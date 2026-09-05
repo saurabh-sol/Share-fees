@@ -1,0 +1,69 @@
+import { z } from "zod";
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  SESSION_SECRET: z.string().min(32).optional(),
+  APP_ORIGIN: z.string().url().optional(),
+  ALLOW_MOCK_SWAPS: z.enum(["true", "false"]).optional(),
+  ADMIN_SECRET: z.string().min(16).optional(),
+  DATABASE_URL: z.string().optional(),
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().optional(),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  LIFI_API_KEY: z.string().optional(),
+  ZERION_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  TREASURY_ENABLED: z.enum(["true", "false"]).optional(),
+  TREASURY_LIVE: z.enum(["true", "false"]).optional(),
+  TREASURY_PRIVATE_KEY: z.string().optional(),
+});
+
+const parsed = envSchema.parse({
+  NODE_ENV: process.env.NODE_ENV,
+  SESSION_SECRET: process.env.SESSION_SECRET,
+  APP_ORIGIN: process.env.APP_ORIGIN,
+  ALLOW_MOCK_SWAPS: process.env.ALLOW_MOCK_SWAPS,
+  ADMIN_SECRET: process.env.ADMIN_SECRET,
+  DATABASE_URL: process.env.DATABASE_URL,
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:
+    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  LIFI_API_KEY: process.env.LIFI_API_KEY,
+  ZERION_API_KEY: process.env.ZERION_API_KEY,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  TREASURY_ENABLED: process.env.TREASURY_ENABLED,
+  TREASURY_LIVE: process.env.TREASURY_LIVE,
+  TREASURY_PRIVATE_KEY: process.env.TREASURY_PRIVATE_KEY,
+});
+
+if (parsed.NODE_ENV === "production") {
+  if (!parsed.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET is required in production (min 32 chars).");
+  }
+  if (!parsed.APP_ORIGIN) {
+    throw new Error("APP_ORIGIN is required in production.");
+  }
+}
+
+export const env = {
+  nodeEnv: parsed.NODE_ENV,
+  sessionSecret:
+    parsed.SESSION_SECRET ??
+    "dev-only-session-secret-do-not-use-in-prod-32",
+  appOrigin: parsed.APP_ORIGIN ?? "http://localhost:3000",
+  allowMockSwaps:
+    parsed.ALLOW_MOCK_SWAPS === "true" && parsed.NODE_ENV !== "production",
+  adminSecret: parsed.ADMIN_SECRET,
+  databaseUrl: parsed.DATABASE_URL,
+  walletConnectProjectId: parsed.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+  publicAppUrl: parsed.NEXT_PUBLIC_APP_URL ?? parsed.APP_ORIGIN ?? "http://localhost:3000",
+  lifiApiKey: parsed.LIFI_API_KEY,
+  zerionApiKey: parsed.ZERION_API_KEY,
+  openaiApiKey: parsed.OPENAI_API_KEY,
+  treasuryEnabled: parsed.TREASURY_ENABLED === "true",
+  treasuryLive: parsed.TREASURY_LIVE === "true",
+  treasuryPrivateKey: parsed.TREASURY_PRIVATE_KEY,
+};
+
+export function appDomain(): string {
+  return new URL(env.appOrigin).host;
+}

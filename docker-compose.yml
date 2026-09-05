@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: t2c
+      POSTGRES_PASSWORD: t2c
+      POSTGRES_DB: trade2credits
+    ports:
+      - "5432:5432"
+    volumes:
+      - t2c_pg:/var/lib/postgresql/data
+
+volumes:
+  t2c_pg:

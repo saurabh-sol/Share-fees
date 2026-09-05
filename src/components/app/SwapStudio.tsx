@@ -1,0 +1,388 @@
+"use client";
+
+import { parseUnits } from "viem";
+import { useAccount, useConnect, useConnectors, useDisconnect } from "wagmi";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { LifiChain, LifiQuote, LifiToken } from "@/lib/lifi/http";
+import { addressesEqual } from "@/lib/lifi/notional";
+
+type Rail = "usdt" | "llm_credits";
+
+type QuotePayload = {
+  quote: LifiQuote;
+  fromAmountUsdCents: number;
+  estimatedRewardCents: number;
+  qualifies: boolean;
+  rule: { conversionBps: number; minNotionalUsdCents: number };
+};
+
+const NATIVE = "0x0000000000000000000000000000000000000000";
+
+function money(cents: number) {
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  const data = (await response.json()) as T & { message?: string; error?: string };
+  if (!response.ok && response.status !== 202) {
+    throw new Error(data.message ?? data.error ?? "request_failed");
+  }
+  return Object.assign(data, { httpStatus: response.status }) as T;
+}
+
+export function SwapStudio({
+  sessionAddress,
+  chainNamespace,
+}: {
+  sessionAddress: string;
+  chainNamespace: string;
+}) {
+  const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { connectAsync } = useConnect();
+  const { disconnectAsync } = useDisconnect();
+  const connectors = useConnectors();
+
+  const [chains, setChains] = useState<LifiChain[]>([]);
+  const [fromTokens, setFromTokens] = useState<LifiToken[]>([]);
+  const [toTokens, setToTokens] = useState<LifiToken[]>([]);
+  const [fromChainId, setFromChainId] = useState(8453);
+  const [toChainId, setToChainId] = useState(42161);
+  const [fromToken, setFromToken] = useState(NATIVE);
+  const [toToken, setToToken] = useState(NATIVE);
+  const [amount, setAmount] = useState("0.25");
+  const [rail, setRail] = useState<Rail>("usdt");
+  const [quote, setQuote] = useState<QuotePayload | null>(null);
+  const [phase, setPhase] = useState<"idle" | "quoting" | "executing" | "settling" | "success" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
+
+  const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
+  const fromMeta = fromTokens.find((token) => token.address.toLowerCase() === fromToken.toLowerCase());
+
+  useEffect(() => {
+    if (chainNamespace !== "eip155") return;
+    void readJson<{ chains: LifiChain[] }>("/api/v1/swaps/chains")
+      .then((data) => setChains(data.chains))
+      .catch((error: unknown) => {
+        setPhase("error");
+        setMessage(error instanceof Error ? error.message : "Could not load chains.");
+      });
+  }, [chainNamespace]);
+
+  useEffect(() => {
+    if (chainNamespace !== "eip155") return;
+    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${fromChainId}`).then((data) => {
+      setFromTokens(data.tokens);
+      setFromToken((current) => {
+        if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
+          return current;
+        }
+        return data.tokens[0]?.address ?? NATIVE;
+      });
+    });
+  }, [fromChainId, chainNamespace]);
+
+  useEffect(() => {
+    if (chainNamespace !== "eip155") return;
+    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${toChainId}`).then((data) => {
+      setToTokens(data.tokens);
+      setToToken((current) => {
+        if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
+          return current;
+        }
+        return data.tokens.find((token) => token.symbol === "USDC")?.address ?? data.tokens[0]?.address ?? NATIVE;
+      });
+    });
+  }, [toChainId, chainNamespace]);
+
+  const featuredFrom = useMemo(() => fromTokens.slice(0, 12), [fromTokens]);
+  const featuredTo = useMemo(() => toTokens.slice(0, 12), [toTokens]);
+
+  async function onQuote() {
+    setPhase("quoting");
+    setMessage(null);
+    setQuote(null);
+    try {
+      const decimals = fromMeta?.decimals ?? 18;
+      const fromAmount = parseUnits(amount, decimals).toString();
+      const data = await readJson<QuotePayload>("/api/v1/swaps/quote", {
+        method: "POST",
+        body: JSON.stringify({
+          fromChainId,
+          toChainId,
+          fromToken,
+          toToken,
+          fromAmount,
+        }),
+      });
+      setQuote(data);
+      setPhase("idle");
+    } catch (error) {
+      setPhase("error");
+      setMessage(error instanceof Error ? error.message : "Quote failed.");
+    }
+  }
+
+  async function settle(txHash: string) {
+    setPhase("settling");
+    setProgress("Waiting for LI.FI to confirm the fill…");
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const response = await fetch("/api/v1/swaps/settle", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          txHash,
+          fromChain: String(fromChainId),
+          toChain: String(toChainId),
+          rail,
+        }),
+      });
+      const data = (await response.json()) as {
+        status?: string;
+        creditedCents?: number;
+        alreadyExists?: boolean;
+        message?: string;
+      };
+      if (response.status === 202) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        continue;
+      }
+      if (!response.ok) {
+        throw new Error(data.message ?? "Settle failed.");
+      }
+      setPhase("success");
+      setProgress(null);
+      setMessage(
+        data.alreadyExists
+          ? "This hash was already booked. No second credit."
+          : `Booked. Credited ${money(data.creditedCents ?? 0)} to ${rail === "usdt" ? "USDT" : "LLM credits"}.`,
+      );
+      router.refresh();
+      return;
+    }
+    throw new Error("LI.FI is still pending. Retry settle from the hash in a minute.");
+  }
+
+  async function onSwap() {
+    if (!quote) return;
+    setPhase("executing");
+    setMessage(null);
+    setProgress("Check your wallet for allowance and swap signatures.");
+    try {
+      const { executeQuotedSwap, firstExecutionHash } = await import("@/lib/lifi/browser");
+      const executed = await executeQuotedSwap(quote.quote as unknown as import("@lifi/sdk").LiFiStep, (route) => {
+        const latest = route.steps.flatMap((step) => step.execution?.actions ?? []).at(-1);
+        if (latest?.type) {
+          setProgress(`${latest.type.replaceAll("_", " ").toLowerCase()} · ${latest.status}`);
+        }
+      });
+      const txHash = firstExecutionHash(executed);
+      if (!txHash) {
+        throw new Error("Wallet signed, but no source hash was returned.");
+      }
+      await settle(txHash);
+    } catch (error) {
+      setPhase("error");
+      setProgress(null);
+      setMessage(error instanceof Error ? error.message : "Swap failed.");
+    }
+  }
+
+  async function reconnect() {
+    const connector = connectors.find((item) => item.name.toLowerCase().includes("metamask")) ?? connectors[0];
+    if (!connector) return;
+    await disconnectAsync().catch(() => undefined);
+    await connectAsync({ connector });
+  }
+
+  if (chainNamespace !== "eip155") {
+    return (
+      <p className="max-w-[65ch] text-zinc-400">
+        Swap Studio is EVM-only in Phase 1. Sign out and connect MetaMask or Coinbase to run a live route.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.15fr_0.85fr]">
+      <form
+        className="space-y-5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onQuote();
+        }}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block space-y-2">
+            <span className="text-sm text-zinc-400">From chain</span>
+            <select
+              value={fromChainId}
+              onChange={(event) => setFromChainId(Number(event.target.value))}
+              className="w-full border border-white/10 bg-[#141416] px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+            >
+              {chains.map((chain) => (
+                <option key={chain.id} value={chain.id}>
+                  {chain.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-2">
+            <span className="text-sm text-zinc-400">To chain</span>
+            <select
+              value={toChainId}
+              onChange={(event) => setToChainId(Number(event.target.value))}
+              className="w-full border border-white/10 bg-[#141416] px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+            >
+              {chains.map((chain) => (
+                <option key={chain.id} value={chain.id}>
+                  {chain.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block space-y-2">
+            <span className="text-sm text-zinc-400">From token</span>
+            <select
+              value={fromToken}
+              onChange={(event) => setFromToken(event.target.value)}
+              className="w-full border border-white/10 bg-[#141416] px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            >
+              {featuredFrom.map((token) => (
+                <option key={`${token.chainId}-${token.address}`} value={token.address}>
+                  {token.symbol}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-2">
+            <span className="text-sm text-zinc-400">To token</span>
+            <select
+              value={toToken}
+              onChange={(event) => setToToken(event.target.value)}
+              className="w-full border border-white/10 bg-[#141416] px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            >
+              {featuredTo.map((token) => (
+                <option key={`${token.chainId}-${token.address}`} value={token.address}>
+                  {token.symbol}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="block space-y-2">
+          <span className="text-sm text-zinc-400">Amount</span>
+          <input
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            inputMode="decimal"
+            required
+          />
+        </label>
+        <fieldset className="space-y-2">
+          <legend className="text-sm text-zinc-400">Reward rail</legend>
+          <div className="flex gap-6">
+            {(["usdt", "llm_credits"] as const).map((value) => (
+              <label key={value} className="flex items-center gap-2 text-sm text-zinc-200">
+                <input
+                  type="radio"
+                  name="rail"
+                  checked={rail === value}
+                  onChange={() => setRail(value)}
+                />
+                {value === "usdt" ? "USDT" : "LLM credits"}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <button
+          type="submit"
+          disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
+          className="rounded-full border border-white/10 px-5 py-2.5 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
+        >
+          {phase === "quoting" ? "Quoting…" : "Get route"}
+        </button>
+      </form>
+
+      <aside className="space-y-6 border-t border-white/8 pt-6 md:border-l md:border-t-0 md:pl-10 md:pt-0">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Route</p>
+        {!isConnected || !walletMatches ? (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-400">
+              Reconnect the signed-in address to execute. Session {sessionAddress.slice(0, 6)}…{sessionAddress.slice(-4)}
+            </p>
+            <button
+              type="button"
+              onClick={() => void reconnect()}
+              className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98]"
+            >
+              Reconnect wallet
+            </button>
+          </div>
+        ) : null}
+
+        {quote ? (
+          <dl className="divide-y divide-white/8 border-y border-white/8 text-sm">
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Notional</dt>
+              <dd className="font-mono">{money(quote.fromAmountUsdCents)}</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Receive</dt>
+              <dd className="font-mono">
+                {quote.quote.estimate.toAmountUSD ? `$${Number(quote.quote.estimate.toAmountUSD).toFixed(2)}` : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Reward at {quote.rule.conversionBps} bps</dt>
+              <dd className="font-mono text-[#c23a3a]">{money(quote.estimatedRewardCents)}</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">$500 floor</dt>
+              <dd className="font-mono">{quote.qualifies ? "Clears" : "Held"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="text-zinc-500">Quote a route to see USD notional and the credit that would post.</p>
+        )}
+
+        <button
+          type="button"
+          disabled={!quote || !walletMatches || phase === "executing" || phase === "settling"}
+          onClick={() => void onSwap()}
+          className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+        >
+          {phase === "executing" ? "Signing…" : phase === "settling" ? "Settling…" : "Swap"}
+        </button>
+        {progress ? <p className="font-mono text-xs text-zinc-500">{progress}</p> : null}
+        {message ? (
+          <p className={phase === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
+            {message}
+          </p>
+        ) : null}
+        {quote && !quote.qualifies ? (
+          <p className="text-sm text-zinc-500">
+            Below {money(quote.rule.minNotionalUsdCents)} the swap still runs. The credit is stored as below_threshold.
+          </p>
+        ) : null}
+      </aside>
+    </div>
+  );
+}

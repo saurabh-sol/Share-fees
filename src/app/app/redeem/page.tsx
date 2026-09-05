@@ -1,0 +1,41 @@
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { RedeemDesk } from "@/components/app/RedeemDesk";
+import { getSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db/client";
+import { wallets } from "@/lib/db/schema";
+import { env } from "@/lib/env";
+import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
+
+export default async function RedeemPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const db = await getDb();
+  const [wallet, redemptions, keys] = await Promise.all([
+    db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),
+    listRedemptions(session.user.id, db),
+    listVirtualKeys(session.user.id, db),
+  ]);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 3</p>
+        <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
+        <p className="mt-3 max-w-[65ch] text-zinc-400">
+          USDT queues an Arbitrum transfer to this wallet. LLM credits issue a metered virtual key.
+          The ledger is debited once; gateway spend never writes the wallet again.
+        </p>
+      </div>
+      <RedeemDesk
+        usdtCents={wallet?.usdtCacheCents ?? 0}
+        llmCents={wallet?.llmCacheCents ?? 0}
+        chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}
+        gatewayBaseUrl={`${env.publicAppUrl.replace(/\/$/, "")}/gateway/v1`}
+        initialRedemptions={redemptions}
+        initialKeys={keys}
+      />
+    </div>
+  );
+}

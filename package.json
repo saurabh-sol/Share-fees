@@ -1,0 +1,47 @@
+{
+  "name": "trade-to-credits",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@lifi/sdk": "^4.6.1",
+    "@lifi/sdk-provider-ethereum": "^4.0.14",
+    "@neondatabase/serverless": "^1.1.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-query": "^5.102.8",
+    "bs58": "^6.0.0",
+    "drizzle-orm": "^0.45.2",
+    "framer-motion": "^13.2.0",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.41.0",
+    "next": "16.3.4",
+    "postgres": "^3.4.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "siwe": "^3.0.0",
+    "tweetnacl": "^1.0.3",
+    "viem": "^2.56.3",
+    "wagmi": "^3.7.7",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bs58": "^4.0.4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}
