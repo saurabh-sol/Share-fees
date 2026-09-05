@@ -9,7 +9,7 @@ export async function OPTIONS() {
 
 export async function GET(request: Request) {
   try {
-    rateLimitOrThrow(`gateway-models:${clientIp(request)}`, 60, 60 * 1000);
+    await rateLimitOrThrow(`gateway-models:${clientIp(request)}`, 60, 60 * 1000);
     const raw = readBearerToken(request.headers.get("authorization"));
     await authenticateVirtualKey(raw);
     return gatewayJson(200, {

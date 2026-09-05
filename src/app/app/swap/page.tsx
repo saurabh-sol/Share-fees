@@ -11,11 +11,12 @@ export default async function SwapPage() {
   return (
     <div className="space-y-16">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 1</p>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 4</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Swap studio</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Routes come from LI.FI. After the wallet signs, we settle against their status API — not your
-          typed notional — then write the ledger. Below $500 the fill still happens; the credit is held.
+          LI.FI covers the usual EVM pairs. Robinhood Chain ETH (and any pair LI.FI will not quote) goes
+          through ChangeNOW: you send a pay-in, they pay out to the same wallet, then we settle the credit.
+          Below $500 the fill still happens; the credit is held.
         </p>
       </div>
       <SwapStudio

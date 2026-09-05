@@ -9,7 +9,7 @@ import { importHashSchema } from "@/lib/validation/swap";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`import:${clientIp(request)}`, 12, 15 * 60 * 1000);
+    await rateLimitOrThrow(`import:${clientIp(request)}`, 12, 15 * 60 * 1000);
 
     const session = await getSession();
     if (!session) {

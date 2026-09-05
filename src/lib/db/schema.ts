@@ -153,6 +153,7 @@ export const discoveredSwaps = pgTable(
     fromAmount: text("from_amount").notNull(),
     toAmount: text("to_amount").notNull(),
     notionalUsdCents: integer("notional_usd_cents").notNull(),
+    kind: text("kind").notNull().default("trade"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull(),
     status: text("status").notNull(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
@@ -181,6 +182,8 @@ export const fraudFlags = pgTable("fraud_flags", {
   swapId: text("swap_id"),
   reason: text("reason").notNull(),
   status: text("status").notNull().default("open"),
+  rail: text("rail"),
+  detail: text("detail"),
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -228,6 +231,38 @@ export const virtualKeys = pgTable(
   (table) => [
     uniqueIndex("virtual_keys_hash").on(table.keyHash),
     index("virtual_keys_user").on(table.userId),
+  ],
+);
+
+export const changenowExchanges = pgTable(
+  "changenow_exchanges",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    exchangeId: text("exchange_id").notNull(),
+    fromChain: text("from_chain").notNull(),
+    toChain: text("to_chain").notNull(),
+    fromCurrency: text("from_currency").notNull(),
+    toCurrency: text("to_currency").notNull(),
+    fromNetwork: text("from_network").notNull(),
+    toNetwork: text("to_network").notNull(),
+    fromAmount: text("from_amount").notNull(),
+    toAmount: text("to_amount").notNull(),
+    payinAddress: text("payin_address").notNull(),
+    payoutAddress: text("payout_address").notNull(),
+    status: text("status").notNull(),
+    depositTx: text("deposit_tx"),
+    payoutTx: text("payout_tx"),
+    notionalUsdCents: integer("notional_usd_cents").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("changenow_exchanges_exchange").on(table.exchangeId),
+    index("changenow_exchanges_user").on(table.userId),
+    index("changenow_exchanges_status").on(table.status),
   ],
 );
 

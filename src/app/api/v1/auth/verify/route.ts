@@ -12,7 +12,7 @@ import { verifyRequestSchema } from "@/lib/validation/swap";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`verify:${clientIp(request)}`, 8, 15 * 60 * 1000);
+    await rateLimitOrThrow(`verify:${clientIp(request)}`, 8, 15 * 60 * 1000);
 
     const body = verifyRequestSchema.parse(await request.json());
     const namespace = body.chainNamespace as ChainNamespace;

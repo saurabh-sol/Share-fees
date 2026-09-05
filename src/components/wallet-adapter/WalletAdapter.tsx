@@ -3,28 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { PeekAccountButton } from "@/components/landing/PeekAccountButton";
 import { PixelWalletArt, PixelWalletArtMobile } from "./PixelWalletArt";
 import { DecorativeAscii } from "./DecorativeAscii";
 import { WalletCard } from "./WalletCard";
 import { useWalletAdapter } from "./useWalletAdapter";
 
 export function WalletAdapter() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const adapter = useWalletAdapter(() => setOpen(false));
 
   return (
     <div className="wallet-grid-bg relative min-h-[100dvh] overflow-hidden bg-[#141416]">
-      {/* Pixel wallet artwork — upper center, behind the card */}
       <PixelWalletArt />
       <PixelWalletArtMobile />
-
-      {/* Decorative ASCII labels around the viewport */}
       <DecorativeAscii />
 
-      {/* Page content */}
       <div className="relative z-10 flex min-h-[100dvh] flex-col">
-        {/* Tiny T2C badge — top left */}
-        <header className="flex items-center justify-between px-5 py-5 sm:px-8">
+        <header className="flex items-center justify-between px-5 py-4 sm:px-8">
           <Link
             href="/"
             className="font-mono text-xs tracking-[0.22em] text-[#c23a3a] transition-opacity hover:opacity-80"
@@ -33,30 +29,27 @@ export function WalletAdapter() {
           </Link>
         </header>
 
-        {/* Card area — centered horizontally, pushed toward the bottom-center */}
-        <div className="flex flex-1 items-end justify-center pb-10 md:items-center md:pb-0">
+        <div className={`flex flex-1 items-center justify-center px-4 pb-8 ${open ? "pt-[28vh] md:pt-[22vh]" : "pt-[42vh] md:pt-[48vh]"}`}>
           <AnimatePresence mode="wait">
             {open ? (
               <motion.div
                 key="card"
-                initial={{ opacity: 0, y: 18 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 12 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               >
                 <WalletCard adapter={adapter} onClose={() => setOpen(false)} />
               </motion.div>
             ) : (
-              <motion.button
+              <motion.div
                 key="trigger"
-                type="button"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                onClick={() => setOpen(true)}
-                className="rounded-[14px] bg-[#c23a3a] px-8 py-3.5 font-mono text-sm uppercase tracking-wider text-white transition-colors hover:bg-[#d04444] active:scale-[0.98] active:bg-[#9f2f2f]"
+                className="flex flex-col items-center overflow-visible pt-2"
               >
-                Connect Wallet
-              </motion.button>
+                <PeekAccountButton label="Connect wallet" onClick={() => setOpen(true)} />
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

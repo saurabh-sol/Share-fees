@@ -1,11 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps } from "@/lib/db/schema";
 import { postSwapReward, type Rail } from "@/lib/ledger/post-swap-reward";
 import { readVerifiedFill } from "@/lib/lifi/settle";
-import { getActiveRule } from "@/lib/rules/engine";
+import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { fetchZerionTradeByHash } from "./zerion";
-import type { HistoricalCandidate } from "./types";
+import { isClaimableKind, type HistoricalCandidate } from "./types";
 
 export class ClaimError extends Error {
   constructor(
@@ -41,6 +41,7 @@ export async function reverifyCandidate(input: {
         fromAmount: lifi.fromAmount,
         toAmount: lifi.toAmount,
         notionalUsdCents: lifi.notionalUsdCents,
+        kind: "trade",
         executedAt: new Date(),
       };
     }
@@ -63,6 +64,15 @@ export async function listUnclaimed(userId: string, db?: Awaited<ReturnType<type
     .where(and(eq(discoveredSwaps.userId, userId), eq(discoveredSwaps.status, "unclaimed")));
 }
 
+export async function listWalletActivity(userId: string, db?: Awaited<ReturnType<typeof getDb>>) {
+  const client = db ?? (await getDb());
+  return client
+    .select()
+    .from(discoveredSwaps)
+    .where(eq(discoveredSwaps.userId, userId))
+    .orderBy(desc(discoveredSwaps.executedAt));
+}
+
 export async function claimDiscoveredSwap(input: {
   userId: string;
   address: string;
@@ -82,7 +92,10 @@ export async function claimDiscoveredSwap(input: {
     throw new ClaimError("claim_not_found", 404);
   }
   if (row.status !== "unclaimed") {
-    throw new ClaimError("claim_not_open", 409);
+    throw new ClaimError(row.status === "below_threshold" ? "below_threshold" : "claim_not_open", 409);
+  }
+  if (!isClaimableKind(row.kind)) {
+    throw new ClaimError("not_a_swap", 400);
   }
 
   const verify = input.reverify ?? reverifyCandidate;
@@ -93,11 +106,12 @@ export async function claimDiscoveredSwap(input: {
     toChain: row.toChain,
   });
 
-  const rule = await getActiveRule(client);
-  if (verified.notionalUsdCents < rule.minNotionalUsdCents) {
+  const rule = await getActiveRuleOrNull(client);
+  const floor = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
+  if (verified.notionalUsdCents < floor) {
     await client
       .update(discoveredSwaps)
-      .set({ status: "rejected" })
+      .set({ status: "below_threshold" })
       .where(eq(discoveredSwaps.id, row.id));
     throw new ClaimError("below_threshold", 400);
   }

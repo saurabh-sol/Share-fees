@@ -9,16 +9,12 @@ import {
   useBalance,
   useChainId,
   useConnect,
-  useConnectors,
   useDisconnect,
   useSignMessage,
 } from "wagmi";
 import { getPhantomSolana, encodeSignature } from "@/lib/wallet/phantom";
-import type { ConnectionStatus, WalletConfig, WalletId } from "./wallet-config";
-import {
-  PRIMARY_WALLETS,
-  EXPANDED_WALLETS,
-} from "./wallet-config";
+import type { ConnectionStatus, DiscoveredWallet } from "./wallet-config";
+import { useInstalledWallets } from "./useInstalledWallets";
 import {
   buildClientSiwsMessage,
   formatEthBalance,
@@ -35,7 +31,7 @@ type NonceResponse = {
 
 export function useWalletAdapter(onClose?: () => void) {
   const router = useRouter();
-  const connectors = useConnectors();
+  const { wallets, connectors } = useInstalledWallets();
   const { connectAsync } = useConnect();
   const { disconnectAsync } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
@@ -43,49 +39,13 @@ export function useWalletAdapter(onClose?: () => void) {
   const chainId = useChainId();
   const { data: balanceData } = useBalance({ address: liveAddress });
 
-  const [selectedWalletId, setSelectedWalletId] = useState<WalletId | null>(null);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [connectedNamespace, setConnectedNamespace] = useState<"eip155" | "solana" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showNetworks, setShowNetworks] = useState(false);
   const [copied, setCopied] = useState(false);
   const connectingRef = useRef(false);
-
-  const phantomSolana = typeof window !== "undefined" ? getPhantomSolana() : null;
-  const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-
-  const resolveConnector = useCallback(
-    (wallet: WalletConfig) => {
-      if (wallet.id === "walletconnect") {
-        return connectors.find((c) => c.id === "walletConnect" || c.name.toLowerCase().includes("walletconnect"));
-      }
-      return connectors.find((item) => {
-        const rdns = "rdns" in item ? String(item.rdns ?? "") : "";
-        if (wallet.rdns && rdns === wallet.rdns) return true;
-        if (wallet.nameMatch && item.name.toLowerCase().includes(wallet.nameMatch)) return true;
-        return false;
-      });
-    },
-    [connectors],
-  );
-
-  const walletAvailability = useMemo(() => {
-    const map = new Map<WalletId, boolean>();
-    for (const wallet of [...PRIMARY_WALLETS, ...EXPANDED_WALLETS]) {
-      if (wallet.id === "phantom") {
-        map.set(wallet.id, Boolean(resolveConnector(wallet) || phantomSolana));
-      } else if (wallet.id === "robinhood-eth") {
-        map.set(wallet.id, Boolean(walletConnectProjectId));
-      } else if (wallet.id === "walletconnect") {
-        map.set(wallet.id, Boolean(walletConnectProjectId && resolveConnector(wallet)));
-      } else {
-        map.set(wallet.id, Boolean(resolveConnector(wallet)));
-      }
-    }
-    return map;
-  }, [resolveConnector, phantomSolana, walletConnectProjectId]);
 
   const resetState = useCallback(async () => {
     setSelectedWalletId(null);
@@ -99,11 +59,11 @@ export function useWalletAdapter(onClose?: () => void) {
   }, [disconnectAsync]);
 
   const loginEvm = useCallback(
-    async (wallet: WalletConfig) => {
-      const connector = resolveConnector(wallet);
+    async (wallet: DiscoveredWallet) => {
+      const connector = connectors.find((item) => item.uid === wallet.connectorUid);
       if (!connector) {
         setConnectionStatus("unavailable");
-        setError(`${wallet.name} not detected. Install the extension or choose another wallet.`);
+        setError(`${wallet.name} is not available in this browser.`);
         return;
       }
 
@@ -143,7 +103,7 @@ export function useWalletAdapter(onClose?: () => void) {
       setConnectedNamespace("eip155");
       setConnectionStatus("connected");
     },
-    [connectAsync, resolveConnector, signMessageAsync],
+    [connectAsync, connectors, signMessageAsync],
   );
 
   const loginPhantomSolana = useCallback(async () => {
@@ -189,37 +149,20 @@ export function useWalletAdapter(onClose?: () => void) {
   }, []);
 
   const connectWallet = useCallback(
-    async (walletId: WalletId) => {
+    async (walletId: string) => {
       if (connectingRef.current) return;
       connectingRef.current = true;
       setSelectedWalletId(walletId);
       setError(null);
 
-      const wallet = [...PRIMARY_WALLETS, ...EXPANDED_WALLETS].find((w) => w.id === walletId);
+      const wallet = wallets.find((item) => item.id === walletId);
       if (!wallet) {
         connectingRef.current = false;
         return;
       }
 
-      if (!walletAvailability.get(walletId)) {
-        setConnectionStatus("unavailable");
-        if (wallet.id === "robinhood-eth") {
-          setError(
-            walletConnectProjectId
-              ? "Robinhood Wallet connects via WalletConnect. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID and scan with the Robinhood app."
-              : "Robinhood Wallet connects via WalletConnect. Add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to enable it.",
-          );
-        } else {
-          setError(`${wallet.name} not detected. Install ${wallet.name} or choose another wallet.`);
-        }
-        connectingRef.current = false;
-        return;
-      }
-
       try {
-        if (wallet.id === "robinhood-eth" || wallet.id === "walletconnect") {
-          await loginEvm({ ...wallet, id: "walletconnect", name: "WalletConnect" });
-        } else if (wallet.id === "phantom" && !resolveConnector(wallet) && phantomSolana) {
+        if (wallet.kind === "solana") {
           await loginPhantomSolana();
         } else {
           await loginEvm(wallet);
@@ -237,15 +180,7 @@ export function useWalletAdapter(onClose?: () => void) {
         connectingRef.current = false;
       }
     },
-    [
-      walletAvailability,
-      walletConnectProjectId,
-      loginEvm,
-      loginPhantomSolana,
-      resolveConnector,
-      phantomSolana,
-      disconnectAsync,
-    ],
+    [wallets, loginEvm, loginPhantomSolana, disconnectAsync],
   );
 
   const disconnect = useCallback(async () => {
@@ -274,14 +209,15 @@ export function useWalletAdapter(onClose?: () => void) {
   }, [connectionStatus, onClose]);
 
   const selectedWallet = useMemo(
-    () => [...PRIMARY_WALLETS, ...EXPANDED_WALLETS].find((w) => w.id === selectedWalletId) ?? null,
-    [selectedWalletId],
+    () => wallets.find((wallet) => wallet.id === selectedWalletId) ?? null,
+    [wallets, selectedWalletId],
   );
 
   const displayAddress = connectedAddress ?? liveAddress ?? null;
   const isBusy = connectionStatus === "connecting" || connectionStatus === "signing";
 
   return {
+    wallets,
     selectedWallet,
     selectedWalletId,
     connectionStatus,
@@ -291,12 +227,7 @@ export function useWalletAdapter(onClose?: () => void) {
     balance: balanceData ? formatEthBalance(balanceData.value, balanceData.decimals) : null,
     balanceSymbol: balanceData?.symbol ?? "ETH",
     error,
-    isExpanded,
-    setIsExpanded,
-    showNetworks,
-    setShowNetworks,
     copied,
-    walletAvailability,
     connectWallet,
     disconnect,
     copyAddress,

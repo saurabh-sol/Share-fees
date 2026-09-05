@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { creditEvents, discoveredSwaps, users, wallets } from "@/lib/db/schema";
-import { claimDiscoveredSwap, listUnclaimed } from "./claim";
+import { claimDiscoveredSwap, listUnclaimed, listWalletActivity } from "./claim";
 import { persistCandidates, scanWallet } from "./scan";
 import type { HistoricalCandidate } from "./types";
 
@@ -28,13 +28,14 @@ function candidate(overrides: Partial<HistoricalCandidate> = {}): HistoricalCand
     fromAmount: "0.2",
     toAmount: "512.77",
     notionalUsdCents: 51277,
+    kind: "trade",
     executedAt: new Date("2026-08-01T12:00:00.000Z"),
     ...overrides,
   };
 }
 
 describe("historical scan → claim → ledger", () => {
-  it("keeps sub-floor trades out of the inbox", async () => {
+  it("stores sub-floor transfers with their USD value and keeps them off the claim list", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     const result = await persistCandidates(
@@ -43,8 +44,27 @@ describe("historical scan → claim → ledger", () => {
       50_000,
       db,
     );
-    expect(result.inserted).toBe(0);
+    expect(result.inserted).toBe(1);
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
+    const activity = await listWalletActivity(userId, db);
+    expect(activity).toHaveLength(1);
+    expect(activity[0]?.status).toBe("below_threshold");
+    expect(activity[0]?.notionalUsdCents).toBe(49_999);
+  });
+
+  it("shows sends in activity but does not make them claimable", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await persistCandidates(
+      userId,
+      [candidate({ kind: "send", notionalUsdCents: 80_000, txHash: "0x" + "33".repeat(32) })],
+      50_000,
+      db,
+    );
+    expect(await listUnclaimed(userId, db)).toHaveLength(0);
+    const activity = await listWalletActivity(userId, db);
+    expect(activity[0]?.kind).toBe("send");
+    expect(activity[0]?.status).toBe("below_threshold");
   });
 
   it("scans through an injected source, claims once, and ignores a replay", async () => {
@@ -111,13 +131,13 @@ describe("historical scan → claim → ledger", () => {
       sources: [{ name: "mock", fetchTrades: async () => [] }],
       db,
     });
-    await expect(
-      scanWallet({
-        userId,
-        address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        sources: [{ name: "mock", fetchTrades: async () => [] }],
-        db,
-      }),
-    ).rejects.toThrow("scan_cooldown");
+    const replay = await scanWallet({
+      userId,
+      address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      sources: [{ name: "mock", fetchTrades: async () => [] }],
+      db,
+    });
+    expect(replay.cooldown).toBe(true);
+    expect(replay.retryAfterSec).toBeGreaterThan(0);
   });
 });

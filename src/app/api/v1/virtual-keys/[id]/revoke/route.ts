@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`revoke-key:${clientIp(request)}`, 20, 15 * 60 * 1000);
+    await rateLimitOrThrow(`revoke-key:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
     const session = await getSession();
     if (!session) {

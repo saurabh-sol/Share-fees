@@ -1,11 +1,12 @@
 "use client";
 
 import { Copy, LogOut, ArrowRight } from "lucide-react";
-import type { WalletConfig } from "./wallet-config";
+import type { DiscoveredWallet } from "./wallet-config";
+import { WalletIcon } from "./WalletIcon";
 import { shortenAddress } from "./wallet-utils";
 
 type Props = {
-  wallet: WalletConfig;
+  wallet: DiscoveredWallet;
   address: string;
   namespace: "eip155" | "solana" | null;
   chainId: number | null;
@@ -38,7 +39,6 @@ export function ConnectedWallet({
   onDisconnect,
   onContinue,
 }: Props) {
-  const Logo = wallet.Logo;
   const networkLabel =
     namespace === "solana"
       ? "Solana"
@@ -47,15 +47,15 @@ export function ConnectedWallet({
         : "Ethereum";
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <span className="flex size-11 items-center justify-center rounded-[10px] border border-white/[0.08] bg-white/[0.02]">
-          <Logo className="size-8" />
+    <div className="space-y-3">
+      <div className="flex items-center gap-2.5">
+        <span className="flex size-9 items-center justify-center rounded-[8px] border border-white/[0.08] bg-white/[0.02]">
+          <WalletIcon name={wallet.name} iconUrl={wallet.iconUrl} size={24} />
         </span>
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#c23a3a]">Connected</p>
-          <h2 className="font-mono text-lg tracking-tight text-[#e4e4e7]">{wallet.name}</h2>
-          <p className="font-mono text-xs text-[#a1a1aa]">{shortenAddress(address, 8, 6)}</p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#c23a3a]">Connected</p>
+          <h2 className="font-mono text-[15px] tracking-tight text-[#e4e4e7]">{wallet.name}</h2>
+          <p className="font-mono text-[11px] text-[#a1a1aa]">{shortenAddress(address, 8, 6)}</p>
         </div>
       </div>
 

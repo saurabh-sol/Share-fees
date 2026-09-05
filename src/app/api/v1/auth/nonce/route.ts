@@ -9,7 +9,7 @@ import { OriginError } from "@/lib/security/origin";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`nonce:${clientIp(request)}`, 12, 15 * 60 * 1000);
+    await rateLimitOrThrow(`nonce:${clientIp(request)}`, 12, 15 * 60 * 1000);
 
     const body = nonceRequestSchema.parse(await request.json());
     const address = normalizeAddress(body.chainNamespace as ChainNamespace, body.address);
@@ -32,6 +32,10 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return jsonError(400, "invalid_body", "Address payload failed validation.");
     }
-    return jsonError(400, "nonce_failed", error instanceof Error ? error.message : "nonce_failed");
+    return jsonError(
+      500,
+      "nonce_failed",
+      error instanceof Error ? error.message : "Could not issue a login nonce.",
+    );
   }
 }

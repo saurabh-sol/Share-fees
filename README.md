@@ -2,7 +2,7 @@
 
 Wallet-only rewards desk. Qualifying token swaps ($500+ USD notional) convert at a published ratio into **USDT** or **LLM credits**.
 
-Phases 0–3 are in this repo: landing, wallet login, LI.FI swap + historical claims, and redeem (USDT outbox + LLM virtual keys).
+Phases 0–4 are in this repo: landing, wallet login, LI.FI swap + historical claims, redeem, and admin / fraud holds.
 
 ## Run
 
@@ -17,6 +17,14 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). Connect a wallet on `/login`, then record a paper fill on `/app/swap`.
 
 `ALLOW_MOCK_SWAPS=true` is required for paper fills and is rejected in production.
+
+## Phase 4
+
+`/admin` is a secret-gated console (cookie after `POST /v1/admin/session`, or Bearer `ADMIN_SECRET`). It shows liability vs pools, versions reward rules (disable = kill switch), reviews wash-trade holds, and drains the payout outbox.
+
+Same-wallet A→B→A fills inside 60 minutes write `swaps.status = held` and an open `fraud_flags` row. The swap still executes. Release posts the credit; reject does not. Swap Studio also quotes Avalanche, Linea, Scroll, and Blast.
+
+`GET /v1/admin/ledger` `GET /v1/admin/overview` `GET /v1/admin/flags` `POST /v1/admin/flags/{id}/resolve`
 
 ## Phase 3
 

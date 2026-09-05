@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return jsonError(403, "mock_disabled", "Paper fills are disabled on this host.");
     }
     assertSameOrigin(request);
-    rateLimitOrThrow(`confirm:${clientIp(request)}`, 20, 15 * 60 * 1000);
+    await rateLimitOrThrow(`confirm:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
     const session = await getSession();
     if (!session) {

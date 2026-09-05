@@ -1,3 +1,13 @@
+export type ActivityKind =
+  | "trade"
+  | "execute"
+  | "send"
+  | "receive"
+  | "deposit"
+  | "withdraw"
+  | "approve"
+  | "other";
+
 export type HistoricalCandidate = {
   provider: "zerion" | "lifi" | "import";
   txHash: string;
@@ -8,8 +18,15 @@ export type HistoricalCandidate = {
   fromAmount: string;
   toAmount: string;
   notionalUsdCents: number;
+  kind: ActivityKind;
   executedAt: Date;
 };
+
+export const CLAIMABLE_KINDS = new Set<ActivityKind>(["trade", "execute"]);
+
+export function isClaimableKind(kind: string | null | undefined) {
+  return CLAIMABLE_KINDS.has((kind ?? "trade") as ActivityKind);
+}
 
 export type TradeSource = {
   name: string;

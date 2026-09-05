@@ -1,6 +1,6 @@
 import { sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
 import type { PgliteQueryResultHKT } from "drizzle-orm/pglite";
 import type * as schema from "./schema";
 
@@ -97,10 +97,14 @@ const STATEMENTS = [
     swap_id TEXT,
     reason TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
+    rail TEXT,
+    detail TEXT,
     reviewed_by TEXT,
     reviewed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE fraud_flags ADD COLUMN IF NOT EXISTS rail TEXT`,
+  `ALTER TABLE fraud_flags ADD COLUMN IF NOT EXISTS detail TEXT`,
   `CREATE TABLE IF NOT EXISTS discovered_swaps (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -113,11 +117,13 @@ const STATEMENTS = [
     from_amount TEXT NOT NULL,
     to_amount TEXT NOT NULL,
     notional_usd_cents INTEGER NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'trade',
     executed_at TIMESTAMPTZ NOT NULL,
     status TEXT NOT NULL,
     claimed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE discovered_swaps ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'trade'`,
   `CREATE UNIQUE INDEX IF NOT EXISTS discovered_tx_chain ON discovered_swaps (tx_hash, from_chain)`,
   `CREATE INDEX IF NOT EXISTS discovered_user_status ON discovered_swaps (user_id, status)`,
   `CREATE TABLE IF NOT EXISTS wallet_scans (
@@ -169,6 +175,30 @@ const STATEMENTS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS payout_outbox_redemption ON payout_outbox (redemption_id)`,
   `CREATE INDEX IF NOT EXISTS payout_outbox_status ON payout_outbox (status)`,
+  `CREATE TABLE IF NOT EXISTS changenow_exchanges (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    exchange_id TEXT NOT NULL,
+    from_chain TEXT NOT NULL,
+    to_chain TEXT NOT NULL,
+    from_currency TEXT NOT NULL,
+    to_currency TEXT NOT NULL,
+    from_network TEXT NOT NULL,
+    to_network TEXT NOT NULL,
+    from_amount TEXT NOT NULL,
+    to_amount TEXT NOT NULL,
+    payin_address TEXT NOT NULL,
+    payout_address TEXT NOT NULL,
+    status TEXT NOT NULL,
+    deposit_tx TEXT,
+    payout_tx TEXT,
+    notional_usd_cents INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS changenow_exchanges_exchange ON changenow_exchanges (exchange_id)`,
+  `CREATE INDEX IF NOT EXISTS changenow_exchanges_user ON changenow_exchanges (user_id)`,
+  `CREATE INDEX IF NOT EXISTS changenow_exchanges_status ON changenow_exchanges (status)`,
   `INSERT INTO reward_rules (
     id, version, conversion_bps, min_notional_usd_cents, daily_cap_usd_cents, enabled, active_from
   )
@@ -184,7 +214,7 @@ export async function applyMigrations(db: AnyDb) {
 
 export type SchemaTx =
   | PgTransaction<
-      PostgresJsQueryResultHKT,
+      NeonQueryResultHKT,
       typeof schema,
       ExtractTablesWithRelations<typeof schema>
     >

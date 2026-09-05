@@ -37,10 +37,20 @@ export const quoteRequestSchema = z.object({
 });
 
 export const settleSwapSchema = z.object({
+  provider: z.enum(["lifi", "changenow"]).optional(),
   txHash: z.string().min(64).max(90),
   fromChain: z.string().min(1).max(32),
   toChain: z.string().min(1).max(32),
   rail: railSchema,
+  exchangeId: z.string().min(6).max(80).optional(),
+});
+
+export const changeNowCreateSchema = z.object({
+  fromChainId: z.number().int(),
+  toChainId: z.number().int(),
+  fromToken: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  toToken: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  fromAmount: z.string().regex(/^[0-9]+$/).max(78),
 });
 
 export const importHashSchema = z.object({
@@ -72,4 +82,12 @@ export const rewardRuleSchema = z.object({
   minNotionalUsdCents: z.number().int().min(0).max(1_000_000_000),
   dailyCapUsdCents: z.number().int().min(0).max(10_000_000_000),
   enabled: z.boolean().default(true),
+});
+
+export const adminSessionSchema = z.object({
+  secret: z.string().min(16).max(200),
+});
+
+export const flagResolveSchema = z.object({
+  action: z.enum(["release", "reject"]),
 });

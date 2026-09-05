@@ -7,7 +7,8 @@ import {
   swaps,
   wallets,
 } from "@/lib/db/schema";
-import { computeRewardCents, getActiveRule } from "@/lib/rules/engine";
+import { findWashPrior } from "@/lib/fraud/wash";
+import { computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { sumAccountCents } from "./balances";
 
 export type Rail = "usdt" | "llm_credits";
@@ -36,7 +37,7 @@ export type PostSwapResult = {
   llmCents: number;
 };
 
-function newId(prefix: string) {
+export function newLedgerId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
 }
 
@@ -50,12 +51,70 @@ export class LedgerError extends Error {
   }
 }
 
+export async function writeRewardLegs(
+  tx: {
+    insert: Awaited<ReturnType<typeof getDb>>["insert"];
+  },
+  input: {
+    userId: string;
+    swapId: string;
+    rail: Rail;
+    ruleId: string;
+    amountCents: number;
+  },
+) {
+  const userAccount = input.rail === "usdt" ? "user_usdt" : "user_llm";
+  await tx.insert(creditEvents).values({
+    id: newLedgerId("cred"),
+    userId: input.userId,
+    swapId: input.swapId,
+    ruleId: input.ruleId,
+    rail: input.rail,
+    amountCents: input.amountCents,
+  });
+  await tx.insert(ledgerEntries).values([
+    {
+      id: newLedgerId("led"),
+      userId: input.userId,
+      account: userAccount,
+      type: "credit",
+      amountCents: input.amountCents,
+      referenceType: "swap",
+      referenceId: input.swapId,
+    },
+    {
+      id: newLedgerId("led"),
+      userId: input.userId,
+      account: "rewards_expense",
+      type: "debit",
+      amountCents: input.amountCents,
+      referenceType: "swap",
+      referenceId: input.swapId,
+    },
+  ]);
+}
+
+export async function remainingDailyCapCents(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+  dailyCapUsdCents: number,
+) {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const spentTodayRows = await db
+    .select({
+      total: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
+    })
+    .from(creditEvents)
+    .where(and(eq(creditEvents.userId, userId), gte(creditEvents.createdAt, startOfDay)));
+  return Math.max(0, dailyCapUsdCents - Number(spentTodayRows[0]?.total ?? 0));
+}
+
 export async function postSwapReward(
   input: PostSwapInput,
   db = undefined as Awaited<ReturnType<typeof getDb>> | undefined,
 ): Promise<PostSwapResult> {
   const client = db ?? (await getDb());
-  const rule = await getActiveRule(client);
 
   if (input.notionalUsdCents < 0 || input.notionalUsdCents > 1_000_000_000) {
     throw new LedgerError("notional_out_of_bounds");
@@ -79,30 +138,30 @@ export async function postSwapReward(
   }
 
   return client.transaction(async (tx) => {
-    const swapId = newId("swap");
-    const belowFloor = input.notionalUsdCents < rule.minNotionalUsdCents;
-    const reward = belowFloor
-      ? 0
-      : computeRewardCents(input.notionalUsdCents, rule.conversionBps);
-
-    const startOfDay = new Date();
-    startOfDay.setUTCHours(0, 0, 0, 0);
-
-    const spentTodayRows = await tx
-      .select({
-        total: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
-      })
-      .from(creditEvents)
-      .where(
-        and(eq(creditEvents.userId, input.userId), gte(creditEvents.createdAt, startOfDay)),
-      );
-    const spentToday = Number(spentTodayRows[0]?.total ?? 0);
-    const remainingCap = Math.max(0, rule.dailyCapUsdCents - spentToday);
-    const credited = Math.min(reward, remainingCap);
+    const swapId = newLedgerId("swap");
+    const rule = await getActiveRuleOrNull(tx as never);
+    const windowStart = new Date(input.executedAt.getTime() - 60 * 60 * 1000);
+    const recents = await tx
+      .select()
+      .from(swaps)
+      .where(and(eq(swaps.userId, input.userId), gte(swaps.executedAt, windowStart)));
+    const wash = findWashPrior(input, recents);
 
     let status = "rewarded";
-    if (belowFloor) status = "below_threshold";
-    else if (credited === 0) status = "capped";
+    let credited = 0;
+
+    if (!rule) {
+      status = "paused";
+    } else if (input.notionalUsdCents < rule.minNotionalUsdCents) {
+      status = "below_threshold";
+    } else if (wash) {
+      status = "held";
+    } else {
+      const reward = computeRewardCents(input.notionalUsdCents, rule.conversionBps);
+      const remainingCap = await remainingDailyCapCents(tx as never, input.userId, rule.dailyCapUsdCents);
+      credited = Math.min(reward, remainingCap);
+      if (credited === 0) status = "capped";
+    }
 
     await tx.insert(swaps).values({
       id: swapId,
@@ -120,46 +179,38 @@ export async function postSwapReward(
       executedAt: input.executedAt,
     });
 
-    if (credited > 0) {
-      const creditId = newId("cred");
-      const userAccount = input.rail === "usdt" ? "user_usdt" : "user_llm";
-
-      await tx.insert(creditEvents).values({
-        id: creditId,
+    if (credited > 0 && rule) {
+      await writeRewardLegs(tx, {
         userId: input.userId,
         swapId,
-        ruleId: rule.id,
         rail: input.rail,
+        ruleId: rule.id,
         amountCents: credited,
       });
-
-      await tx.insert(ledgerEntries).values([
-        {
-          id: newId("led"),
-          userId: input.userId,
-          account: userAccount,
-          type: "credit",
-          amountCents: credited,
-          referenceType: "swap",
-          referenceId: swapId,
-        },
-        {
-          id: newId("led"),
-          userId: input.userId,
-          account: "rewards_expense",
-          type: "debit",
-          amountCents: credited,
-          referenceType: "swap",
-          referenceId: swapId,
-        },
-      ]);
-    } else if (belowFloor || remainingCap === 0) {
+    } else if (status === "held" && wash) {
       await tx.insert(fraudFlags).values({
-        id: newId("flag"),
+        id: newLedgerId("flag"),
         userId: input.userId,
         swapId,
-        reason: belowFloor ? "below_threshold" : "daily_cap",
+        reason: "wash_round_trip",
+        status: "open",
+        rail: input.rail,
+        detail: JSON.stringify({
+          priorFromToken: wash.fromToken,
+          priorToToken: wash.toToken,
+          priorFromChain: wash.fromChain,
+          priorToChain: wash.toChain,
+          priorExecutedAt: wash.executedAt.toISOString(),
+        }),
+      });
+    } else if (status === "paused" || status === "below_threshold" || status === "capped") {
+      await tx.insert(fraudFlags).values({
+        id: newLedgerId("flag"),
+        userId: input.userId,
+        swapId,
+        reason: status === "paused" ? "rewards_paused" : status,
         status: "closed",
+        rail: input.rail,
       });
     }
 
@@ -194,7 +245,7 @@ export async function postSwapReward(
   });
 }
 
-async function readWallet(
+export async function readWallet(
   db: Awaited<ReturnType<typeof getDb>>,
   userId: string,
 ) {

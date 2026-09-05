@@ -6,16 +6,24 @@ import { rewardRules } from "@/lib/db/schema";
 import { OriginError, assertSameOrigin, jsonError } from "@/lib/security/origin";
 import { rewardRuleSchema } from "@/lib/validation/swap";
 
-export async function GET() {
-  const db = await getDb();
-  const rules = await db.select().from(rewardRules).orderBy(desc(rewardRules.version));
-  return Response.json({ rules });
+export async function GET(request: Request) {
+  try {
+    await assertAdmin(request);
+    const db = await getDb();
+    const rules = await db.select().from(rewardRules).orderBy(desc(rewardRules.version));
+    return Response.json({ rules });
+  } catch (error) {
+    if (error instanceof AdminError) {
+      return jsonError(error.status, error.message, "Admin request failed.");
+    }
+    return jsonError(400, "rules_failed", error instanceof Error ? error.message : "rules_failed");
+  }
 }
 
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    assertAdmin(request);
+    await assertAdmin(request);
     const body = rewardRuleSchema.parse(await request.json());
     const db = await getDb();
     const latest = await db

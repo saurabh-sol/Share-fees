@@ -19,25 +19,25 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     <WalletProvider>
       <div className="min-h-[100dvh]">
         <header className="sticky top-0 z-20 border-b border-white/8 bg-[#141416]/80 backdrop-blur-xl">
-          <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 md:px-8">
-            <Link href="/app" className="flex items-baseline gap-3">
+          <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 md:px-8">
+            <Link href="/app" className="flex shrink-0 items-baseline gap-3">
               <span className="font-mono text-xs tracking-[0.22em] text-[#c23a3a]">T2C</span>
-              <span className="text-sm text-zinc-200">Desk</span>
+              <span className="hidden text-sm text-zinc-200 sm:inline">Desk</span>
             </Link>
-            <nav className="flex items-center gap-6 text-sm text-zinc-400">
-              <Link href="/app" className="hover:text-zinc-100">
+            <nav className="flex min-w-0 items-center gap-4 overflow-x-auto text-sm text-zinc-400 md:gap-6">
+              <Link href="/app" className="shrink-0 hover:text-zinc-100">
                 Balances
               </Link>
-              <Link href="/app/swap" className="hover:text-zinc-100">
+              <Link href="/app/swap" className="shrink-0 hover:text-zinc-100">
                 Swap
               </Link>
-              <Link href="/app/claims" className="hover:text-zinc-100">
-                Claims
+              <Link href="/app/claims" className="shrink-0 hover:text-zinc-100">
+                Activity
               </Link>
-              <Link href="/app/redeem" className="hover:text-zinc-100">
+              <Link href="/app/redeem" className="shrink-0 hover:text-zinc-100">
                 Redeem
               </Link>
-              <Link href="/app/rewards" className="hover:text-zinc-100">
+              <Link href="/app/rewards" className="shrink-0 hover:text-zinc-100">
                 Ledger
               </Link>
               <span className="hidden font-mono text-xs text-zinc-500 md:inline">

@@ -1,5 +1,5 @@
 import { assertTxHash } from "@/lib/auth/addresses";
-import { getActiveRule } from "@/lib/rules/engine";
+import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { persistCandidates } from "./scan";
 import { reverifyCandidate } from "./claim";
 
@@ -17,9 +17,7 @@ export async function importHistoricalHash(input: {
     fromChain: input.fromChain,
     toChain: input.toChain,
   });
-  const rule = await getActiveRule();
-  if (verified.notionalUsdCents < rule.minNotionalUsdCents) {
-    throw new Error("below_threshold");
-  }
-  return persistCandidates(input.userId, [verified], rule.minNotionalUsdCents);
+  const rule = await getActiveRuleOrNull();
+  const floor = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
+  return persistCandidates(input.userId, [{ ...verified, kind: verified.kind ?? "trade" }], floor);
 }

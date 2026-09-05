@@ -1,11 +1,24 @@
 import { createConfig, http, injected } from "wagmi";
 import { coinbaseWallet, walletConnect } from "wagmi/connectors";
-import { arbitrum, base, bsc, mainnet, optimism, polygon, sepolia } from "wagmi/chains";
+import {
+  arbitrum,
+  avalanche,
+  base,
+  blast,
+  bsc,
+  linea,
+  mainnet,
+  optimism,
+  polygon,
+  scroll,
+  sepolia,
+} from "wagmi/chains";
+import { robinhoodChain } from "@/lib/chains/robinhood";
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 export const wagmiConfig = createConfig({
-  chains: [mainnet, optimism, arbitrum, base, polygon, bsc, sepolia],
+  chains: [mainnet, optimism, arbitrum, base, polygon, bsc, avalanche, linea, scroll, blast, robinhoodChain, sepolia],
   connectors: [
     injected(),
     coinbaseWallet({
@@ -28,6 +41,11 @@ export const wagmiConfig = createConfig({
     [base.id]: http(),
     [polygon.id]: http(),
     [bsc.id]: http(),
+    [avalanche.id]: http(),
+    [linea.id]: http(),
+    [scroll.id]: http(),
+    [blast.id]: http(),
+    [robinhoodChain.id]: http("https://rpc.mainnet.chain.robinhood.com"),
     [sepolia.id]: http(),
   },
   ssr: true,

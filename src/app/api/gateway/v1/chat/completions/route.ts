@@ -10,7 +10,7 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
-    rateLimitOrThrow(`gateway-ip:${clientIp(request)}`, 60, 60 * 1000);
+    await rateLimitOrThrow(`gateway-ip:${clientIp(request)}`, 60, 60 * 1000);
     const body = await request.json();
     const response = await handleChatCompletion({
       authorization: request.headers.get("authorization"),

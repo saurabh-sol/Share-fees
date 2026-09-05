@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps, swaps, walletScans } from "@/lib/db/schema";
-import { getActiveRule } from "@/lib/rules/engine";
-import type { HistoricalCandidate, TradeSource } from "./types";
+import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
+import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
@@ -38,20 +38,17 @@ export async function persistCandidates(
   let skipped = 0;
 
   for (const candidate of candidates) {
-    if (candidate.notionalUsdCents < minNotionalUsdCents) {
-      skipped += 1;
-      continue;
-    }
-
     const [alreadyBooked] = await client
       .select({ id: swaps.id })
       .from(swaps)
       .where(and(eq(swaps.txHash, candidate.txHash), eq(swaps.fromChain, candidate.fromChain)))
       .limit(1);
-    if (alreadyBooked) {
-      skipped += 1;
-      continue;
-    }
+
+    const qualifies =
+      !alreadyBooked &&
+      isClaimableKind(candidate.kind) &&
+      candidate.notionalUsdCents >= minNotionalUsdCents;
+    const status = alreadyBooked ? "booked" : qualifies ? "unclaimed" : "below_threshold";
 
     try {
       await client.insert(discoveredSwaps).values({
@@ -66,8 +63,9 @@ export async function persistCandidates(
         fromAmount: candidate.fromAmount,
         toAmount: candidate.toAmount,
         notionalUsdCents: candidate.notionalUsdCents,
+        kind: candidate.kind,
         executedAt: candidate.executedAt,
-        status: "unclaimed",
+        status,
       });
       inserted += 1;
     } catch {
@@ -94,10 +92,22 @@ export async function scanWallet(input: {
     .limit(1);
 
   if (!input.force && last && Date.now() - last.scannedAt.getTime() < SCAN_COOLDOWN_MS) {
-    throw new ScanError("scan_cooldown", 429);
+    const retryAfterSec = Math.ceil(
+      (SCAN_COOLDOWN_MS - (Date.now() - last.scannedAt.getTime())) / 1000,
+    );
+    return {
+      inserted: 0,
+      skipped: 0,
+      scanned: last.foundCount,
+      providers: last.provider ? last.provider.split(",").filter(Boolean) : [],
+      cooldown: true,
+      retryAfterSec,
+      minNotionalUsdCents: (await getActiveRuleOrNull(client))?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
+      windowDays: 90,
+    };
   }
 
-  const rule = await getActiveRule(client);
+  const rule = await getActiveRuleOrNull(client);
   const since = new Date(Date.now() - SCAN_WINDOW_MS);
   const candidates: HistoricalCandidate[] = [];
   const providers: string[] = [];
@@ -108,7 +118,12 @@ export async function scanWallet(input: {
     candidates.push(...batch);
   }
 
-  const result = await persistCandidates(input.userId, candidates, rule.minNotionalUsdCents, client);
+  const result = await persistCandidates(
+    input.userId,
+    candidates,
+    rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
+    client,
+  );
 
   await client
     .insert(walletScans)
@@ -116,14 +131,14 @@ export async function scanWallet(input: {
       userId: input.userId,
       scannedAt: new Date(),
       provider: providers.join(",") || "none",
-      foundCount: result.inserted,
+      foundCount: candidates.length,
     })
     .onConflictDoUpdate({
       target: walletScans.userId,
       set: {
         scannedAt: new Date(),
         provider: providers.join(",") || "none",
-        foundCount: result.inserted,
+        foundCount: candidates.length,
       },
     });
 
@@ -131,7 +146,7 @@ export async function scanWallet(input: {
     ...result,
     scanned: candidates.length,
     providers,
-    minNotionalUsdCents: rule.minNotionalUsdCents,
+    minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
     windowDays: 90,
   };
 }

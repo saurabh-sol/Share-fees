@@ -128,7 +128,7 @@ export async function handleChatCompletion(input: {
 }) {
   const raw = readBearerToken(input.authorization);
   const key = await authenticateVirtualKey(raw, input.db);
-  rateLimitOrThrow(`gateway:${key.keyHash}`, 60, 60_000);
+  await rateLimitOrThrow(`gateway:${key.keyHash}`, 60, 60_000);
 
   const parsed = chatCompletionSchema.parse(input.body);
   if (parsed.stream) {

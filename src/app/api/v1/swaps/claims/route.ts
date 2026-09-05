@@ -1,8 +1,8 @@
 import { getSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
-import { listUnclaimed } from "@/lib/indexer/claim";
+import { listWalletActivity } from "@/lib/indexer/claim";
 import { jsonError } from "@/lib/security/origin";
-import { computeRewardCents, getActiveRule } from "@/lib/rules/engine";
+import { computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 
 export async function GET() {
   const session = await getSession();
@@ -11,19 +11,25 @@ export async function GET() {
   }
 
   const [claims, rule] = await Promise.all([
-    listUnclaimed(session.user.id),
-    getActiveRule(),
+    listWalletActivity(session.user.id),
+    getActiveRuleOrNull(),
   ]);
 
   return Response.json({
     claims: claims.map((row) => ({
       ...row,
-      estimatedRewardCents: computeRewardCents(row.notionalUsdCents, rule.conversionBps),
+      estimatedRewardCents:
+        row.status === "unclaimed" && rule
+          ? computeRewardCents(row.notionalUsdCents, rule.conversionBps)
+          : 0,
     })),
-    rule: {
-      conversionBps: rule.conversionBps,
-      minNotionalUsdCents: rule.minNotionalUsdCents,
-    },
+    paused: !rule,
+    rule: rule
+      ? {
+          conversionBps: rule.conversionBps,
+          minNotionalUsdCents: rule.minNotionalUsdCents,
+        }
+      : null,
     autoScan: Boolean(env.zerionApiKey),
   });
 }

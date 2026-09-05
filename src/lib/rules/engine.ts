@@ -18,7 +18,7 @@ export function computeRewardCents(
   return Math.floor((notionalUsdCents * conversionBps) / 10_000);
 }
 
-export async function getActiveRule(db?: Awaited<ReturnType<typeof getDb>>): Promise<RewardRule> {
+export async function getActiveRuleOrNull(db?: Awaited<ReturnType<typeof getDb>>) {
   const client = db ?? (await getDb());
   const now = new Date();
   const rows = await client
@@ -33,8 +33,11 @@ export async function getActiveRule(db?: Awaited<ReturnType<typeof getDb>>): Pro
     )
     .orderBy(desc(rewardRules.version))
     .limit(1);
+  return rows[0] ?? null;
+}
 
-  const rule = rows[0];
+export async function getActiveRule(db?: Awaited<ReturnType<typeof getDb>>): Promise<RewardRule> {
+  const rule = await getActiveRuleOrNull(db);
   if (!rule) {
     throw new Error("no_active_reward_rule");
   }

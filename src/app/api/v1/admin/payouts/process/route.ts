@@ -5,7 +5,7 @@ import { OriginError, assertSameOrigin, jsonError } from "@/lib/security/origin"
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    assertAdmin(request);
+    await assertAdmin(request);
     const processed = await processPayoutOutbox();
     return Response.json({ processed });
   } catch (error) {

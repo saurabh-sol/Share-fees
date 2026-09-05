@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { assertTxHash } from "@/lib/auth/addresses";
 import { getSession } from "@/lib/auth/session";
+import { settleChangeNowFill } from "@/lib/changenow/settle";
+import { ChangeNowError } from "@/lib/changenow/types";
 import { LedgerError, postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { SettleError, readVerifiedFill } from "@/lib/lifi/settle";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
@@ -10,7 +12,7 @@ import { settleSwapSchema } from "@/lib/validation/swap";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`settle:${clientIp(request)}`, 20, 15 * 60 * 1000);
+    await rateLimitOrThrow(`settle:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
     const session = await getSession();
     if (!session) {
@@ -19,6 +21,31 @@ export async function POST(request: Request) {
 
     const body = settleSwapSchema.parse(await request.json());
     const txHash = assertTxHash("eip155", body.txHash);
+
+    if (body.provider === "changenow") {
+      if (!body.exchangeId) {
+        return jsonError(400, "missing_exchange", "ChangeNOW settle needs an exchange id.");
+      }
+      const verified = await settleChangeNowFill({
+        userId: session.user.id,
+        sessionAddress: session.user.address,
+        exchangeId: body.exchangeId,
+        txHash,
+        fromChain: body.fromChain,
+        toChain: body.toChain,
+        rail: body.rail,
+      });
+      if (verified.kind === "pending") {
+        return Response.json({ status: "pending", provider: "changenow", nowStatus: verified.status }, { status: 202 });
+      }
+      return Response.json({
+        ...verified.result,
+        notionalUsdCents: verified.notionalUsdCents,
+        provider: "changenow",
+        nowStatus: "finished",
+      });
+    }
+
     const verified = await readVerifiedFill({
       txHash,
       fromChain: body.fromChain,
@@ -27,10 +54,7 @@ export async function POST(request: Request) {
     });
 
     if (verified.kind === "pending") {
-      return Response.json(
-        { status: "pending", lifiStatus: verified.status.status },
-        { status: 202 },
-      );
+      return Response.json({ status: "pending", lifiStatus: verified.status.status }, { status: 202 });
     }
 
     const result = await postSwapReward({
@@ -54,6 +78,7 @@ export async function POST(request: Request) {
       ...result,
       notionalUsdCents: verified.notionalUsdCents,
       lifiStatus: "DONE",
+      provider: "lifi",
     });
   } catch (error) {
     if (error instanceof OriginError) {
@@ -61,6 +86,9 @@ export async function POST(request: Request) {
     }
     if (error instanceof RateLimitError) {
       return jsonError(429, "rate_limited", "Too many settle requests.");
+    }
+    if (error instanceof ChangeNowError) {
+      return jsonError(error.status, error.message, "ChangeNOW status was rejected.");
     }
     if (error instanceof SettleError) {
       return jsonError(error.status, error.message, "LI.FI status was rejected.");

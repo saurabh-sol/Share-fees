@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    rateLimitOrThrow(`redeem:${clientIp(request)}`, 20, 15 * 60 * 1000);
+    await rateLimitOrThrow(`redeem:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
     const session = await getSession();
     if (!session) {

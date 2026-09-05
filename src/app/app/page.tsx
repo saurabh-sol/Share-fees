@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/session";
 import { ClaimsBanner } from "@/components/app/ClaimsBanner";
+import { HeldBanner } from "@/components/app/HeldBanner";
 import { getDb } from "@/lib/db/client";
 import { wallets } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
@@ -24,6 +25,7 @@ export default async function DeskPage() {
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Desk</h1>
       </div>
       <ClaimsBanner userId={session.user.id} />
+      <HeldBanner userId={session.user.id} />
       <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-2 md:divide-x md:divide-y-0">
         <div className="py-8 md:pr-10">
           <dt className="text-sm text-zinc-500">USDT</dt>
@@ -39,15 +41,16 @@ export default async function DeskPage() {
         </div>
       </dl>
       <p className="max-w-[65ch] text-zinc-400">
-        Live routes settle through LI.FI. Historical $500+ fills can be scanned and claimed once.
+        Live routes settle through LI.FI or ChangeNOW (Robinhood ETH). Historical $500+ fills can be scanned and
+        claimed once.
         Redeem USDT or issue an LLM key from the desk. Cache is derived from ledger entries, never edited by hand.
       </p>
-      <div className="flex gap-6">
+      <div className="flex flex-wrap gap-6">
         <Link href="/app/swap" className="text-sm text-[#c23a3a]">
           Open swap studio
         </Link>
         <Link href="/app/claims" className="text-sm text-zinc-300">
-          Scan claims
+          Wallet activity
         </Link>
         <Link href="/app/redeem" className="text-sm text-zinc-300">
           Redeem

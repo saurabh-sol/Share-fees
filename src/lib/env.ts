@@ -10,11 +10,17 @@ const envSchema = z.object({
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   LIFI_API_KEY: z.string().optional(),
+  CHANGENOW_API_KEY: z.string().optional(),
   ZERION_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   TREASURY_ENABLED: z.enum(["true", "false"]).optional(),
   TREASURY_LIVE: z.enum(["true", "false"]).optional(),
   TREASURY_PRIVATE_KEY: z.string().optional(),
+  REDIS_URL: z.string().optional(),
+  REDIS_HOST: z.string().optional(),
+  REDIS_PORT: z.string().optional(),
+  REDIS_USERNAME: z.string().optional(),
+  REDIS_PASSWORD: z.string().optional(),
 });
 
 const parsed = envSchema.parse({
@@ -28,11 +34,17 @@ const parsed = envSchema.parse({
     process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   LIFI_API_KEY: process.env.LIFI_API_KEY,
+  CHANGENOW_API_KEY: process.env.CHANGENOW_API_KEY,
   ZERION_API_KEY: process.env.ZERION_API_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   TREASURY_ENABLED: process.env.TREASURY_ENABLED,
   TREASURY_LIVE: process.env.TREASURY_LIVE,
   TREASURY_PRIVATE_KEY: process.env.TREASURY_PRIVATE_KEY,
+  REDIS_URL: process.env.REDIS_URL,
+  REDIS_HOST: process.env.REDIS_HOST,
+  REDIS_PORT: process.env.REDIS_PORT,
+  REDIS_USERNAME: process.env.REDIS_USERNAME,
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
 });
 
 if (parsed.NODE_ENV === "production") {
@@ -57,11 +69,17 @@ export const env = {
   walletConnectProjectId: parsed.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
   publicAppUrl: parsed.NEXT_PUBLIC_APP_URL ?? parsed.APP_ORIGIN ?? "http://localhost:3000",
   lifiApiKey: parsed.LIFI_API_KEY,
+  changeNowApiKey: parsed.CHANGENOW_API_KEY,
   zerionApiKey: parsed.ZERION_API_KEY,
   openaiApiKey: parsed.OPENAI_API_KEY,
   treasuryEnabled: parsed.TREASURY_ENABLED === "true",
   treasuryLive: parsed.TREASURY_LIVE === "true",
   treasuryPrivateKey: parsed.TREASURY_PRIVATE_KEY,
+  redisUrl: parsed.REDIS_URL,
+  redisHost: parsed.REDIS_HOST,
+  redisPort: parsed.REDIS_PORT ? Number(parsed.REDIS_PORT) : 6379,
+  redisUsername: parsed.REDIS_USERNAME ?? "default",
+  redisPassword: parsed.REDIS_PASSWORD,
 };
 
 export function appDomain(): string {
