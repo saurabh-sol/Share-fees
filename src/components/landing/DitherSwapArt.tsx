@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ArrowRight, ArrowsClockwise, Coins } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react";
 
 const COLS = 56;
 const ROWS = 56;
@@ -72,6 +72,89 @@ function solToneAt(x: number, y: number): number {
   if (x < 5) return 1;
   if (x < 11) return (x + y) % 2 === 0 ? 0 : 1;
   return 0;
+}
+
+// Hover-state icons as string bitmaps: "." empty, "a"/"b"/"c" = palette 0/1/2.
+const SWAP_TONES = PIXEL_TONES;
+const COIN_TONES = ["#c23a3a", "rgba(194, 58, 58, 0.55)", "rgba(194, 58, 58, 0.28)"] as const;
+
+// Two half-ring arcs with pixel arrowheads (clockwise cycle).
+const SWAP_ROWS = [
+  "................",
+  ".......aa.......",
+  "....aaaaaaaa....",
+  "...aaaa..aaaa...",
+  "..aaa......aaa..",
+  "..aa........aa..",
+  "..aa.......aaaaa",
+  "..a.........aaa.",
+  ".aaa.........a..",
+  "aaaaa.......aa..",
+  "..aa........aa..",
+  "..aaa......aaa..",
+  "...aaaa..aaaa...",
+  "....aaaaaaaa....",
+  ".......aa.......",
+  "................",
+];
+
+// Two stacked pixel coins; the back coin sits dimmer for depth.
+const COINS_ROWS = [
+  "................",
+  "................",
+  "................",
+  "...bbbbbb.......",
+  ".bbccccccbb.....",
+  ".bccccccccb.....",
+  ".bccccccccb.....",
+  ".bbccccaaaaaa...",
+  "...bbaabbbbbbaa.",
+  ".....abbbbbbbba.",
+  ".....abbbbbbbba.",
+  ".....aabbbbbbaa.",
+  ".......aaaaaa...",
+  "................",
+  "................",
+  "................",
+];
+
+function PixelIconGlyph({
+  rows,
+  palette,
+  className,
+}: {
+  rows: string[];
+  palette: readonly [string, string, string];
+  className: string;
+}) {
+  const toneIndex: Record<string, number> = { a: 0, b: 1, c: 2 };
+  const rects: React.ReactNode[] = [];
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x += 1) {
+      const tone = toneIndex[row[x]!];
+      if (tone === undefined) continue;
+      rects.push(
+        <rect
+          key={`${x}-${y}`}
+          x={x + 0.08}
+          y={y + 0.08}
+          width={0.84}
+          height={0.84}
+          fill={palette[tone]}
+        />,
+      );
+    }
+  });
+  return (
+    <svg
+      viewBox={`0 0 ${rows[0]!.length} ${rows.length}`}
+      shapeRendering="crispEdges"
+      className={className}
+      aria-hidden
+    >
+      {rects}
+    </svg>
+  );
 }
 
 function PixelTokenGlyph({
@@ -221,12 +304,12 @@ export function DitherSwapArt() {
           </div>
           <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
             <div className="flex flex-col items-center gap-2">
-              <ArrowsClockwise size={36} className="text-zinc-100" />
+              <PixelIconGlyph rows={SWAP_ROWS} palette={SWAP_TONES} className="h-9 w-9" />
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-100">Swap</span>
             </div>
             <span className="font-mono text-2xl text-zinc-500">=</span>
             <div className="flex flex-col items-center gap-2">
-              <Coins size={36} className="text-accent" />
+              <PixelIconGlyph rows={COINS_ROWS} palette={COIN_TONES} className="h-9 w-9" />
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Credits</span>
             </div>
           </div>

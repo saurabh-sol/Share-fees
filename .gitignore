@@ -45,6 +45,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# temporary screenshot checks
+.tmp-check/
+
 # local agent / design notes — keep off GitHub
 AGENTS.md
 CLAUDE.md

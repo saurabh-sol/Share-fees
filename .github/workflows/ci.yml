@@ -10,15 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SESSION_SECRET: ci-session-secret-min-32-characters
+      SESSION_SECRET: ci-session-secret-min-32-characters-long
       APP_ORIGIN: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
