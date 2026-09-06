@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleLogo, OpenAiLogo } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -10,24 +11,28 @@ const APIS = [
     host: "api.openai.com/v1",
     path: "POST /v1/chat/completions",
     auth: "Authorization: Bearer t2c_…",
-    mark: "/openai.png",
-    invert: true,
+    mark: "openai" as const,
   },
   {
     vendor: "Anthropic",
     host: "api.anthropic.com",
     path: "POST /v1/messages",
     auth: "x-api-key: t2c_…",
-    mark: "/claude.png",
-    invert: false,
+    mark: "/claude.png" as const,
   },
   {
     vendor: "DeepSeek",
     host: "api.deepseek.com/v1",
     path: "POST /v1/chat/completions",
     auth: "Authorization: Bearer t2c_…",
-    mark: "/deepseek.png",
-    invert: false,
+    mark: "/deepseek.png" as const,
+  },
+  {
+    vendor: "Google",
+    host: "generativelanguage.googleapis.com",
+    path: "POST /v1beta/models/{model}:generateContent",
+    auth: "x-goog-api-key: t2c_…",
+    mark: "google" as const,
   },
 ];
 
@@ -43,7 +48,7 @@ export function ApiSurface() {
         </div>
         <p className="max-w-[44ch] text-base leading-relaxed text-zinc-400">
           Redeem locks a provider. The key is that vendor’s real contract. Usage hits the live model and burns
-          remaining cents. The pool key never leaves the server.
+          remaining cents. Upstream credentials stay on the server.
         </p>
       </div>
 
@@ -59,13 +64,19 @@ export function ApiSurface() {
           >
             <div className="flex items-center gap-4 border-b border-white/8 px-4 py-10 md:border-b-0 md:border-r md:px-8">
               <span className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-[#1c1c1f] ring-1 ring-white/8">
-                <img
-                  src={item.mark}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className={`h-9 w-9 object-contain ${item.invert ? "invert" : ""}`}
-                />
+                {item.mark === "openai" ? (
+                  <OpenAiLogo size={22} weight="regular" className="text-zinc-100" />
+                ) : item.mark === "google" ? (
+                  <GoogleLogo size={22} weight="regular" className="text-zinc-100" />
+                ) : (
+                  <img
+                    src={item.mark}
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="h-7 w-7 object-contain"
+                  />
+                )}
               </span>
               <div>
                 <p className="text-xl tracking-tight text-zinc-100">{item.vendor}</p>

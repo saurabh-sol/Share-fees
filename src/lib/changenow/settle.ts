@@ -56,7 +56,7 @@ export async function settleChangeNowFill(input: {
     return { kind: "pending" as const, status: live.status };
   }
   if (kind === "failed") {
-    throw new ChangeNowError(`ChangeNOW marked the swap ${live.status}.`, 400);
+    throw new ChangeNowError(`The route marked the swap ${live.status}.`, 400);
   }
 
   assertPayoutOwnedBy(live, input.sessionAddress);

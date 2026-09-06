@@ -120,10 +120,15 @@ export function ClaimsInbox({
         updated?: number;
         providers: string[];
         cooldown?: boolean;
+        cached?: boolean;
         retryAfterSec?: number;
       }>("/api/v1/swaps/scan", { method: "POST" });
       await load();
-      if (result.cooldown) {
+      if (result.cached) {
+        setMessage(
+          "History provider is busy. Showing the last scan. Import a hash if you need a new fill now.",
+        );
+      } else if (result.cooldown) {
         setMessage(
           `Last scan is still fresh. Try again in ${Math.max(1, result.retryAfterSec ?? 60)}s.`,
         );
@@ -183,8 +188,8 @@ export function ClaimsInbox({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="max-w-[65ch] text-sm text-zinc-400">
           {autoScan
-            ? `Scan pulls confirmed wallet transfers from the last 90 days and totals the USD volume. Reward is shown only when that total clears ${money(minNotionalUsdCents)}.`
-            : "Automatic scan needs ZERION_API_KEY. You can still import a hash that LI.FI (or Zerion) can prove is yours."}
+            ? `Scan lists 90 days of transfers and sums swap volume. The history key is shared, so a busy minute reuses your last scan. Import a hash if you need one fill now. Reward shows after volume clears ${money(minNotionalUsdCents)}.`
+            : "Wallet scan needs ZERION_API_KEY. You can still import a hash that LI.FI can prove is yours."}
         </p>
         <button
           type="button"
@@ -202,7 +207,7 @@ export function ClaimsInbox({
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">{summary.transferCount}</dd>
         </div>
         <div className="py-6 md:px-8">
-          <dt className="text-sm text-zinc-500">Total volume</dt>
+          <dt className="text-sm text-zinc-500">Swap volume</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(summary.totalVolumeCents)}
           </dd>

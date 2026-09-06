@@ -196,7 +196,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
         userId: input.userId,
         destination,
         amountCents: input.amountCents,
-        chain: "ethereum",
+        chain: "robinhood",
         status: "queued",
       });
     }

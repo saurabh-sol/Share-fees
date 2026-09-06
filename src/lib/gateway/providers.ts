@@ -1,6 +1,9 @@
 import { env } from "@/lib/env";
-import type { LlmProvider } from "./catalog";
+import { gatewayModelSlug, type LlmProvider } from "./catalog";
 import { GatewayError } from "./errors";
+
+const AI_GATEWAY_CHAT = "https://ai-gateway.vercel.sh/v1/chat/completions";
+const AI_GATEWAY_MESSAGES = "https://ai-gateway.vercel.sh/v1/messages";
 
 export type ChatForwarder = (input: {
   body: unknown;
@@ -49,28 +52,49 @@ async function readJson(response: Response) {
   return (await response.json()) as Record<string, unknown>;
 }
 
-/** Pool keys stay server-side. Clients send only Authorization: Bearer t2c_… */
+export function aiGatewayAuth() {
+  return env.aiGatewayApiKey || env.vercelOidcToken || "";
+}
+
+/** Gateway rejects OIDC JWTs as Authorization: Bearer. Keys use Bearer; OIDC uses x-vercel-oidc-token. */
+export function aiGatewayHeaders(): Record<string, string> {
+  if (env.aiGatewayApiKey) {
+    return { authorization: `Bearer ${env.aiGatewayApiKey}` };
+  }
+  if (env.vercelOidcToken) {
+    return { "x-vercel-oidc-token": env.vercelOidcToken };
+  }
+  return {};
+}
+
+/** Optional leftover per-provider keys. Prefer AI Gateway so .env does not hold house keys. */
 export function poolKeyFor(provider: LlmProvider) {
   if (provider === "anthropic") return env.anthropicApiKey;
   if (provider === "deepseek") return env.deepseekApiKey;
+  if (provider === "google") return env.googleApiKey;
   return env.openaiApiKey;
 }
 
 export function providerReady(provider: LlmProvider) {
-  return Boolean(poolKeyFor(provider));
+  return Boolean(aiGatewayAuth() || poolKeyFor(provider));
+}
+
+function throwUnlessReady(provider: LlmProvider) {
+  if (providerReady(provider)) return;
+  throw new GatewayError("provider_pool_empty", 503);
 }
 
 const forwardOpenAICompatible = async (
   url: string,
-  apiKey: string,
+  headers: Record<string, string>,
   body: unknown,
   signal?: AbortSignal,
 ) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
+      ...headers,
     },
     body: JSON.stringify(body),
     signal,
@@ -89,22 +113,61 @@ const forwardOpenAICompatible = async (
   };
 };
 
+async function forwardViaAiGatewayChat(
+  provider: LlmProvider,
+  publicModel: string,
+  body: unknown,
+  signal?: AbortSignal,
+) {
+  const token = aiGatewayAuth();
+  if (!token) return null;
+  const record = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : {};
+  record.model = gatewayModelSlug(provider, publicModel);
+  record.stream = false;
+  const forwarded = await forwardOpenAICompatible(AI_GATEWAY_CHAT, aiGatewayHeaders(), record, signal);
+  return {
+    ...forwarded,
+    model: publicModel,
+  };
+}
+
 export const forwardToOpenAI: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("openai");
+  const publicModel = asChatBody(body).model;
+  const viaGateway = await forwardViaAiGatewayChat("openai", publicModel, body, signal);
+  if (viaGateway) return viaGateway;
   const key = env.openaiApiKey;
   if (!key) throw new GatewayError("provider_pool_empty", 503);
-  return forwardOpenAICompatible("https://api.openai.com/v1/chat/completions", key, body, signal);
+  return forwardOpenAICompatible(
+    "https://api.openai.com/v1/chat/completions",
+    { authorization: `Bearer ${key}` },
+    body,
+    signal,
+  );
 };
 
 export const forwardToDeepSeek: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("deepseek");
+  const publicModel = asChatBody(body).model;
+  const viaGateway = await forwardViaAiGatewayChat("deepseek", publicModel, body, signal);
+  if (viaGateway) return viaGateway;
   const key = env.deepseekApiKey;
   if (!key) throw new GatewayError("provider_pool_empty", 503);
-  return forwardOpenAICompatible("https://api.deepseek.com/v1/chat/completions", key, body, signal);
+  return forwardOpenAICompatible(
+    "https://api.deepseek.com/v1/chat/completions",
+    { authorization: `Bearer ${key}` },
+    body,
+    signal,
+  );
 };
 
 export const forwardToAnthropic: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("anthropic");
+  const parsed = asChatBody(body);
+  const viaGateway = await forwardViaAiGatewayChat("anthropic", parsed.model, body, signal);
+  if (viaGateway) return viaGateway;
   const key = env.anthropicApiKey;
   if (!key) throw new GatewayError("provider_pool_empty", 503);
-  const parsed = asChatBody(body);
   const system = parsed.messages
     .filter((item) => item.role === "system")
     .map((item) => contentToText(item.content))
@@ -170,16 +233,46 @@ export const forwardToAnthropic: ChatForwarder = async ({ body, signal }) => {
   };
   return {
     response: Response.json(openaiShaped),
-    promptTokens: usage.input_tokens ?? 0,
-    completionTokens: usage.output_tokens ?? 0,
+    promptTokens,
+    completionTokens,
     model: parsed.model,
   };
 };
 
 export const forwardAnthropicMessages: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("anthropic");
+  const record = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : {};
+  const publicModel = typeof record.model === "string" ? record.model : asChatBody(body).model;
+  const token = aiGatewayAuth();
+  if (token) {
+    record.model = gatewayModelSlug("anthropic", publicModel);
+    record.stream = false;
+    const response = await fetch(AI_GATEWAY_MESSAGES, {
+      method: "POST",
+      headers: {
+        ...aiGatewayHeaders(),
+        "content-type": "application/json",
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(record),
+      signal,
+    });
+    const json = await readJson(response);
+    if (!response.ok) {
+      const err = json.error as { message?: string } | undefined;
+      throw new GatewayError(err?.message ?? "provider_error", 502);
+    }
+    const usage = (json.usage ?? {}) as { input_tokens?: number; output_tokens?: number };
+    return {
+      response: Response.json({ ...json, model: publicModel }),
+      promptTokens: usage.input_tokens ?? 0,
+      completionTokens: usage.output_tokens ?? 0,
+      model: publicModel,
+    };
+  }
+
   const key = env.anthropicApiKey;
   if (!key) throw new GatewayError("provider_pool_empty", 503);
-  const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -200,12 +293,31 @@ export const forwardAnthropicMessages: ChatForwarder = async ({ body, signal }) 
     response: Response.json(json),
     promptTokens: usage.input_tokens ?? 0,
     completionTokens: usage.output_tokens ?? 0,
-    model: typeof json.model === "string" ? json.model : asChatBody(body).model,
+    model: typeof json.model === "string" ? json.model : publicModel,
   };
+};
+
+export const forwardToGoogle: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("google");
+  const publicModel = asChatBody(body).model;
+  const viaGateway = await forwardViaAiGatewayChat("google", publicModel, body, signal);
+  if (viaGateway) return viaGateway;
+  const key = env.googleApiKey;
+  if (!key) throw new GatewayError("provider_pool_empty", 503);
+  const record = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : {};
+  record.model = publicModel;
+  record.stream = false;
+  return forwardOpenAICompatible(
+    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    { authorization: `Bearer ${key}` },
+    record,
+    signal,
+  );
 };
 
 export function forwarderFor(provider: LlmProvider): ChatForwarder {
   if (provider === "anthropic") return forwardToAnthropic;
   if (provider === "deepseek") return forwardToDeepSeek;
+  if (provider === "google") return forwardToGoogle;
   return forwardToOpenAI;
 }

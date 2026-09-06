@@ -72,7 +72,7 @@ describe("historical scan → claim → ledger", () => {
     expect(activity[0]?.status).toBe("below_threshold");
   });
 
-  it("sums every transfer and only mentions reward after $250 volume", async () => {
+  it("sums swap volume only and ignores sends after $250 trade volume", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await persistCandidates(
@@ -88,9 +88,9 @@ describe("historical scan → claim → ledger", () => {
     const activity = await listWalletActivity(userId, db);
     const summary = summarizeWalletVolume(activity, { conversionBps: 50 });
     expect(activity).toHaveLength(3);
-    expect(summary.totalVolumeCents).toBe(55_000);
+    expect(summary.totalVolumeCents).toBe(40_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(275);
+    expect(summary.estimatedTotalRewardCents).toBe(200);
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
@@ -127,7 +127,7 @@ describe("historical scan → claim → ledger", () => {
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
-  it("lets an empty scan retry and cools down after a non-empty scan", async () => {
+  it("cools down after any scan, including an empty one", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     const empty = await scanWallet({
@@ -144,8 +144,13 @@ describe("historical scan → claim → ledger", () => {
       sources: [{ name: "mock", fetchTrades: async () => [] }],
       db,
     });
-    expect(retryEmpty.cooldown).toBeUndefined();
+    expect(retryEmpty.cooldown).toBe(true);
+    expect(retryEmpty.retryAfterSec).toBeGreaterThan(0);
+  });
 
+  it("returns the last scan when Zerion rate-limits", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
     await scanWallet({
       userId,
       address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -155,10 +160,19 @@ describe("historical scan → claim → ledger", () => {
     const replay = await scanWallet({
       userId,
       address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      sources: [{ name: "mock", fetchTrades: async () => [candidate()] }],
+      sources: [
+        {
+          name: "zerion",
+          fetchTrades: async () => {
+            throw new Error("zerion_429");
+          },
+        },
+      ],
+      force: true,
       db,
     });
+    expect(replay.cached).toBe(true);
+    expect(replay.scanned).toBe(1);
     expect(replay.cooldown).toBe(true);
-    expect(replay.retryAfterSec).toBeGreaterThan(0);
   });
 });

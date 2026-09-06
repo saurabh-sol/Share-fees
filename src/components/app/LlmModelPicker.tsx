@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CaretDown, Check } from "@phosphor-icons/react";
+import { CaretDown, Check, GoogleLogo, OpenAiLogo } from "@phosphor-icons/react";
 import {
   LLM_CATALOG,
   modelsForProvider,
@@ -11,13 +11,9 @@ import {
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
 
-const PROVIDER_MARK: Record<
-  LlmProvider,
-  { src: string; invert?: boolean; tile: string }
-> = {
-  anthropic: { src: "/claude.png", tile: "bg-[#141416]" },
-  openai: { src: "/openai.png", invert: true, tile: "bg-white" },
-  deepseek: { src: "/deepseek.png", tile: "bg-[#141416]" },
+const PROVIDER_MARK: Record<Exclude<LlmProvider, "openai" | "google">, { src: string }> = {
+  anthropic: { src: "/claude.png" },
+  deepseek: { src: "/deepseek.png" },
 };
 
 export function ProviderMark({
@@ -27,19 +23,24 @@ export function ProviderMark({
   provider: LlmProvider;
   size?: number;
 }) {
-  const mark = PROVIDER_MARK[provider];
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md ring-1 ring-white/8 ${mark.tile}`}
+      className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#141416] ring-1 ring-white/8"
       style={{ width: size, height: size }}
     >
-      <img
-        src={mark.src}
-        alt=""
-        width={size}
-        height={size}
-        className={`h-full w-full object-contain ${mark.invert ? "invert" : ""}`}
-      />
+      {provider === "openai" ? (
+        <OpenAiLogo size={Math.round(size * 0.62)} weight="regular" className="text-zinc-100" />
+      ) : provider === "google" ? (
+        <GoogleLogo size={Math.round(size * 0.62)} weight="regular" className="text-zinc-100" />
+      ) : (
+        <img
+          src={PROVIDER_MARK[provider].src}
+          alt=""
+          width={size}
+          height={size}
+          className="h-[72%] w-[72%] object-contain"
+        />
+      )}
     </span>
   );
 }
@@ -48,10 +49,12 @@ export function LlmModelPicker({
   provider,
   model,
   onChange,
+  compact = false,
 }: {
   provider: LlmProvider;
   model: string;
   onChange: (next: { provider: LlmProvider; model: string }) => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -75,21 +78,33 @@ export function LlmModelPicker({
   }, []);
 
   return (
-    <div ref={rootRef} className="relative">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Model</p>
+    <div ref={rootRef} className={`relative ${compact ? "w-[13.5rem] shrink-0" : ""}`}>
+      {compact ? (
+        <span className="sr-only">Model</span>
+      ) : (
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Model</p>
+      )}
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="mt-3 flex w-full items-center gap-3 border border-white/8 bg-[#1c1c1f] px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
+        className={`flex w-full items-center text-left transition-transform active:scale-[0.98] ${
+          compact
+            ? "gap-2 border border-white/10 px-3 py-2"
+            : "mt-3 gap-3 border border-white/8 bg-[#1c1c1f] px-3 py-2.5"
+        }`}
       >
-        <ProviderMark provider={provider} size={32} />
+        <ProviderMark provider={provider} size={compact ? 22 : 32} />
         <span className="min-w-0 flex-1">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-            {selectedProvider.label}
+          {compact ? null : (
+            <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+              {selectedProvider.label}
+            </span>
+          )}
+          <span className={`block truncate text-sm text-zinc-100 ${compact ? "" : "mt-0.5"}`}>
+            {selectedModel?.label}
           </span>
-          <span className="mt-0.5 block truncate text-sm text-zinc-100">{selectedModel?.label}</span>
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={spring} className="text-zinc-500">
           <CaretDown size={16} />
@@ -99,11 +114,15 @@ export function LlmModelPicker({
       <AnimatePresence>
         {open ? (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: compact ? 6 : -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
+            exit={{ opacity: 0, y: compact ? 6 : -6 }}
             transition={spring}
-            className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden border border-white/8 bg-[#1c1c1f] shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+            className={`absolute z-30 overflow-hidden border border-white/8 bg-[#1c1c1f] ${
+              compact
+                ? "bottom-[calc(100%+8px)] right-0 w-[min(22rem,calc(100vw-2rem))]"
+                : "left-0 right-0 top-[calc(100%+8px)]"
+            }`}
           >
             <div className="grid grid-cols-1 sm:grid-cols-[7.5rem_1fr] md:grid-cols-[9.5rem_1fr]">
               <div className="border-b border-white/8 sm:border-b-0 sm:border-r">
@@ -127,7 +146,7 @@ export function LlmModelPicker({
                   );
                 })}
               </div>
-              <div>
+              <div className="max-h-80 overflow-y-auto">
                 {modelsForProvider(provider).map((item) => {
                   const active = item.id === model;
                   return (

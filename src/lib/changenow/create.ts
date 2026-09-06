@@ -25,7 +25,7 @@ export async function openChangeNowPayin(input: {
   });
   if (!payoutOk.result) {
     throw new ChangeNowError(
-      payoutOk.message ?? "ChangeNOW rejected the payout address for that network.",
+      payoutOk.message ?? "That payout address was rejected for this network.",
       400,
     );
   }
@@ -91,7 +91,7 @@ export async function loadUserExchange(input: { userId: string; exchangeId: stri
     .where(eq(changenowExchanges.exchangeId, input.exchangeId))
     .limit(1);
   if (!row) {
-    throw new ChangeNowError("Unknown ChangeNOW exchange.", 404);
+    throw new ChangeNowError("Unknown pay-in.", 404);
   }
   if (row.userId !== input.userId) {
     throw new ChangeNowError("exchange_not_owned", 403);

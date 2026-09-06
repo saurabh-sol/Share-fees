@@ -1,8 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { creditEvents, discoveredSwaps, swaps } from "@/lib/db/schema";
 import { listWalletActivity } from "@/lib/indexer/claim";
 import { summarizeWalletVolume } from "@/lib/indexer/summary";
+import { CLAIMABLE_KINDS } from "@/lib/indexer/types";
 import {
   MIN_NOTIONAL_USD_CENTS,
   MIN_REWARD_CENTS,
@@ -157,5 +158,11 @@ async function markVolumeSettled(
   await db
     .update(discoveredSwaps)
     .set({ status: "volume_settled", claimedAt: new Date() })
-    .where(and(eq(discoveredSwaps.userId, userId), eq(discoveredSwaps.status, "unclaimed")));
+    .where(
+      and(
+        eq(discoveredSwaps.userId, userId),
+        eq(discoveredSwaps.status, "unclaimed"),
+        inArray(discoveredSwaps.kind, [...CLAIMABLE_KINDS]),
+      ),
+    );
 }

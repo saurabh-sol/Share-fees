@@ -28,6 +28,8 @@ export async function GET() {
       database,
       redis,
       treasuryCanBroadcast: treasuryCanBroadcast(),
+      cronConfigured: Boolean(env.cronSecret),
+      adminConfigured: Boolean(env.adminSecret),
     },
     { status: ok ? 200 : 503 },
   );

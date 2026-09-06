@@ -26,11 +26,11 @@ export async function ClaimsBanner({ userId }: { userId: string }) {
   return (
     <div className="flex flex-col gap-3 border-y border-white/8 py-5 md:flex-row md:items-center md:justify-between">
       <p className="text-sm text-zinc-300">
-        {summary.transferCount} transfer{summary.transferCount === 1 ? "" : "s"} · volume{" "}
+        {summary.transferCount} transfer{summary.transferCount === 1 ? "" : "s"} · swap volume{" "}
         {money(summary.totalVolumeCents)}
         {summary.qualifiesVolume
           ? ` · reward ${money(summary.estimatedTotalRewardCents)} at ${summary.conversionBps} bps`
-          : ` · reward listed after ${money(summary.minNotionalUsdCents)} volume`}
+          : ` · reward listed after ${money(summary.minNotionalUsdCents)} swap volume`}
         . {claims.length} swap{claims.length === 1 ? "" : "s"} ready to claim.
       </p>
       <Link href="/app/claims" className="text-sm text-[#c23a3a]">

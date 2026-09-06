@@ -175,7 +175,7 @@ export function SwapStudio({
     setPhase("settling");
     setProgress(
       provider === "changenow"
-        ? "Waiting for ChangeNOW to finish the payout…"
+        ? "Waiting for the payout to finish…"
         : "Waiting for LI.FI to confirm the fill…",
     );
     for (let attempt = 0; attempt < 24; attempt += 1) {
@@ -224,7 +224,7 @@ export function SwapStudio({
     setMessage(null);
     try {
       if (quote.provider === "changenow" || isChangeNowQuote(quote.quote)) {
-        setProgress("Opening a ChangeNOW pay-in…");
+        setProgress("Opening a pay-in…");
         const decimals = fromMeta?.decimals ?? 18;
         const fromAmount = parseUnits(amount, decimals).toString();
         const opened = await readJson<OpenedPayin>("/api/v1/swaps/changenow/create", {
@@ -238,7 +238,7 @@ export function SwapStudio({
           }),
         });
         setPayin(opened);
-        setProgress("Check your wallet — send the deposit to the ChangeNOW address.");
+        setProgress("Check your wallet — send the deposit to the pay-in address.");
         const { sendChangeNowDeposit } = await import("@/lib/changenow/browser");
         const txHash = await sendChangeNowDeposit({
           fromChainId,
@@ -282,7 +282,7 @@ export function SwapStudio({
     return (
       <p className="max-w-[65ch] text-zinc-400">
         Swap Studio is EVM-only. Sign out and connect MetaMask or Coinbase to run a live route, including
-        Robinhood Chain ETH via ChangeNOW.
+        Robinhood Chain ETH.
       </p>
     );
   }
@@ -360,11 +360,11 @@ export function SwapStudio({
         <p className="font-mono text-xs text-zinc-500">
           {quote
             ? quote.provider === "changenow"
-              ? "ChangeNOW"
+              ? "Desk route"
               : "LI.FI"
             : robinhoodLeg
-              ? "Robinhood ETH routes through ChangeNOW"
-              : "LI.FI first, ChangeNOW if the pair is missing"}
+              ? "Robinhood ETH desk route"
+              : "LI.FI first; desk route if the pair is missing"}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">

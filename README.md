@@ -2,7 +2,9 @@
 
 **You swap. We credit.**
 
-Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, and DeepSeek-compatible clients.
+Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, and Google-compatible clients.
+
+The full walk of the live site is in [E2E.md](E2E.md).
 
 There is no email account and no username. The address that signs in is the desk. Ethereum wallets sign SIWE. Solana wallets sign SIWS. The session stays bound to that address.
 
@@ -10,11 +12,11 @@ There is no email account and no username. The address that signs in is the desk
 
 | Term | Value |
 | --- | --- |
-| Floor | **$250 USD** confirmed volume before BPS is listed; each paying fill must also be at or above $250 |
+| Floor | **$250 USD** confirmed **swap** volume before BPS is listed. Sends, receives, and approvals do not count. A single imported fill still has to be at or above $250 to claim on its own. |
 | Ratio | **50 bps** (0.50%) of qualifying notional |
 | Worked example | $1,842.60 notional × 50 bps = **$9.21** credit |
 | Daily cap | **$2,500** of credit per day |
-| USDG destination | Signed-in EVM address only, on **Ethereum** |
+| USDG destination | Signed-in EVM address only, on **Robinhood Chain** |
 | LLM credit | Metered `t2c_` key, shown once |
 
 Notional is the **USD value of the fill**, not the token amount. A $40 swap in a large-cap token is still $40. Changing the published rule later does not rewrite rows that already posted.
@@ -22,13 +24,13 @@ Notional is the **USD value of the fill**, not the token amount. A $40 swap in a
 ## How it pays
 
 1. **Connect the wallet** at `/login`. MetaMask, Phantom, Coinbase, and other injected wallets are detected from the extension.
-2. **Swap live, or bring history.** Swap Studio quotes and executes through LI.FI, ChangeNOW, or Robinhood ETH. Activity can scan the same wallet (last 90 days, when a scan key is configured) or accept a verified transaction hash.
-3. **Clear the $250 floor.** Confirmed volume on the connected wallet must reach $250 before BPS is listed. Smaller fills can still execute. They do not pay.
+2. **Swap live, or bring history.** Swap Studio quotes and executes through LI.FI or Robinhood ETH. Activity can scan the same wallet (last 90 days, when a scan key is configured) or accept a verified transaction hash.
+3. **Clear the $250 floor.** Confirmed swap volume on the connected wallet must reach $250 before BPS is listed. Smaller swaps still count toward that total. Sends do not. A live fill below $250 still executes; it does not pay on its own.
 4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
 5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it.
 6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
 
-Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, ChangeNOW, and Robinhood.
+Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, and Robinhood.
 
 ## The desk
 
@@ -45,9 +47,9 @@ Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, ChangeNOW, and R
 
 ### USDG
 
-Pick the USDG rail before the credit is consumed. Redeem queues a payout to the **session EVM address on Ethereum**. No other destination is accepted.
+Pick the USDG rail before the credit is consumed. Redeem queues a payout to the **session EVM address on Robinhood Chain**. Gas is Robinhood ETH. The token is Robinhood USDG, not Paxos USDG on Ethereum mainnet. No other destination is accepted.
 
-The redeem still books when treasury is off. The transfer waits in queue until treasury is enabled, a signing key is present, and (in production) live send is turned on. Until then, the desk shows the redeem as queued, not broadcast.
+The redeem still books when treasury is off. Locally a valid `TREASURY_PRIVATE_KEY` is enough to broadcast unless `TREASURY_ENABLED=false`. Production also needs `TREASURY_ENABLED=true` and `TREASURY_LIVE=true`. Until then, the desk shows the redeem as queued, not broadcast.
 
 ### LLM credits
 
@@ -68,7 +70,7 @@ await client.chat.completions.create({
 });
 ```
 
-If a provider pool key is missing, redeem can still issue the virtual key; that provider returns an error until the pool is funded. `/gateway/v1` is the same API.
+Upstream calls go through **Vercel AI Gateway**. You do not paste OpenAI, Anthropic, or DeepSeek keys. Set `AI_GATEWAY_API_KEY`, or on Vercel use the automatic OIDC token. Desk credit still caps the `t2c_` key. If Gateway is unset and a leftover provider key is also empty, that provider returns `503`. `/gateway/v1` is the same API.
 
 ## What the desk will not do
 
@@ -124,16 +126,17 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 | `REDIS_URL` | Rate limits. Required in production. |
 | `LIFI_API_KEY` | Optional partner key. Public quotes still work without it. |
 | `CHANGENOW_API_KEY` | Required to open a ChangeNOW pay-in. |
-| `ZERION_API_KEY` | Enables automatic 90-day wallet scans. Without it, users can still import a verified hash. |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` | Pool keys for the LLM gateway. Paste into `.env.local` only, then restart the desk. Virtual `t2c_` keys never see these. Empty = `503 provider_pool_empty`. |
-| `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | All three are required before USDG is broadcast. The private key stays server-only. |
-| `CRON_SECRET` | Authorizes the payout and settle jobs. |
+| `ZERION_API_KEY` | Shared 90-day wallet scan key. Calls are queued (2/sec) and a scan is reused for 15 minutes. Without it, users can still import a verified hash. |
+| `AI_GATEWAY_API_KEY` | One Vercel AI Gateway key for OpenAI, Anthropic, and DeepSeek. On Vercel, `VERCEL_OIDC_TOKEN` is enough. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY` | Optional fallbacks if Gateway is unset. Virtual `t2c_` keys never see these. |
+| `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | Signs Robinhood USDG transfers. Locally a valid key is enough unless `TREASURY_ENABLED=false`. Production also needs enabled + live. The private key stays server-only. |
+| `CRON_SECRET` | Authorizes the payout and settle jobs. Local `next dev` ticks them every minute. Vercel Cron uses the same secret. |
 | `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for provider settle webhooks. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional. WalletConnect stays hidden if empty. |
 
 Do not put treasury or vendor keys in an image or a committed file.
 
-LLM path: credit → redeem(provider) → `t2c_` → official `/v1/chat/completions` → pool key. After the three pool keys are set, `npx vitest run src/lib/gateway/live.e2e.test.ts` probes models, chat, and the 401 / 400 / 402 / 503 cases per provider.
+LLM path: credit → redeem(provider) → `t2c_` → official `/v1/chat/completions` → AI Gateway. After `AI_GATEWAY_API_KEY` or OIDC is set, `npx vitest run src/lib/gateway/live.e2e.test.ts` probes models, chat, and the 401 / 400 / 402 / 503 cases per provider.
 
 ## Operator console
 

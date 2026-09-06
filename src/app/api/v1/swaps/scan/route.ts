@@ -8,7 +8,9 @@ function humanizeScanError(message: string) {
   if (message.startsWith("zerion_401") || message.startsWith("zerion_403")) {
     return "History provider rejected the key. Check ZERION_API_KEY.";
   }
-  if (message.startsWith("zerion_429")) return "History provider is rate-limiting. Retry in a minute.";
+  if (message.startsWith("zerion_429") || message === "rate_limited") {
+    return "History provider is busy. Wait a minute, or import a transaction hash instead.";
+  }
   if (message.startsWith("zerion_")) return "History provider failed. Retry the scan.";
   if (message.includes("getTime") || message.includes("Invalid time")) {
     return "Scan state was unreadable. Retry.";
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }
 
-    await rateLimitOrThrow(`scan:${session.user.id}`, 30, 15 * 60 * 1000);
+    await rateLimitOrThrow(`scan:${session.user.id}`, 6, 15 * 60 * 1000);
 
     const result = await scanWallet({
       userId: session.user.id,

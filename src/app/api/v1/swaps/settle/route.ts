@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     if (body.provider === "changenow") {
       if (!body.exchangeId) {
-        return jsonError(400, "missing_exchange", "ChangeNOW settle needs an exchange id.");
+        return jsonError(400, "missing_exchange", "This settle needs an exchange id.");
       }
       const verified = await settleChangeNowFill({
         userId: session.user.id,
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       return jsonError(429, "rate_limited", "Too many settle requests.");
     }
     if (error instanceof ChangeNowError) {
-      return jsonError(error.status, error.message, "ChangeNOW status was rejected.");
+      return jsonError(error.status, error.message, "Pay-in status was rejected.");
     }
     if (error instanceof SettleError) {
       return jsonError(error.status, error.message, "LI.FI status was rejected.");

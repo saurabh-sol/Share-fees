@@ -73,7 +73,7 @@ export default async function DeskPage() {
       />
       <p className="max-w-[65ch] text-zinc-400">
         Claim a qualifying fill first. Credit sits on this wallet. Convert 1:1 to LLM or USDG, then redeem a key or
-        queue Ethereum USDG.
+        queue Robinhood USDG.
       </p>
       <div className="flex flex-wrap gap-6">
         <Link href="/app/swap" className="text-sm text-[#c23a3a]">
@@ -81,6 +81,9 @@ export default async function DeskPage() {
         </Link>
         <Link href="/app/claims" className="text-sm text-zinc-300">
           Claim history
+        </Link>
+        <Link href="/app/chat" className="text-sm text-zinc-300">
+          Chat
         </Link>
         <Link href="/app/redeem" className="text-sm text-zinc-300">
           Redeem

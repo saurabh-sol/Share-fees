@@ -124,7 +124,7 @@ export async function loadMappedPair(input: {
     tokenAddress: input.toToken,
   });
   if (!from || !to) {
-    throw new ChangeNowError("That pair is not listed on ChangeNOW for these networks.", 400);
+    throw new ChangeNowError("That pair is not listed for these networks.", 400);
   }
   return { currencies, from, to };
 }

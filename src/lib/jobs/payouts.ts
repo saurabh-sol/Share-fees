@@ -1,11 +1,11 @@
 import { and, eq, lte, or } from "drizzle-orm";
 import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { robinhoodChain } from "@/lib/chains/robinhood";
 import { getDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions } from "@/lib/db/schema";
 import { syncWalletCache } from "@/lib/ledger/balances";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
-import { broadcastEthereumUsdg, treasuryCanBroadcast, type BroadcastUsdt } from "@/lib/redeem/treasury";
+import { broadcastRobinhoodUsdg, treasuryCanBroadcast, type BroadcastUsdt } from "@/lib/redeem/treasury";
 
 const MAX_ATTEMPTS = 8;
 const STALE_MS = 5 * 60 * 1000;
@@ -15,7 +15,7 @@ function backoffMs(attempts: number) {
 }
 
 async function confirmReceipt(txHash: string) {
-  const client = createPublicClient({ chain: mainnet, transport: http() });
+  const client = createPublicClient({ chain: robinhoodChain, transport: http() });
   const receipt = await client.waitForTransactionReceipt({
     hash: txHash as `0x${string}`,
     timeout: 90_000,
@@ -62,7 +62,7 @@ export async function processPayoutOutbox(input?: {
   db?: Awaited<ReturnType<typeof getDb>>;
 }) {
   const client = input?.db ?? (await getDb());
-  const send = input?.broadcast ?? broadcastEthereumUsdg;
+  const send = input?.broadcast ?? broadcastRobinhoodUsdg;
   const waitReceipt = input?.confirm ?? (input?.broadcast ? async () => undefined : confirmReceipt);
   const now = new Date();
   const staleBefore = new Date(now.getTime() - STALE_MS);

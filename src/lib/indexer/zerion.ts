@@ -1,11 +1,14 @@
 import { env } from "@/lib/env";
 import { usdToCents } from "@/lib/lifi/notional";
+import { RateLimitError, acquireSharedSlot } from "@/lib/security/rate-limit";
 import type { ActivityKind, HistoricalCandidate, TradeSource } from "./types";
 
 const ZERION_BASE = "https://api.zerion.io/v1";
 
 const ZERION_PAGE_SIZE = 50;
 const ZERION_MAX_PAGES = 10;
+/** One key is shared. Two HTTP calls per second keeps a 50-user burst from 429ing. */
+const ZERION_HTTP_PER_SEC = 2;
 
 function zerionAuthHeader() {
   const raw = `${env.zerionApiKey}:`;
@@ -106,6 +109,12 @@ export async function fetchZerionTrades(
   const auth = zerionAuthHeader();
 
   for (let page = 0; page < ZERION_MAX_PAGES && next; page += 1) {
+    try {
+      await acquireSharedSlot("zerion", ZERION_HTTP_PER_SEC, 1_000);
+    } catch (error) {
+      if (error instanceof RateLimitError) throw new Error("zerion_429");
+      throw error;
+    }
     const response = await fetch(next, {
       headers: {
         accept: "application/json",
@@ -148,6 +157,12 @@ export async function fetchZerionTradeByHash(
   if (!env.zerionApiKey) return null;
   const auth = zerionAuthHeader();
   const url = `${ZERION_BASE}/wallets/${address}/transactions/?currency=usd&page[size]=5&filter[search_query]=${txHash}`;
+  try {
+    await acquireSharedSlot("zerion", ZERION_HTTP_PER_SEC, 1_000);
+  } catch (error) {
+    if (error instanceof RateLimitError) return null;
+    throw error;
+  }
   const response = await fetch(url, {
     headers: { accept: "application/json", authorization: auth },
     cache: "no-store",

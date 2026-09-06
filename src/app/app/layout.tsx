@@ -34,6 +34,9 @@ export default async function AppShell({ children }: { children: ReactNode }) {
               <Link href="/app/claims" className="shrink-0 hover:text-zinc-100">
                 Activity
               </Link>
+              <Link href="/app/chat" className="shrink-0 hover:text-zinc-100">
+                Chat
+              </Link>
               <Link href="/app/redeem" className="shrink-0 hover:text-zinc-100">
                 Redeem
               </Link>

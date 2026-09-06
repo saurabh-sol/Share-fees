@@ -30,7 +30,7 @@ const STEPS: {
   {
     id: "02",
     title: "Swap live, or scan history",
-    body: "Run a fill in Swap Studio (LI.FI, ChangeNOW, Robinhood ETH) or scan the same wallet. Both paths hit one rule engine.",
+    body: "Run a fill in Swap Studio (LI.FI or Robinhood ETH) or scan the same wallet. Both paths hit one rule engine.",
     Icon: ArrowsLeftRight,
     span: "md:col-span-5",
   },
@@ -51,7 +51,7 @@ const STEPS: {
   {
     id: "05",
     title: "Claim, then convert",
-    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a t2c_ key or queue Ethereum USDG after that.",
+    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a t2c_ key or queue Robinhood USDG after that.",
     Icon: Coins,
     span: "md:col-span-7",
   },
@@ -132,7 +132,7 @@ export function HowItPays() {
           <div className="grid grid-rows-2">
             <div className="border-b border-white/8 px-4 py-10 md:px-8">
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">USDG rail</p>
-              <p className="mt-3 text-xl tracking-tight text-zinc-100">Same wallet. Ethereum.</p>
+              <p className="mt-3 text-xl tracking-tight text-zinc-100">Same wallet. Robinhood.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                 Redeem from the desk. Destination is the session EVM address only.
               </p>
@@ -141,7 +141,7 @@ export function HowItPays() {
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">LLM rail</p>
               <p className="mt-3 text-xl tracking-tight text-zinc-100">A metered t2c_ key.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Paste into Claude, OpenAI, or DeepSeek-compatible clients. Usage burns the balance.
+                Paste into Claude, OpenAI, DeepSeek, or Google-compatible clients. Usage burns the balance.
               </p>
             </div>
           </div>

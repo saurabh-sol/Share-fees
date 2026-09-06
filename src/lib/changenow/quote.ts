@@ -62,7 +62,7 @@ export async function quoteChangeNow(input: {
   ]);
 
   if (minAmount && Number.parseFloat(human) < Number.parseFloat(minAmount)) {
-    throw new ChangeNowError(`Below ChangeNOW minimum of ${minAmount} ${from.ticker.toUpperCase()}.`, 400);
+    throw new ChangeNowError(`Below the route minimum of ${minAmount} ${from.ticker.toUpperCase()}.`, 400);
   }
 
   let fromAmountUsd = estimate.fromAmountUsd;

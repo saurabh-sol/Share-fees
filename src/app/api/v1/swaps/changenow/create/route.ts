@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
     await rateLimitOrThrow(`cnow:${session.user.id}`, 10, 15 * 60 * 1000);
     if (session.user.chainNamespace !== "eip155") {
-      return jsonError(400, "evm_only", "ChangeNOW pay-ins are EVM-only.");
+      return jsonError(400, "evm_only", "Pay-ins are EVM-only.");
     }
 
     const body = changeNowCreateSchema.parse(await request.json());
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return jsonError(403, "forbidden_origin", "Request origin was rejected.");
     }
     if (error instanceof RateLimitError) {
-      return jsonError(429, "rate_limited", "Too many ChangeNOW creates.");
+      return jsonError(429, "rate_limited", "Too many pay-in requests.");
     }
     if (error instanceof ChangeNowError) {
       return jsonError(error.status, "changenow_create_failed", error.message);

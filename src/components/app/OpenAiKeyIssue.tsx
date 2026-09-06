@@ -40,6 +40,32 @@ console.log(message.content);`,
     };
   }
 
+  if (provider === "google") {
+    return {
+      host: "generativelanguage.googleapis.com",
+      base: origin,
+      label: "Official Google Gemini API",
+      sdkLabel: "Official Google GenAI SDK",
+      curl: `curl ${origin}/v1beta/models/${model}:generateContent \\
+  -H "Content-Type: application/json" \\
+  -H "x-goog-api-key: ${apiKey}" \\
+  -d '{"contents":[{"role":"user","parts":[{"text":"Hello"}]}]}'`,
+      sdk: `import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({
+  apiKey: "${apiKey}",
+  httpOptions: { baseUrl: "${origin}" },
+});
+
+const response = await ai.models.generateContent({
+  model: "${model}",
+  contents: "Hello",
+});
+
+console.log(response.text);`,
+    };
+  }
+
   if (provider === "deepseek") {
     return {
       host: "api.deepseek.com/v1",
@@ -138,7 +164,19 @@ export function OpenAiKeyIssue({
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#c23a3a]">Show once</p>
             <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-400">
               This is the plaintext API key. It is not stored. Paste it as the official{" "}
-              {issuedProvider === "anthropic" ? "x-api-key" : "apiKey"} for {issuedProvider}.
+              {issuedProvider === "anthropic"
+                ? "x-api-key"
+                : issuedProvider === "google"
+                  ? "x-goog-api-key"
+                  : "apiKey"}{" "}
+              for {issuedProvider}.
+              {issuedProvider === "google" ? (
+                <>
+                  {" "}
+                  The same key also works as Bearer against{" "}
+                  <span className="font-mono">{originFromBase(gatewayBaseUrl)}/v1</span>.
+                </>
+              ) : null}
             </p>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <code className="break-all font-mono text-sm text-zinc-100">{issuedKey}</code>

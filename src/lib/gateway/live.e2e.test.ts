@@ -6,7 +6,13 @@ import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { redeem } from "@/lib/redeem/service";
 import type { LlmProvider } from "./catalog";
-import { GatewayError, handleChatCompletion, handleListModels, handleMessages } from "./service";
+import {
+  GatewayError,
+  handleChatCompletion,
+  handleGenerateContent,
+  handleListModels,
+  handleMessages,
+} from "./service";
 import { providerReady } from "./providers";
 
 const ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -19,6 +25,7 @@ const PROBES: Array<{
   { provider: "openai", model: "gpt-4o-mini", wrongModel: "claude-haiku-4-5" },
   { provider: "anthropic", model: "claude-haiku-4-5", wrongModel: "gpt-4o-mini" },
   { provider: "deepseek", model: "deepseek-chat", wrongModel: "gpt-4o-mini" },
+  { provider: "google", model: "gemini-2.5-flash-lite", wrongModel: "gpt-4o-mini" },
 ];
 
 const fill = {
@@ -81,7 +88,7 @@ function chatBody(model: string) {
   };
 }
 
-describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → gateway → pool key", () => {
+describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gateway", () => {
   it("redeems one key per provider and probes models, chat, and error cases", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db, "user_gw_e2e");
@@ -308,6 +315,74 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → gateway �
     const body = (await response.json()) as { type?: string; content?: Array<{ text?: string }> };
     expect(body.type).toBe("message");
     expect(body.content?.[0]?.text).toBe("ok");
+  });
+
+  it("serves official Gemini generateContent only for Google keys", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db, "user_gw_e2e_gemini");
+    await creditThenConvert(db, userId, "llm_credits", `0x${"ff".repeat(32)}`);
+    const google = await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "llm_credits",
+        amountCents: 5,
+        idempotencyKey: "idem_gemini_google",
+        provider: "google",
+        model: "gemini-2.5-flash",
+      },
+      db,
+    );
+    const openai = await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "llm_credits",
+        amountCents: 5,
+        idempotencyKey: "idem_gemini_openai",
+        provider: "openai",
+        model: "gpt-4o-mini",
+      },
+      db,
+    );
+
+    await expect(
+      handleGenerateContent({
+        authorization: `Bearer ${openai.plaintextKey}`,
+        model: "gemini-2.5-flash",
+        body: { contents: [{ role: "user", parts: [{ text: "Hello" }] }] },
+        db,
+      }),
+    ).rejects.toMatchObject({
+      message: "provider_api_mismatch",
+      status: 400,
+    } satisfies Partial<GatewayError>);
+
+    const response = await handleGenerateContent({
+      authorization: `Bearer ${google.plaintextKey}`,
+      model: "models/gemini-2.5-flash",
+      body: { contents: [{ role: "user", parts: [{ text: "Hello" }] }] },
+      db,
+      forward: async () => ({
+        response: Response.json({
+          choices: [{ message: { role: "assistant", content: "ok" } }],
+          usage: { prompt_tokens: 6, completion_tokens: 2, total_tokens: 8 },
+        }),
+        promptTokens: 6,
+        completionTokens: 2,
+        model: "gemini-2.5-flash",
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-T2C-Provider")).toBe("google");
+    const body = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      usageMetadata?: { totalTokenCount?: number };
+    };
+    expect(body.candidates?.[0]?.content?.parts?.[0]?.text).toBe("ok");
+    expect(body.usageMetadata?.totalTokenCount).toBe(8);
   });
 
   it("queues USDT to the session EVM address only", async () => {

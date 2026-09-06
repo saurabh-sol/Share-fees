@@ -32,9 +32,9 @@ export default async function ClaimsPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Activity</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Wallet transfers</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Scan lists every confirmed transfer and sums the USD volume. If that total clears {money(floor)}, the
-          estimated reward at {summary.conversionBps} bps is shown. Claiming still posts one credit per {money(floor)}+
-          swap.
+          Scan lists every confirmed transfer and sums swap volume only. Sends do not count. If that swap
+          total clears {money(floor)}, the estimated reward at {summary.conversionBps} bps is shown. A single
+          imported fill still has to be a {money(floor)}+ swap to claim on its own.
         </p>
       </div>
       <ClaimsInbox

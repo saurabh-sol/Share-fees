@@ -10,7 +10,7 @@ import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
-const HOUSES = ["MetaMask", "Phantom", "Coinbase", "LI.FI", "ChangeNOW", "Robinhood"];
+const HOUSES = ["MetaMask", "Phantom", "Coinbase", "LI.FI", "Robinhood"];
 
 export default function HomePage() {
   return (
@@ -27,7 +27,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400">
               Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits for
-              Claude, OpenAI, and DeepSeek-compatible clients.
+              Claude, OpenAI, DeepSeek, and Google-compatible clients.
             </p>
             <div className="mt-10">
               <NotchedCta href="/login">Connect wallet</NotchedCta>
@@ -60,7 +60,7 @@ export default function HomePage() {
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">[05] Rails</p>
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">USDG to the same wallet.</h2>
               <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-zinc-400">
-                Pick USDG before the credit posts. The outbox queues a payout to the session EVM address on Ethereum.
+                Pick USDG before the credit posts. The outbox queues a payout to the session EVM address on Robinhood.
                 No other destination. You redeem from the desk when you want the transfer.
               </p>
             </article>
@@ -69,7 +69,7 @@ export default function HomePage() {
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">A metered key, not a coupon.</h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-400">
                 LLM rail mints a t2c_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
-                balance. Claude, OpenAI, and DeepSeek marks on the desk control are the same rail.
+                balance. Claude, OpenAI, DeepSeek, and Google marks on the desk control are the same rail.
               </p>
             </article>
           </div>

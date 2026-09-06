@@ -7,7 +7,7 @@ import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./t
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
-export const SCAN_COOLDOWN_MS = 5 * 60 * 1000;
+export const SCAN_COOLDOWN_MS = 15 * 60 * 1000;
 
 export function asDate(value: Date | string | number | null | undefined) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -136,27 +136,29 @@ export async function scanWallet(input: {
     .limit(1);
   const lastScannedAt = asDate(last?.scannedAt);
 
+  const cachedScan = async (retryAfterSec: number, cached: boolean) => ({
+    inserted: 0,
+    skipped: 0,
+    scanned: last?.foundCount ?? 0,
+    providers: last?.provider ? last.provider.split(",").filter(Boolean) : [],
+    cooldown: true,
+    cached,
+    retryAfterSec,
+    minNotionalUsdCents: (await getActiveRuleOrNull(client))?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
+    windowDays: 90,
+    volumeReward: await settleScannedVolumeReward(input.userId, client),
+  });
+
   if (
     !input.force &&
     last &&
-    last.foundCount > 0 &&
     lastScannedAt &&
     Date.now() - lastScannedAt.getTime() < SCAN_COOLDOWN_MS
   ) {
     const retryAfterSec = Math.ceil(
       (SCAN_COOLDOWN_MS - (Date.now() - lastScannedAt.getTime())) / 1000,
     );
-    return {
-      inserted: 0,
-      skipped: 0,
-      scanned: last.foundCount,
-      providers: last.provider ? last.provider.split(",").filter(Boolean) : [],
-      cooldown: true,
-      retryAfterSec,
-      minNotionalUsdCents: (await getActiveRuleOrNull(client))?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
-      windowDays: 90,
-      volumeReward: await settleScannedVolumeReward(input.userId, client),
-    };
+    return cachedScan(retryAfterSec, false);
   }
 
   const rule = await getActiveRuleOrNull(client);
@@ -171,6 +173,9 @@ export async function scanWallet(input: {
       candidates.push(...batch);
     } catch (error) {
       const message = error instanceof Error ? error.message : "scan_source_failed";
+      if (last && (message.startsWith("zerion_429") || message === "rate_limited")) {
+        return cachedScan(60, true);
+      }
       throw new ScanError(message, 502);
     }
   }

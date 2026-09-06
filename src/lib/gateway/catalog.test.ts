@@ -3,6 +3,7 @@ import {
   assertProviderModel,
   estimateUsageCents,
   findModel,
+  gatewayModelSlug,
   isLlmProvider,
 } from "./catalog";
 
@@ -13,6 +14,15 @@ describe("LLM catalog", () => {
     expect(findModel("anthropic", "gpt-4o-mini")).toBeNull();
     expect(() => assertProviderModel("deepseek", "deepseek-chat")).not.toThrow();
     expect(() => assertProviderModel("openai", "claude-sonnet-5")).toThrow("invalid_llm_model");
+    expect(gatewayModelSlug("openai", "gpt-4o-mini")).toBe("openai/gpt-4o-mini");
+    expect(gatewayModelSlug("anthropic", "claude-haiku-4-5")).toBe("anthropic/claude-haiku-4.5");
+    expect(gatewayModelSlug("deepseek", "deepseek-chat")).toBe("deepseek/deepseek-v3.2");
+    expect(isLlmProvider("google")).toBe(true);
+    expect(findModel("google", "gemini-2.5-flash-lite")?.id).toBe("gemini-2.5-flash-lite");
+    expect(findModel("google", "models/gemini-2.5-flash-lite")?.id).toBe("gemini-2.5-flash-lite");
+    expect(gatewayModelSlug("google", "gemini-2.5-flash-lite")).toBe(
+      "google/gemini-2.5-flash-lite",
+    );
   });
 
   it("meters at least 1 cent and never under-charges a $1 key past the ceil", () => {
@@ -24,12 +34,12 @@ describe("LLM catalog", () => {
         completionTokens: 50,
       }),
     ).toBe(1);
-    const sonnet = estimateUsageCents({
-      provider: "anthropic",
-      model: "claude-sonnet-5",
+    const gpt4o = estimateUsageCents({
+      provider: "openai",
+      model: "gpt-4o",
       promptTokens: 200_000,
       completionTokens: 50_000,
     });
-    expect(sonnet).toBe(135);
+    expect(gpt4o).toBe(100);
   });
 });

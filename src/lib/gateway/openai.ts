@@ -151,8 +151,12 @@ export function readGatewayApiKey(request: Request) {
     return authorization.startsWith("Bearer ") ? authorization : `Bearer ${authorization}`;
   }
   const apiKey =
-    request.headers.get("x-api-key")?.trim() || request.headers.get("api-key")?.trim();
+    request.headers.get("x-goog-api-key")?.trim() ||
+    request.headers.get("x-api-key")?.trim() ||
+    request.headers.get("api-key")?.trim();
   if (apiKey) return `Bearer ${apiKey}`;
+  const queryKey = new URL(request.url).searchParams.get("key")?.trim();
+  if (queryKey) return `Bearer ${queryKey}`;
   throw new GatewayError("invalid_api_key", 401);
 }
 

@@ -27,8 +27,8 @@ export default async function RedeemPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">After a claim</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Claimed swap credit lands here. Take USDG to this wallet, or mint an official OpenAI-shaped
-          API key. That key calls the real provider. Usage spends your points.
+          Claimed swap credit lands here. Talk to a model on Chat without a key, take USDG to this
+          wallet, or mint a t2c_ key for Cursor. Usage spends your points.
         </p>
       </div>
       <RedeemDesk

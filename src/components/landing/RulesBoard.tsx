@@ -5,7 +5,7 @@ const RULES = [
   },
   {
     title: "Same wallet only",
-    body: "USDG redeem queues to the session EVM address on Ethereum. No other destination is accepted.",
+    body: "USDG redeem queues to the session EVM address on Robinhood. No other destination is accepted.",
   },
   {
     title: "One hash, once",

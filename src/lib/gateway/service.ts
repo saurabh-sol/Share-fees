@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db/client";
 import { virtualKeys } from "@/lib/db/schema";
 import { hashVirtualKey } from "@/lib/redeem/keys";
 import { rateLimitOrThrow } from "@/lib/security/rate-limit";
-import { anthropicMessagesSchema, chatCompletionSchema } from "@/lib/validation/swap";
+import { anthropicMessagesSchema, chatCompletionSchema, geminiGenerateSchema } from "@/lib/validation/swap";
 import {
   DEFAULT_LLM_MODEL,
   DEFAULT_LLM_PROVIDER,
@@ -16,6 +16,7 @@ import {
 } from "./catalog";
 import { GatewayError } from "./errors";
 import { reshapeAnthropicMessage } from "./anthropic";
+import { geminiToChatBody, reshapeGeminiContent } from "./gemini";
 import { reshapeProviderCompletion, toOpenAiModel } from "./openai";
 import { type ChatForwarder, forwardAnthropicMessages, forwarderFor } from "./providers";
 
@@ -27,11 +28,13 @@ export const GATEWAY_MODELS = allGatewayModels().map((item) => item.id);
  * Working map — do not invert:
  * credit (50 bps) → convert 1:1 to LLM rail → redeem(provider, model)
  * → t2c_ plaintext shown once → official provider APIs
- *    OpenAI / DeepSeek: POST {origin}/v1/chat/completions
+ *    OpenAI / DeepSeek / Google: POST {origin}/v1/chat/completions
+ *    Google OpenAI-compat: POST {origin}/v1beta/openai/chat/completions
+ *    Google native: POST {origin}/v1beta/models/{model}:generateContent (x-goog-api-key)
  *    Anthropic: POST {origin}/v1/messages (x-api-key)
  *    Models: GET {origin}/v1/models
- * → hash lookup + spend cap → pool key for that provider → settle cents.
- * The client never sees OPENAI_ / ANTHROPIC_ / DEEPSEEK_API_KEY.
+ * → hash lookup + spend cap → Vercel AI Gateway (or a leftover provider pool
+ *    key) → settle cents. The client never sees upstream credentials.
  */
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -262,6 +265,35 @@ export async function handleMessages(input: {
   }
 }
 
+export async function handleGenerateContent(input: {
+  authorization: string | null;
+  model: string;
+  body: unknown;
+  forward?: ChatForwarder;
+  db?: Db;
+}) {
+  const raw = readBearerToken(input.authorization);
+  const key = await authenticateVirtualKey(raw, input.db);
+  if (key.provider !== "google") {
+    throw new GatewayError("provider_api_mismatch", 400);
+  }
+  const parsed = geminiGenerateSchema.parse(input.body);
+  const model = resolveRequestModel("google", key.model ?? DEFAULT_LLM_MODEL, input.model);
+  const routed = geminiToChatBody(model, parsed);
+  if (routed.messages.length === 0) {
+    throw new GatewayError("invalid_body", 400);
+  }
+  const response = await handleChatCompletion({
+    authorization: input.authorization,
+    body: routed,
+    forward: input.forward,
+    db: input.db,
+  });
+  const headers = new Headers(response.headers);
+  const payload = reshapeGeminiContent(await response.json(), model);
+  return Response.json(payload, { status: response.status, headers });
+}
+
 export class AiGateway {
   authenticateVirtualKey = authenticateVirtualKey;
   consumeVirtualKey = consumeVirtualKey;
@@ -269,4 +301,5 @@ export class AiGateway {
   handleRetrieveModel = handleRetrieveModel;
   handleChatCompletion = handleChatCompletion;
   handleMessages = handleMessages;
+  handleGenerateContent = handleGenerateContent;
 }

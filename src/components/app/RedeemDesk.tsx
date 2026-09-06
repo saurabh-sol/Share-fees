@@ -137,7 +137,7 @@ export function RedeemDesk({
         result.alreadyExists
           ? "That idempotency key already posted. The plaintext key is not shown again."
           : rail === "usdt"
-            ? `Queued ${money(amountCents)} USDG to this wallet on Ethereum. It stays queued until treasury is unlocked.`
+            ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood. It stays queued until treasury is unlocked.`
             : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
@@ -196,7 +196,7 @@ export function RedeemDesk({
                 disabled={!evmOnly}
                 onChange={() => setRail("usdt")}
               />
-              USDG on ETH
+              USDG on Robinhood
             </label>
             <label className="flex items-center gap-2 text-sm text-zinc-200">
               <input
@@ -278,7 +278,11 @@ export function RedeemDesk({
                 <div className="flex items-center gap-3">
                   <ProviderMark
                     provider={
-                      key.provider === "anthropic" || key.provider === "deepseek" ? key.provider : "openai"
+                      key.provider === "anthropic" ||
+                      key.provider === "deepseek" ||
+                      key.provider === "google"
+                        ? key.provider
+                        : "openai"
                     }
                     size={28}
                   />

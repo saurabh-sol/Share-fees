@@ -19,7 +19,7 @@ const PAGES: Array<{
     id: "01",
     href: "/app/swap",
     title: "Swap Studio",
-    body: "Quote and settle a live fill through LI.FI, ChangeNOW, or Robinhood ETH. The same rule engine prices it.",
+    body: "Quote and settle a live fill through LI.FI or Robinhood ETH. The same rule engine prices it.",
     Icon: ArrowsLeftRight,
     wide: true,
   },

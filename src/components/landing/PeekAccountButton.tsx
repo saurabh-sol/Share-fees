@@ -1,25 +1,12 @@
 "use client";
 
+import { OpenAiLogo } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
 
-function PeekMark({
-  src,
-  invert = false,
-}: {
-  src: "/claude.png" | "/openai.png" | "/deepseek.png";
-  invert?: boolean;
-}) {
-  return (
-    <img
-      src={src}
-      alt=""
-      width={36}
-      height={36}
-      className={`h-9 w-9 object-contain ${invert ? "invert brightness-150 contrast-125" : ""}`}
-    />
-  );
+function PeekMark({ src }: { src: "/claude.png" | "/deepseek.png" }) {
+  return <img src={src} alt="" width={36} height={36} className="h-9 w-9 object-contain" />;
 }
 
 export function PeekAccountButton({
@@ -69,7 +56,7 @@ export function PeekAccountButton({
         transition={{ ...spring, delay: 0.06 }}
         className="pointer-events-none absolute bottom-0 right-2 z-0"
       >
-        <PeekMark src="/openai.png" invert />
+        <OpenAiLogo size={32} weight="regular" className="text-zinc-100" />
       </motion.div>
 
       <span className="relative z-10 inline-flex w-[min(228px,calc(100vw-48px))] items-center justify-center border border-white/35 bg-[#1c1c1f] px-6 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-100 transition-transform group-active:scale-[0.98] sm:px-8">
