@@ -1,40 +1,26 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { virtualKeys } from "@/lib/db/schema";
-import { env } from "@/lib/env";
 import { hashVirtualKey } from "@/lib/redeem/keys";
 import { rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { chatCompletionSchema } from "@/lib/validation/swap";
+import {
+  DEFAULT_LLM_MODEL,
+  DEFAULT_LLM_PROVIDER,
+  allGatewayModels,
+  assertProviderModel,
+  estimateUsageCents,
+  isLlmProvider,
+  type LlmProvider,
+} from "./catalog";
+import { GatewayError } from "./errors";
+import { type ChatForwarder, forwarderFor } from "./providers";
 
-export class GatewayError extends Error {
-  constructor(
-    message: string,
-    readonly status = 400,
-  ) {
-    super(message);
-    this.name = "GatewayError";
-  }
-}
+export { GatewayError } from "./errors";
+export { estimateUsageCents } from "./catalog";
+export const GATEWAY_MODELS = allGatewayModels().map((item) => item.id);
 
 type Db = Awaited<ReturnType<typeof getDb>>;
-
-const MODEL_RATES: Record<string, { in: number; out: number }> = {
-  "gpt-4o-mini": { in: 0.15, out: 0.6 },
-  "gpt-4o": { in: 2.5, out: 10 },
-};
-
-export const GATEWAY_MODELS = ["gpt-4o-mini", "gpt-4o"] as const;
-
-export function estimateUsageCents(input: {
-  model: string;
-  promptTokens: number;
-  completionTokens: number;
-}) {
-  const rate = MODEL_RATES[input.model] ?? MODEL_RATES["gpt-4o-mini"];
-  const dollars =
-    (input.promptTokens * rate.in) / 1_000_000 + (input.completionTokens * rate.out) / 1_000_000;
-  return Math.max(1, Math.ceil(dollars * 100));
-}
 
 export function readBearerToken(header: string | null) {
   if (!header?.startsWith("Bearer ")) {
@@ -47,7 +33,14 @@ export function readBearerToken(header: string | null) {
   return token;
 }
 
-export async function authenticateVirtualKey(raw: string, db?: Db) {
+function providerOf(row: { provider?: string | null }): LlmProvider {
+  const value = row.provider ?? DEFAULT_LLM_PROVIDER;
+  return isLlmProvider(value) ? value : DEFAULT_LLM_PROVIDER;
+}
+
+export async function authenticateVirtualKey(raw: string, db?: Db): Promise<
+  typeof virtualKeys.$inferSelect & { remainingCents: number; provider: LlmProvider }
+> {
   if (!raw.startsWith("t2c_")) {
     throw new GatewayError("invalid_api_key", 401);
   }
@@ -64,7 +57,8 @@ export async function authenticateVirtualKey(raw: string, db?: Db) {
   if (remainingCents <= 0) {
     throw new GatewayError("insufficient_credits", 402);
   }
-  return { ...row, remainingCents };
+  const provider = providerOf(row);
+  return { ...row, remainingCents, provider };
 }
 
 export async function consumeVirtualKey(keyId: string, cents: number, db?: Db) {
@@ -116,44 +110,15 @@ async function releaseReservation(keyId: string, usedBefore: number, db: Db) {
   await db.update(virtualKeys).set({ spendUsedCents: usedBefore }).where(eq(virtualKeys.id, keyId));
 }
 
-export type ChatForwarder = (input: {
-  body: unknown;
-  signal?: AbortSignal;
-}) => Promise<{
-  response: Response;
-  promptTokens: number;
-  completionTokens: number;
-  model: string;
-}>;
-
-export const forwardToOpenAI: ChatForwarder = async ({ body, signal }) => {
-  if (!env.openaiApiKey) {
-    throw new GatewayError("provider_pool_empty", 503);
+function resolveRequestModel(provider: LlmProvider, keyModel: string, requested: unknown) {
+  const fallback = keyModel || DEFAULT_LLM_MODEL;
+  const model = typeof requested === "string" && requested.length > 0 ? requested : fallback;
+  try {
+    return assertProviderModel(provider, model).model;
+  } catch {
+    throw new GatewayError("model_not_allowed", 400);
   }
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${env.openaiApiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
-  const json = (await response.json()) as {
-    model?: string;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
-    error?: { message?: string };
-  };
-  if (!response.ok) {
-    throw new GatewayError(json.error?.message ?? "provider_error", 502);
-  }
-  return {
-    response: Response.json(json),
-    promptTokens: json.usage?.prompt_tokens ?? 0,
-    completionTokens: json.usage?.completion_tokens ?? 0,
-    model: json.model ?? "gpt-4o-mini",
-  };
-};
+}
 
 export async function handleChatCompletion(input: {
   authorization: string | null;
@@ -163,20 +128,26 @@ export async function handleChatCompletion(input: {
 }) {
   const raw = readBearerToken(input.authorization);
   const key = await authenticateVirtualKey(raw, input.db);
-  await rateLimitOrThrow(`gateway:${key.keyHash}`, 60, 60_000);
+  await rateLimitOrThrow(`gateway:${key.keyHash}`, 30, 60_000);
+  await rateLimitOrThrow(`gateway:${key.provider}:${key.keyHash}`, 20, 60_000);
 
   const parsed = chatCompletionSchema.parse(input.body);
   if (parsed.stream) {
     throw new GatewayError("stream_not_supported", 400);
   }
 
+  const provider = key.provider;
+  const model = resolveRequestModel(provider, key.model ?? DEFAULT_LLM_MODEL, parsed.model);
+  const routedBody = { ...parsed, model };
+
   const client = input.db ?? (await getDb());
   const reservation = await reserveVirtualKey(key.id, client);
   try {
-    const forward = input.forward ?? forwardToOpenAI;
-    const result = await forward({ body: parsed });
+    const forward = input.forward ?? forwarderFor(provider);
+    const result = await forward({ body: routedBody });
     const used = estimateUsageCents({
-      model: result.model,
+      provider,
+      model: result.model || model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
     });
@@ -190,6 +161,8 @@ export async function handleChatCompletion(input: {
 
     const headers = new Headers(result.response.headers);
     headers.set("X-T2C-Remaining-Cents", String(remainingCents));
+    headers.set("X-T2C-Provider", provider);
+    headers.set("X-T2C-Spend-Cap-Cents", String(reservation.cap));
     return new Response(result.response.body, {
       status: result.response.status,
       headers,

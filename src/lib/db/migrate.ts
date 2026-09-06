@@ -156,6 +156,8 @@ const STATEMENTS = [
     prefix TEXT NOT NULL,
     spend_cap_cents INTEGER NOT NULL,
     spend_used_cents INTEGER NOT NULL DEFAULT 0,
+    provider TEXT NOT NULL DEFAULT 'openai',
+    model TEXT NOT NULL DEFAULT 'gpt-4o-mini',
     status TEXT NOT NULL DEFAULT 'active',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     revoked_at TIMESTAMPTZ
@@ -239,6 +241,8 @@ const STATEMENTS = [
   `UPDATE reward_rules
    SET min_notional_usd_cents = 25000
    WHERE min_notional_usd_cents = 50000`,
+  `ALTER TABLE virtual_keys ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'openai'`,
+  `ALTER TABLE virtual_keys ADD COLUMN IF NOT EXISTS model TEXT NOT NULL DEFAULT 'gpt-4o-mini'`,
 ];
 
 export async function applyMigrations(db: AnyDb) {

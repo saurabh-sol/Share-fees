@@ -268,6 +268,8 @@ export const virtualKeys = pgTable(
     prefix: text("prefix").notNull(),
     spendCapCents: integer("spend_cap_cents").notNull(),
     spendUsedCents: integer("spend_used_cents").notNull().default(0),
+    provider: text("provider").notNull().default("openai"),
+    model: text("model").notNull().default("gpt-4o-mini"),
     status: text("status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),

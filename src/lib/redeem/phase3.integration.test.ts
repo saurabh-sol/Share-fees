@@ -94,6 +94,9 @@ describe("phase 3 redeem + gateway", () => {
     const keys = await db.select().from(virtualKeys);
     expect(keys).toHaveLength(1);
     expect(keys[0]?.keyHash).toBe(hashVirtualKey(first.plaintextKey!));
+    expect(keys[0]?.provider).toBe("openai");
+    expect(keys[0]?.model).toBe("gpt-4o-mini");
+    expect(keys[0]?.spendCapCents).toBe(100);
     expect(JSON.stringify(keys)).not.toContain(first.plaintextKey);
 
     const replay = await redeem(
@@ -382,5 +385,39 @@ describe("phase 3 redeem + gateway", () => {
         db,
       ),
     ).rejects.toMatchObject({ message: "usdt_evm_only" });
+  });
+
+  it("binds an LLM key to Anthropic and rejects an OpenAI model", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db, "user_anth_1");
+    await claimThenConvert(db, userId, "llm_credits", { txHash: "0x" + "11".repeat(32) });
+    const issued = await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "llm_credits",
+        amountCents: 100,
+        idempotencyKey: "idem_anth_1",
+        provider: "anthropic",
+        model: "claude-sonnet-5",
+      },
+      db,
+    );
+    const [key] = await db.select().from(virtualKeys);
+    expect(key?.provider).toBe("anthropic");
+    expect(key?.model).toBe("claude-sonnet-5");
+    expect(key?.spendCapCents).toBe(100);
+
+    await expect(
+      handleChatCompletion({
+        authorization: `Bearer ${issued.plaintextKey}`,
+        body: { ...chatBody, model: "gpt-4o" },
+        db,
+        forward: async () => {
+          throw new Error("should_not_forward");
+        },
+      }),
+    ).rejects.toMatchObject({ message: "model_not_allowed" });
   });
 });

@@ -73,6 +73,8 @@ export const redeemRequestSchema = z.object({
   rail: railSchema,
   amountCents: z.number().int().min(100).max(10_000_000),
   idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
+  provider: z.enum(["anthropic", "openai", "deepseek"]).optional(),
+  model: z.string().min(3).max(80).optional(),
 });
 
 export const chatCompletionSchema = z

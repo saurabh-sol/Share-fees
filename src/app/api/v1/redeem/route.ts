@@ -32,11 +32,15 @@ export async function POST(request: Request) {
       rail: body.rail,
       amountCents: body.amountCents,
       idempotencyKey: body.idempotencyKey,
+      provider: body.provider,
+      model: body.model,
     });
 
     return Response.json({
       ...result,
       rail: body.rail,
+      provider: body.provider,
+      model: body.model,
     });
   } catch (error) {
     if (error instanceof OriginError) {

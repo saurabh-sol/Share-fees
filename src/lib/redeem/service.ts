@@ -1,6 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import { normalizeAddress, type ChainNamespace } from "@/lib/auth/addresses";
 import { getDb } from "@/lib/db/client";
+import {
+  DEFAULT_LLM_MODEL,
+  DEFAULT_LLM_PROVIDER,
+  assertProviderModel,
+  type LlmProvider,
+} from "@/lib/gateway/catalog";
 import { creditConversions, ledgerEntries, payoutOutbox, redemptions, virtualKeys } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/balances";
 import type { Rail } from "@/lib/ledger/post-swap-reward";
@@ -28,6 +34,8 @@ export type RedeemInput = {
   rail: Rail;
   amountCents: number;
   idempotencyKey: string;
+  provider?: LlmProvider;
+  model?: string;
 };
 
 export function publicVirtualKey(row: typeof virtualKeys.$inferSelect) {
@@ -37,6 +45,8 @@ export function publicVirtualKey(row: typeof virtualKeys.$inferSelect) {
     spendCapCents: row.spendCapCents,
     spendUsedCents: row.spendUsedCents,
     remainingCents: row.spendCapCents - row.spendUsedCents,
+    provider: row.provider,
+    model: row.model,
     status: row.status,
     createdAt: row.createdAt,
     revokedAt: row.revokedAt,
@@ -67,6 +77,18 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
 
   if (input.rail === "usdt" && input.chainNamespace !== "eip155") {
     throw new RedeemError("usdt_evm_only", 400);
+  }
+
+  let llm: ReturnType<typeof assertProviderModel> | null = null;
+  if (input.rail === "llm_credits") {
+    try {
+      llm = assertProviderModel(
+        input.provider ?? DEFAULT_LLM_PROVIDER,
+        input.model ?? DEFAULT_LLM_MODEL,
+      );
+    } catch {
+      throw new RedeemError("invalid_llm_model", 400);
+    }
   }
 
   const account = input.rail === "usdt" ? "user_usdt" : "user_llm";
@@ -162,6 +184,8 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
         prefix: material.prefix,
         spendCapCents: input.amountCents,
         spendUsedCents: 0,
+        provider: llm?.provider ?? DEFAULT_LLM_PROVIDER,
+        model: llm?.model ?? DEFAULT_LLM_MODEL,
         status: "active",
       });
     } else {

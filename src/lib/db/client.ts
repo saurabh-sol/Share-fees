@@ -21,7 +21,7 @@ type AppDb =
   | PostgresJsDatabase<typeof schema>
   | ReturnType<typeof drizzlePglite<typeof schema>>;
 
-const DB_CACHE_GEN = 6;
+const DB_CACHE_GEN = 7;
 
 const globalForDb = globalThis as unknown as {
   t2cDbGen?: number;

@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy } from "@phosphor-icons/react";
+import {
+  DEFAULT_LLM_MODEL,
+  DEFAULT_LLM_PROVIDER,
+  LLM_CATALOG,
+  modelsForProvider,
+  type LlmProvider,
+} from "@/lib/gateway/catalog";
 
 type Rail = "usdt" | "llm_credits";
 
@@ -21,6 +28,8 @@ type VirtualKey = {
   spendCapCents: number;
   spendUsedCents: number;
   remainingCents: number;
+  provider?: string;
+  model?: string;
   status: string;
 };
 
@@ -64,6 +73,8 @@ export function RedeemDesk({
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
   const [rail, setRail] = useState<Rail>(evmOnly ? "usdt" : "llm_credits");
+  const [provider, setProvider] = useState<LlmProvider>(DEFAULT_LLM_PROVIDER);
+  const [model, setModel] = useState(DEFAULT_LLM_MODEL);
   const [amount, setAmount] = useState(() =>
     creditCents >= 100 ? (creditCents / 100).toFixed(2) : "1.00",
   );
@@ -110,6 +121,7 @@ export function RedeemDesk({
           rail,
           amountCents,
           idempotencyKey: crypto.randomUUID(),
+          ...(rail === "llm_credits" ? { provider, model } : {}),
         }),
       });
       setBalances({
@@ -128,7 +140,7 @@ export function RedeemDesk({
           ? "That idempotency key already posted. The plaintext key is not shown again."
           : rail === "usdt"
             ? `Queued ${money(amountCents)} USDT to this wallet on Arbitrum. It stays queued until treasury is unlocked.`
-            : `Issued a ${money(amountCents)} LLM key. Copy it now — it is not stored in plaintext.`,
+            : `Issued a ${money(amountCents)} ${provider} key for ${model}. That is the hard API cap. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
       setStatus("error");
@@ -207,6 +219,47 @@ export function RedeemDesk({
             <p className="text-sm text-zinc-500">USDT withdraw is EVM-only. This session is Solana.</p>
           ) : null}
         </fieldset>
+
+        {rail === "llm_credits" ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-sm text-zinc-400">Provider</span>
+              <select
+                value={provider}
+                onChange={(event) => {
+                  const next = event.target.value as LlmProvider;
+                  setProvider(next);
+                  const first = modelsForProvider(next)[0];
+                  if (first) setModel(first.id);
+                }}
+                className="w-full border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+              >
+                {LLM_CATALOG.map((item) => (
+                  <option key={item.id} value={item.id} className="bg-[#1c1c1f]">
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm text-zinc-400">API model</span>
+              <select
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                className="w-full border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+              >
+                {modelsForProvider(provider).map((item) => (
+                  <option key={item.id} value={item.id} className="bg-[#1c1c1f]">
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="sm:col-span-2 text-xs text-zinc-500">
+              Redeem $1.00 and this key can spend at most $1.00 on {provider}. Extra tokens are rejected.
+            </p>
+          </div>
+        ) : null}
 
         <label className="block space-y-2">
           <span className="text-sm text-zinc-400">Amount (USD)</span>
@@ -287,7 +340,8 @@ export function RedeemDesk({
                 <div>
                   <p className="font-mono text-sm text-zinc-100">{key.prefix}…</p>
                   <p className="font-mono text-xs text-zinc-500">
-                    {money(key.remainingCents)} left of {money(key.spendCapCents)} · {key.status}
+                    {money(key.remainingCents)} left of {money(key.spendCapCents)} · {key.provider ?? "openai"} ·{" "}
+                    {key.model ?? "gpt-4o-mini"} · {key.status}
                   </p>
                 </div>
                 {key.status === "active" ? (

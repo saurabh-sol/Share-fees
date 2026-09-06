@@ -1,5 +1,6 @@
 import { gatewayJson, gatewayPreflight } from "@/lib/gateway/cors";
-import { GATEWAY_MODELS, GatewayError, authenticateVirtualKey, readBearerToken } from "@/lib/gateway/service";
+import { modelsForProvider } from "@/lib/gateway/catalog";
+import { GatewayError, authenticateVirtualKey, readBearerToken } from "@/lib/gateway/service";
 import { clientIp } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 
@@ -11,13 +12,14 @@ export async function GET(request: Request) {
   try {
     await rateLimitOrThrow(`gateway-models:${clientIp(request)}`, 60, 60 * 1000);
     const raw = readBearerToken(request.headers.get("authorization"));
-    await authenticateVirtualKey(raw);
+    const key = await authenticateVirtualKey(raw);
+    const provider = key.provider;
     return gatewayJson(200, {
       object: "list",
-      data: GATEWAY_MODELS.map((id) => ({
-        id,
+      data: modelsForProvider(provider).map((item) => ({
+        id: item.id,
         object: "model",
-        owned_by: "openai",
+        owned_by: provider,
       })),
     });
   } catch (error) {

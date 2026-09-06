@@ -1,98 +1,133 @@
 # Trade2Credits
 
-Wallet-only rewards desk. Qualifying token swaps ($250+ USD notional) convert at a published ratio into **USDT** or **LLM credits**.
+**You swap. We credit.**
 
-Phases 0–4 are in this repo: landing, wallet login, LI.FI swap + historical claims, redeem, and admin / fraud holds.
+Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDT** to the same wallet, or as **LLM credits** for Claude, OpenAI, and DeepSeek-compatible clients.
 
-## Run
+There is no email account and no username. The address that signs in is the desk. Ethereum wallets sign SIWE. Solana wallets sign SIWS. The session stays bound to that address.
+
+## Published terms
+
+| Term | Value |
+| --- | --- |
+| Floor | **$250 USD** confirmed volume before BPS is listed; each paying fill must also be at or above $250 |
+| Ratio | **50 bps** (0.50%) of qualifying notional |
+| Worked example | $1,842.60 notional × 50 bps = **$9.21** credit |
+| Daily cap | **$2,500** of credit per day |
+| USDT destination | Signed-in EVM address only, on **Arbitrum** |
+| LLM credit | Metered `t2c_` key, shown once |
+
+Notional is the **USD value of the fill**, not the token amount. A $40 swap in a large-cap token is still $40. Changing the published rule later does not rewrite rows that already posted.
+
+## How it pays
+
+1. **Connect the wallet** at `/login`. MetaMask, Phantom, Coinbase, and other injected wallets are detected from the extension.
+2. **Swap live, or bring history.** Swap Studio quotes and executes through LI.FI, ChangeNOW, or Robinhood ETH. Activity can scan the same wallet (last 90 days, when a scan key is configured) or accept a verified transaction hash.
+3. **Clear the $250 floor.** Confirmed volume on the connected wallet must reach $250 before BPS is listed. Smaller fills can still execute. They do not pay.
+4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
+5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDT rail or the LLM rail when you want it.
+6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
+
+Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, ChangeNOW, and Robinhood.
+
+## The desk
+
+| Page | Purpose |
+| --- | --- |
+| `/` | Landing: how it pays, the published ratio, both rails |
+| `/login` | Connect wallet and sign in |
+| `/app` | Balances for website credit, USDT rail, and LLM rail |
+| `/app/swap` | Quote a pair, execute the fill, settle the credit |
+| `/app/claims` | Scan wallet history or import a hash, then claim |
+| `/app/redeem` | Convert credit and redeem USDT or a `t2c_` key |
+
+## Rails
+
+### USDT
+
+Pick the USDT rail before the credit is consumed. Redeem queues a payout to the **session EVM address on Arbitrum**. No other destination is accepted.
+
+The redeem still books when treasury is off. The transfer waits in queue until treasury is enabled, a signing key is present, and (in production) live send is turned on. Until then, the desk shows the redeem as queued, not broadcast.
+
+### LLM credits
+
+Pick the LLM rail, then redeem. The desk mints a `t2c_` virtual key. The full key is shown **once**. After that, only a hash is stored.
+
+Paste the key into any OpenAI-compatible client. Set the client base URL to:
+
+```
+{your site origin}/gateway/v1
+```
+
+Authorize with `Bearer t2c_…`. Usage burns the credit balance. Claude, OpenAI, and DeepSeek all draw from this rail. If a provider pool key is missing, redeem can still issue the virtual key; that provider returns an error until the pool is funded.
+
+## What the desk will not do
+
+- Pay a fill below **$250 USD**.
+- Credit the same transaction twice.
+- Send USDT to any address other than the signed-in EVM wallet.
+- Show a `t2c_` key a second time.
+- Invent a second balance. Website credit, USDT, and LLM are the same ledger, different rails.
+- Treat a paper fill as a live chain swap. Practice rows exist only when `ALLOW_MOCK_SWAPS=true`, and that switch is rejected in production.
+
+Round-trip wash (A → B → A on the same wallet inside an hour) still executes on-chain. The credit can be **held for review**. Release posts it. Reject does not.
+
+## Open locally
 
 ```bash
 cp .env.example .env.local
-# set SESSION_SECRET to 32+ random chars
+```
+
+Set at least `SESSION_SECRET` to 32 or more random characters. Then:
+
+```bash
 npm install
-npm test
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Connect a wallet on `/login`, then record a paper fill on `/app/swap`.
+Open [http://localhost:3000](http://localhost:3000), connect a wallet, and use the desk.
 
-`ALLOW_MOCK_SWAPS=true` is required for paper fills and is rejected in production.
-
-## Run with Docker
-
-Full stack (Next.js, Postgres 16, Redis 7, minute payout/settle jobs):
+To run the site together with local Postgres, Redis, and the minute payout/settle jobs:
 
 ```bash
-cp .env.example .env.local
-# set SESSION_SECRET (32+ chars), ADMIN_SECRET, and CRON_SECRET
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Compose overrides `DATABASE_URL` and `REDIS_URL` to the internal services. Vendor keys still come from `.env.local`. `GET /api/v1/health` reports Postgres + Redis.
-
-Hostdev (deps only, Next on the machine):
+To keep Next.js on the machine and only run the data services:
 
 ```bash
 docker compose up postgres redis
 ```
 
-Point `.env.local` at:
+Point `.env.local` at `postgresql://t2c:t2c@localhost:5432/trade2credits` and `redis://localhost:6379`, then `npm run dev`.
 
-```
-DATABASE_URL=postgresql://t2c:t2c@localhost:5432/trade2credits
-REDIS_URL=redis://localhost:6379
-```
+## Configuration
 
-then `npm run dev`.
+Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 
-The image is `output: "standalone"` and can be reused off Vercel. Do not bake `TREASURY_PRIVATE_KEY` or vendor keys into the image. Vercel + Neon + Redis Cloud stay the production path unless you promote this image yourself.
+| Variable | Why it exists |
+| --- | --- |
+| `SESSION_SECRET` | Required to sign sessions. Use 32+ random characters. |
+| `APP_ORIGIN` / `NEXT_PUBLIC_APP_URL` | Public origin for sign-in binding and the site URL. |
+| `ALLOW_MOCK_SWAPS` | Practice fills on a local desk only. Never on a public host. |
+| `ADMIN_SECRET` | Gates `/admin` and operator actions. |
+| `DATABASE_URL` | Production and Docker Postgres. Empty locally uses an on-disk store. |
+| `REDIS_URL` | Rate limits. Required in production. |
+| `LIFI_API_KEY` | Optional partner key. Public quotes still work without it. |
+| `CHANGENOW_API_KEY` | Required to open a ChangeNOW pay-in. |
+| `ZERION_API_KEY` | Enables automatic 90-day wallet scans. Without it, users can still import a verified hash. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` | Pool keys for the LLM gateway. Virtual `t2c_` keys never see these. |
+| `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | All three are required before USDT is broadcast. The private key stays server-only. |
+| `CRON_SECRET` | Authorizes the payout and settle jobs. |
+| `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for provider settle webhooks. |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional. WalletConnect stays hidden if empty. |
 
-## Phase 4
+Do not put treasury or vendor keys in an image or a committed file.
 
-`/admin` is a secret-gated console (cookie after `POST /v1/admin/session`, or Bearer `ADMIN_SECRET`). It shows liability vs pools, versions reward rules (disable = kill switch), reviews wash-trade holds, and drains the payout outbox.
+## Operator console
 
-Same-wallet A→B→A fills inside 60 minutes write `swaps.status = held` and an open `fraud_flags` row. The swap still executes. Release posts the credit; reject does not. Swap Studio also quotes Avalanche, Linea, Scroll, and Blast.
+`/admin` is secret-gated. After sign-in with `ADMIN_SECRET` it shows liability versus pools, the live reward rule (disable is a kill switch), held fills awaiting review, and the payout queue.
 
-`GET /v1/admin/ledger` `GET /v1/admin/overview` `GET /v1/admin/flags` `POST /v1/admin/flags/{id}/resolve`
+## Status
 
-## Phase 3
-
-`/app/redeem` debits the ledger once. USDT writes `payout_outbox` for Arbitrum (destination = signed-in wallet). Nothing is broadcast unless `TREASURY_ENABLED=true`, `TREASURY_PRIVATE_KEY` is set, and (in production) `TREASURY_LIVE=true`. LLM credits issue a `t2c_` key — sha256 is stored, plaintext is shown once.
-
-OpenAI-compatible gateway (no cookie / no same-origin check):
-
-```bash
-POST /gateway/v1/chat/completions
-Authorization: Bearer t2c_...
-```
-
-Set any OpenAI-compatible client base URL to `{APP_ORIGIN}/gateway/v1`. If `OPENAI_API_KEY` is missing, redeem still issues keys and the gateway returns 503. Admin drain: `POST /v1/admin/payouts/process` with `ADMIN_SECRET`.
-
-## Phase 2
-
-`/app/claims` scans the signed-in wallet (Zerion, last 90 days, when `ZERION_API_KEY` is set) and accepts a verified hash import. Claim re-checks ownership and USD, then writes the same ledger as a live swap. One reward per `(tx_hash, from_chain)`.
-
-## Phase 1
-
-Signed-in desk at `/app/swap` quotes through our API (`POST /v1/swaps/quote`), executes with the LI.FI SDK in the wallet, then settles via `POST /v1/swaps/settle`. The server reads USD notional from LI.FI status and checks `fromAddress` against the session. Client-typed amounts are not trusted.
-
-## Phase 0 surface
-
-- `GET /` landing
-- `GET /login` EIP-6963 + Phantom Solana
-- `GET /app` balances
-- `POST /v1/auth/nonce` `POST /v1/auth/verify` `POST /v1/auth/logout`
-- `GET /v1/wallet`
-- `POST /v1/swaps/confirm` (paper fill, auth + origin + rate limit)
-- `POST /v1/admin/reward-rules` (Bearer `ADMIN_SECRET`)
-
-## Security notes
-
-- Account = wallet. Session is an httpOnly JWT plus a revocable server row.
-- Nonces are one-time, address-bound, and expire in 10 minutes.
-- Mutating `/v1` routes require a matching `Origin` / `Referer`. The `/gateway` path does not — it authenticates with a `t2c_` key and is CORS-open for CLI clients.
-- Virtual keys store sha256 only. USDT withdraws only to the signed-in EVM wallet.
-- Money is integer cents. Balances are derived from `ledger_entries`.
-- One reward per `(tx_hash, from_chain)`.
-- Paper confirm is compile-time disabled when `NODE_ENV=production`.
-- Treasury never broadcasts unless `TREASURY_ENABLED` + `TREASURY_PRIVATE_KEY` (and `TREASURY_LIVE` in production).
+`GET /api/v1/health` reports whether the desk can reach its database and Redis, and whether treasury is allowed to broadcast.
