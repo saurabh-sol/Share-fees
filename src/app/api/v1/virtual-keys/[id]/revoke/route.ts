@@ -11,7 +11,7 @@ export async function POST(
     assertSameOrigin(request);
     await rateLimitOrThrow(`revoke-key:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }

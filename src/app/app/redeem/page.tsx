@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { wallets } from "@/lib/db/schema";
 import { env } from "@/lib/env";
+import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
 
 export default async function RedeemPage() {
@@ -12,11 +13,13 @@ export default async function RedeemPage() {
   if (!session) redirect("/login");
 
   const db = await getDb();
+  await settleScannedVolumeReward(session.user.id, db);
   const [wallet, redemptions, keys] = await Promise.all([
     db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),
     listRedemptions(session.user.id, db),
     listVirtualKeys(session.user.id, db),
   ]);
+  const creditCents = wallet?.creditCacheCents ?? 0;
 
   return (
     <div className="space-y-8">
@@ -24,11 +27,12 @@ export default async function RedeemPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 3</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          USDT queues an Arbitrum transfer to this wallet. LLM credits issue a metered virtual key.
-          The ledger is debited once; gateway spend never writes the wallet again.
+          Activity total reward lands here. Pick USDT or LLM and redeem it. USDT queues an Arbitrum
+          transfer to this wallet. LLM credits issue a metered virtual key.
         </p>
       </div>
       <RedeemDesk
+        creditCents={creditCents}
         usdtCents={wallet?.usdtCacheCents ?? 0}
         llmCents={wallet?.llmCacheCents ?? 0}
         chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}

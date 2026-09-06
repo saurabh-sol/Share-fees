@@ -1,9 +1,6 @@
-import { eq } from "drizzle-orm";
 import { createWalletClient, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrum } from "viem/chains";
-import { getDb } from "@/lib/db/client";
-import { payoutOutbox, redemptions } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 
 export const ARBITRUM_USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
@@ -39,47 +36,3 @@ export const broadcastArbitrumUsdt: BroadcastUsdt = async ({ destination, amount
     args: [destination as `0x${string}`, units],
   });
 };
-
-export async function processPayoutOutbox(input?: {
-  broadcast?: BroadcastUsdt;
-  db?: Awaited<ReturnType<typeof getDb>>;
-}) {
-  const client = input?.db ?? (await getDb());
-  const send = input?.broadcast ?? broadcastArbitrumUsdt;
-  const rows = await client.select().from(payoutOutbox).where(eq(payoutOutbox.status, "queued"));
-
-  const results: Array<{ id: string; status: string; txHash?: string }> = [];
-  for (const row of rows) {
-    if (!treasuryCanBroadcast() && !input?.broadcast) {
-      results.push({ id: row.id, status: "queued" });
-      continue;
-    }
-    try {
-      await client
-        .update(payoutOutbox)
-        .set({ status: "sending", attempts: row.attempts + 1, updatedAt: new Date() })
-        .where(eq(payoutOutbox.id, row.id));
-      const txHash = await send({
-        destination: row.destination,
-        amountCents: row.amountCents,
-      });
-      await client
-        .update(payoutOutbox)
-        .set({ status: "sent", txHash, lastError: null, updatedAt: new Date() })
-        .where(eq(payoutOutbox.id, row.id));
-      await client
-        .update(redemptions)
-        .set({ status: "fulfilled", fulfilledAt: new Date() })
-        .where(eq(redemptions.id, row.redemptionId));
-      results.push({ id: row.id, status: "sent", txHash });
-    } catch (error) {
-      const message = error instanceof Error ? error.message.slice(0, 180) : "payout_failed";
-      await client
-        .update(payoutOutbox)
-        .set({ status: "failed", lastError: message, updatedAt: new Date() })
-        .where(eq(payoutOutbox.id, row.id));
-      results.push({ id: row.id, status: "failed" });
-    }
-  }
-  return results;
-}

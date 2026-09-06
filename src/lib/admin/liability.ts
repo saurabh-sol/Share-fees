@@ -17,6 +17,7 @@ export async function accountTotals(db?: Awaited<ReturnType<typeof getDb>>) {
     map.set(row.account, Number(row.total ?? 0));
   }
   return {
+    userCreditsCents: map.get("user_credits") ?? 0,
     userUsdtCents: map.get("user_usdt") ?? 0,
     userLlmCents: map.get("user_llm") ?? 0,
     rewardsExpenseCents: -(map.get("rewards_expense") ?? 0),
@@ -52,7 +53,7 @@ export async function adminOverview(db?: Awaited<ReturnType<typeof getDb>>) {
       .then((rows) => Number(rows[0]?.count ?? 0)),
   ]);
 
-  const liabilityCents = totals.userUsdtCents + totals.userLlmCents;
+  const liabilityCents = totals.userCreditsCents + totals.userUsdtCents + totals.userLlmCents;
   return {
     ...totals,
     liabilityCents,

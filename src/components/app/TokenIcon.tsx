@@ -12,13 +12,14 @@ export function TokenIcon({
   size?: number;
 }) {
   const fallback = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${symbol.toLowerCase()}.png`;
-  const [src, setSrc] = useState(logoURI || fallback);
+  const safeLogo = logoURI && /^https?:\/\//i.test(logoURI) ? logoURI : null;
+  const [src, setSrc] = useState(safeLogo || fallback);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setSrc(logoURI || fallback);
+    setSrc(safeLogo || fallback);
     setFailed(false);
-  }, [logoURI, fallback]);
+  }, [safeLogo, fallback]);
 
   if (failed) {
     return (
@@ -41,7 +42,7 @@ export function TokenIcon({
       className="shrink-0 object-contain"
       style={{ width: size, height: size }}
       onError={() => {
-        if (src !== fallback && logoURI) {
+        if (src !== fallback && safeLogo) {
           setSrc(fallback);
           return;
         }

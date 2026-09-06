@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { creditEvents, discoveredSwaps, users, wallets } from "@/lib/db/schema";
-import { claimDiscoveredSwap, listUnclaimed, listWalletActivity } from "./claim";
-import { persistCandidates, scanWallet } from "./scan";
+import { listUnclaimed, listWalletActivity } from "./claim";
+import { asDate, persistCandidates, scanWallet } from "./scan";
+import { summarizeWalletVolume } from "./summary";
 import type { HistoricalCandidate } from "./types";
 
 async function seedUser(db: Awaited<ReturnType<typeof createTestDb>>) {
@@ -13,7 +13,7 @@ async function seedUser(db: Awaited<ReturnType<typeof createTestDb>>) {
     chainNamespace: "eip155",
     address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   });
-  await db.insert(wallets).values({ userId, usdtCacheCents: 0, llmCacheCents: 0 });
+  await db.insert(wallets).values({ userId, creditCacheCents: 0, usdtCacheCents: 0, llmCacheCents: 0 });
   return userId;
 }
 
@@ -35,13 +35,18 @@ function candidate(overrides: Partial<HistoricalCandidate> = {}): HistoricalCand
 }
 
 describe("historical scan → claim → ledger", () => {
+  it("parses scan timestamps that arrive as strings", () => {
+    const parsed = asDate("2026-09-06T06:00:00.000Z");
+    expect(parsed?.getTime()).toBe(Date.parse("2026-09-06T06:00:00.000Z"));
+  });
+
   it("stores sub-floor transfers with their USD value and keeps them off the claim list", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     const result = await persistCandidates(
       userId,
-      [candidate({ notionalUsdCents: 49_999, txHash: "0x" + "22".repeat(32) })],
-      50_000,
+      [candidate({ notionalUsdCents: 24_999, txHash: "0x" + "22".repeat(32) })],
+      25_000,
       db,
     );
     expect(result.inserted).toBe(1);
@@ -49,7 +54,7 @@ describe("historical scan → claim → ledger", () => {
     const activity = await listWalletActivity(userId, db);
     expect(activity).toHaveLength(1);
     expect(activity[0]?.status).toBe("below_threshold");
-    expect(activity[0]?.notionalUsdCents).toBe(49_999);
+    expect(activity[0]?.notionalUsdCents).toBe(24_999);
   });
 
   it("shows sends in activity but does not make them claimable", async () => {
@@ -58,13 +63,35 @@ describe("historical scan → claim → ledger", () => {
     await persistCandidates(
       userId,
       [candidate({ kind: "send", notionalUsdCents: 80_000, txHash: "0x" + "33".repeat(32) })],
-      50_000,
+      25_000,
       db,
     );
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
     const activity = await listWalletActivity(userId, db);
     expect(activity[0]?.kind).toBe("send");
     expect(activity[0]?.status).toBe("below_threshold");
+  });
+
+  it("sums every transfer and only mentions reward after $250 volume", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await persistCandidates(
+      userId,
+      [
+        candidate({ notionalUsdCents: 20_000, txHash: "0x" + "41".repeat(32) }),
+        candidate({ notionalUsdCents: 20_000, txHash: "0x" + "42".repeat(32) }),
+        candidate({ kind: "send", notionalUsdCents: 15_000, txHash: "0x" + "43".repeat(32) }),
+      ],
+      25_000,
+      db,
+    );
+    const activity = await listWalletActivity(userId, db);
+    const summary = summarizeWalletVolume(activity, { conversionBps: 50 });
+    expect(activity).toHaveLength(3);
+    expect(summary.totalVolumeCents).toBe(55_000);
+    expect(summary.qualifiesVolume).toBe(true);
+    expect(summary.estimatedTotalRewardCents).toBe(275);
+    expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
   it("scans through an injected source, claims once, and ignores a replay", async () => {
@@ -79,37 +106,15 @@ describe("historical scan → claim → ledger", () => {
       db,
     });
     expect(first.inserted).toBe(1);
-
-    const inbox = await listUnclaimed(userId, db);
-    expect(inbox).toHaveLength(1);
-
-    const claimed = await claimDiscoveredSwap({
-      userId,
-      address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      claimId: inbox[0]!.id,
-      rail: "llm_credits",
-      reverify: async () => trade,
-      db,
-    });
-    expect(claimed.creditedCents).toBe(256);
-    expect(claimed.llmCents).toBe(256);
+    expect(first.volumeReward?.creditedCents).toBe(256);
+    expect(await listUnclaimed(userId, db)).toHaveLength(0);
 
     const credits = await db.select().from(creditEvents);
     expect(credits).toHaveLength(1);
+    expect(credits[0]?.amountCents).toBe(256);
 
-    const [row] = await db.select().from(discoveredSwaps).where(eq(discoveredSwaps.id, inbox[0]!.id));
-    expect(row?.status).toBe("claimed");
-
-    await expect(
-      claimDiscoveredSwap({
-        userId,
-        address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        claimId: inbox[0]!.id,
-        rail: "usdt",
-        reverify: async () => trade,
-        db,
-      }),
-    ).rejects.toThrow("claim_not_open");
+    const [row] = await db.select().from(discoveredSwaps);
+    expect(row?.status).toBe("volume_settled");
 
     const replay = await scanWallet({
       userId,
@@ -122,19 +127,35 @@ describe("historical scan → claim → ledger", () => {
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
-  it("enforces scan cooldown", async () => {
+  it("lets an empty scan retry and cools down after a non-empty scan", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await scanWallet({
+    const empty = await scanWallet({
       userId,
       address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       sources: [{ name: "mock", fetchTrades: async () => [] }],
       db,
     });
-    const replay = await scanWallet({
+    expect(empty.cooldown).toBeUndefined();
+
+    const retryEmpty = await scanWallet({
       userId,
       address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       sources: [{ name: "mock", fetchTrades: async () => [] }],
+      db,
+    });
+    expect(retryEmpty.cooldown).toBeUndefined();
+
+    await scanWallet({
+      userId,
+      address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      sources: [{ name: "mock", fetchTrades: async () => [candidate()] }],
+      db,
+    });
+    const replay = await scanWallet({
+      userId,
+      address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      sources: [{ name: "mock", fetchTrades: async () => [candidate()] }],
       db,
     });
     expect(replay.cooldown).toBe(true);

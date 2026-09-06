@@ -15,7 +15,7 @@ export function RulesForm({
 }) {
   const router = useRouter();
   const [conversionBps, setConversionBps] = useState(String(latest?.conversionBps ?? 50));
-  const [minNotional, setMinNotional] = useState(String((latest?.minNotionalUsdCents ?? 50_000) / 100));
+  const [minNotional, setMinNotional] = useState(String((latest?.minNotionalUsdCents ?? 25_000) / 100));
   const [dailyCap, setDailyCap] = useState(String((latest?.dailyCapUsdCents ?? 250_000) / 100));
   const [enabled, setEnabled] = useState(latest ? latest.enabled === 1 : true);
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
@@ -54,9 +54,11 @@ export function RulesForm({
         A new version is appended. Disable to pause all new credits (kill switch). Old ledger rows stay.
       </p>
       <label className="block space-y-2">
-        <span className="text-sm text-zinc-400">Conversion (bps)</span>
+        <span className="text-sm text-zinc-400">Conversion (bps, 25–100)</span>
         <input
           required
+          min={25}
+          max={100}
           value={conversionBps}
           onChange={(event) => setConversionBps(event.target.value)}
           className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"

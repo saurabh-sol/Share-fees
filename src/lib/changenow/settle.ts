@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { addressesEqual } from "@/lib/lifi/notional";
 import { getDb } from "@/lib/db/client";
 import { changenowExchanges } from "@/lib/db/schema";
-import { LedgerError, postSwapReward, type Rail } from "@/lib/ledger/post-swap-reward";
+import { LedgerError, postSwapReward } from "@/lib/ledger/post-swap-reward";
+import { MIN_NOTIONAL_USD_CENTS, MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { ChangeNowError, type ChangeNowExchange } from "./types";
 import { fetchChangeNowExchange } from "./http";
 import { loadUserExchange } from "./create";
@@ -34,7 +35,6 @@ export async function settleChangeNowFill(input: {
   txHash: string;
   fromChain: string;
   toChain: string;
-  rail: Rail;
 }) {
   const stored = await loadUserExchange({ userId: input.userId, exchangeId: input.exchangeId });
   const live = await fetchChangeNowExchange(input.exchangeId);
@@ -60,8 +60,18 @@ export async function settleChangeNowFill(input: {
   }
 
   assertPayoutOwnedBy(live, input.sessionAddress);
-  if (stored.notionalUsdCents <= 0) {
+  const liveNotional = stored.notionalUsdCents;
+  if (liveNotional <= 0) {
     throw new ChangeNowError("missing_usd_notional", 422);
+  }
+
+  const rule = await getActiveRuleOrNull();
+  const floor = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
+  if (liveNotional < floor) {
+    throw new ChangeNowError("below_threshold", 400);
+  }
+  if (rule && computeRewardCents(liveNotional, rule.conversionBps) < MIN_REWARD_CENTS) {
+    throw new ChangeNowError("below_threshold", 400);
   }
 
   const executedHash = (live.payinHash ?? input.txHash).toLowerCase();
@@ -76,11 +86,10 @@ export async function settleChangeNowFill(input: {
       toToken: live.toCurrency || stored.toCurrency,
       fromAmount: live.fromAmount || stored.fromAmount,
       toAmount: live.toAmount || stored.toAmount,
-      notionalUsdCents: stored.notionalUsdCents,
+      notionalUsdCents: liveNotional,
       executedAt: new Date(),
-      rail: input.rail,
     });
-    return { kind: "done" as const, status: live.status, result, notionalUsdCents: stored.notionalUsdCents };
+    return { kind: "done" as const, status: live.status, result, notionalUsdCents: liveNotional };
   } catch (error) {
     if (error instanceof LedgerError) throw error;
     throw error;

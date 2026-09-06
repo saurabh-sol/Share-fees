@@ -45,6 +45,7 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function RedeemDesk({
+  creditCents,
   usdtCents,
   llmCents,
   chainNamespace,
@@ -52,6 +53,7 @@ export function RedeemDesk({
   initialRedemptions,
   initialKeys,
 }: {
+  creditCents: number;
   usdtCents: number;
   llmCents: number;
   chainNamespace: "eip155" | "solana";
@@ -62,16 +64,19 @@ export function RedeemDesk({
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
   const [rail, setRail] = useState<Rail>(evmOnly ? "usdt" : "llm_credits");
-  const [amount, setAmount] = useState("5.00");
+  const [amount, setAmount] = useState(() =>
+    creditCents >= 100 ? (creditCents / 100).toFixed(2) : "1.00",
+  );
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState<"key" | "url" | null>(null);
   const [redemptions, setRedemptions] = useState(initialRedemptions);
   const [keys, setKeys] = useState(initialKeys);
-  const [balances, setBalances] = useState({ usdtCents, llmCents });
+  const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
 
-  const available = rail === "usdt" ? balances.usdtCents : balances.llmCents;
+  const available =
+    balances.creditCents + (rail === "usdt" ? balances.usdtCents : balances.llmCents);
 
   async function refreshLists() {
     const [redeemData, keyData] = await Promise.all([
@@ -96,6 +101,7 @@ export function RedeemDesk({
         alreadyExists: boolean;
         status: string;
         plaintextKey: string | null;
+        creditCents: number;
         usdtCents: number;
         llmCents: number;
       }>("/api/v1/redeem", {
@@ -106,7 +112,11 @@ export function RedeemDesk({
           idempotencyKey: crypto.randomUUID(),
         }),
       });
-      setBalances({ usdtCents: result.usdtCents, llmCents: result.llmCents });
+      setBalances({
+        creditCents: result.creditCents,
+        usdtCents: result.usdtCents,
+        llmCents: result.llmCents,
+      });
       if (result.plaintextKey) {
         setIssuedKey(result.plaintextKey);
       }
@@ -148,14 +158,20 @@ export function RedeemDesk({
 
   return (
     <div className="space-y-12">
-      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-2 md:divide-x md:divide-y-0">
-        <div className="py-8 md:pr-10">
+      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="py-8 md:pr-8">
+          <dt className="text-sm text-zinc-500">Total reward</dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
+            {money(balances.creditCents)}
+          </dd>
+        </div>
+        <div className="py-8 md:px-8">
           <dt className="text-sm text-zinc-500">USDT available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(balances.usdtCents)}
           </dd>
         </div>
-        <div className="py-8 md:pl-10">
+        <div className="py-8 md:pl-8">
           <dt className="text-sm text-zinc-500">LLM credits available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(balances.llmCents)}
@@ -202,7 +218,8 @@ export function RedeemDesk({
             className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
           />
           <span className="block text-xs text-zinc-500">
-            Available on this rail: {money(available)}. Minimum $1.00. Pays only to the signed-in wallet.
+            Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00. Pays only to the
+            signed-in wallet.
           </span>
         </label>
 

@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/v1/jobs/payouts", "schedule": "* * * * *" },
+    { "path": "/api/v1/jobs/settles", "schedule": "* * * * *" }
+  ]
+}

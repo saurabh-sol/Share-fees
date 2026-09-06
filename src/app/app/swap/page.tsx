@@ -16,7 +16,7 @@ export default async function SwapPage() {
         <p className="mt-3 max-w-[65ch] text-zinc-400">
           LI.FI covers the usual EVM pairs. Robinhood Chain ETH (and any pair LI.FI will not quote) goes
           through ChangeNOW: you send a pay-in, they pay out to the same wallet, then we settle the credit.
-          Below $500 the fill still happens; the credit is held.
+          Below $250 the fill still happens; the credit is held.
         </p>
       </div>
       <SwapStudio

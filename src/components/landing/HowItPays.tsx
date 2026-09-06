@@ -36,8 +36,8 @@ const STEPS: {
   },
   {
     id: "03",
-    title: "Clear the $500 floor",
-    body: "Only confirmed swaps at or above $500 USD notional can credit. Smaller transfers stay visible. They do not pay.",
+    title: "Clear the $250 floor",
+    body: "Once the connected wallet's confirmed volume clears $250, BPS is listed. Each swap at or above $250 can credit. Smaller transfers stay visible. They do not pay.",
     Icon: Scales,
     span: "md:col-span-5",
   },
@@ -50,8 +50,8 @@ const STEPS: {
   },
   {
     id: "05",
-    title: "Pick USDT or LLM credits",
-    body: "Choose the rail before the row posts. USDT to the same EVM wallet on Arbitrum. LLM credits become a metered t2c_ key.",
+    title: "Claim, then convert",
+    body: "BPS posts website credit first. Convert 1:1 to LLM or USDT any time. Redeem a t2c_ key or queue Arbitrum USDT after that.",
     Icon: Coins,
     span: "md:col-span-7",
   },
@@ -123,7 +123,7 @@ export function HowItPays() {
             <p className="mt-6 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">$1,842.60 notional × 50 bps</p>
             <p className="mt-3 font-mono text-6xl tabular-nums tracking-tighter text-[#c23a3a] md:text-8xl">$9.21</p>
             <p className="mt-6 max-w-[54ch] text-base leading-relaxed text-zinc-400">
-              Notional is the USD value of the fill, not the token amount. Below $500 the swap can still run; the
+              Notional is the USD value of the fill, not the token amount. Below $250 the swap can still run; the
               ledger stores it as below_threshold and no credit posts.
             </p>
           </div>

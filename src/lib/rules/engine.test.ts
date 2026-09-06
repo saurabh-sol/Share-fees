@@ -10,7 +10,14 @@ describe("computeRewardCents", () => {
     expect(computeRewardCents(50123, 50)).toBe(250);
   });
 
-  it("rejects invalid bps", () => {
+  it("accepts the locked band edges", () => {
+    expect(computeRewardCents(50_000, 25)).toBe(125);
+    expect(computeRewardCents(50_000, 100)).toBe(500);
+  });
+
+  it("rejects bps outside 25–100", () => {
+    expect(() => computeRewardCents(50000, 24)).toThrow("invalid_conversion_bps");
+    expect(() => computeRewardCents(50000, 101)).toThrow("invalid_conversion_bps");
     expect(() => computeRewardCents(50000, 10_001)).toThrow("invalid_conversion_bps");
   });
 });

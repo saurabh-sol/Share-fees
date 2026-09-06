@@ -1,9 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 import { normalizeAddress, type ChainNamespace } from "@/lib/auth/addresses";
 import { getDb } from "@/lib/db/client";
-import { ledgerEntries, payoutOutbox, redemptions, virtualKeys } from "@/lib/db/schema";
-import { sumAccountCents, syncWalletCache } from "@/lib/ledger/balances";
+import { creditConversions, ledgerEntries, payoutOutbox, redemptions, virtualKeys } from "@/lib/db/schema";
+import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/balances";
 import type { Rail } from "@/lib/ledger/post-swap-reward";
+import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { issueVirtualKeyMaterial } from "./keys";
 
 export class RedeemError extends Error {
@@ -69,15 +70,48 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
   }
 
   const account = input.rail === "usdt" ? "user_usdt" : "user_llm";
-  const available = await sumAccountCents(client, input.userId, account);
-  if (available < input.amountCents) {
-    throw new RedeemError("insufficient_balance", 400);
-  }
-
   const destination =
     input.rail === "usdt" ? normalizeAddress("eip155", input.address) : "gateway";
 
   return client.transaction(async (tx) => {
+    await lockWalletRow(tx as never, input.userId);
+    const railAvailable = await sumAccountCents(tx as never, input.userId, account);
+    const creditAvailable = await sumAccountCents(tx as never, input.userId, "user_credits");
+    if (railAvailable + creditAvailable < input.amountCents) {
+      throw new RedeemError("insufficient_balance", 400);
+    }
+
+    const fromCredit = Math.min(creditAvailable, input.amountCents);
+    if (fromCredit > 0) {
+      const conversionId = newLedgerId("cnv");
+      await tx.insert(creditConversions).values({
+        id: conversionId,
+        userId: input.userId,
+        rail: input.rail,
+        amountCents: fromCredit,
+        idempotencyKey: `rdm_${input.idempotencyKey}`,
+      });
+      await tx.insert(ledgerEntries).values([
+        {
+          id: newId("led"),
+          userId: input.userId,
+          account: "user_credits",
+          type: "debit",
+          amountCents: fromCredit,
+          referenceType: "conversion",
+          referenceId: conversionId,
+        },
+        {
+          id: newId("led"),
+          userId: input.userId,
+          account,
+          type: "credit",
+          amountCents: fromCredit,
+          referenceType: "conversion",
+          referenceId: conversionId,
+        },
+      ]);
+    }
     const redemptionId = newId("rdm");
     const initialStatus = input.rail === "usdt" ? "queued" : "fulfilled";
 

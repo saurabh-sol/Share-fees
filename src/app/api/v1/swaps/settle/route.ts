@@ -3,6 +3,7 @@ import { assertTxHash } from "@/lib/auth/addresses";
 import { getSession } from "@/lib/auth/session";
 import { settleChangeNowFill } from "@/lib/changenow/settle";
 import { ChangeNowError } from "@/lib/changenow/types";
+import { upsertPendingSettle } from "@/lib/jobs/pending";
 import { LedgerError, postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { SettleError, readVerifiedFill } from "@/lib/lifi/settle";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     await rateLimitOrThrow(`settle:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }
@@ -33,9 +34,16 @@ export async function POST(request: Request) {
         txHash,
         fromChain: body.fromChain,
         toChain: body.toChain,
-        rail: body.rail,
       });
       if (verified.kind === "pending") {
+        await upsertPendingSettle({
+          userId: session.user.id,
+          provider: "changenow",
+          txHash,
+          exchangeId: body.exchangeId,
+          fromChain: body.fromChain,
+          toChain: body.toChain,
+        });
         return Response.json({ status: "pending", provider: "changenow", nowStatus: verified.status }, { status: 202 });
       }
       return Response.json({
@@ -54,6 +62,13 @@ export async function POST(request: Request) {
     });
 
     if (verified.kind === "pending") {
+      await upsertPendingSettle({
+        userId: session.user.id,
+        provider: "lifi",
+        txHash,
+        fromChain: body.fromChain,
+        toChain: body.toChain,
+      });
       return Response.json({ status: "pending", lifiStatus: verified.status.status }, { status: 202 });
     }
 
@@ -71,7 +86,6 @@ export async function POST(request: Request) {
       toAmount: verified.toAmount,
       notionalUsdCents: verified.notionalUsdCents,
       executedAt: new Date(),
-      rail: body.rail,
     });
 
     return Response.json({

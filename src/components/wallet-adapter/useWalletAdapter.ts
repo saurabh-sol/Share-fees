@@ -13,6 +13,7 @@ import {
   useSignMessage,
 } from "wagmi";
 import { getPhantomSolana, encodeSignature } from "@/lib/wallet/phantom";
+import { forgetWallet, rememberWallet } from "@/lib/wallet/remember";
 import type { ConnectionStatus, DiscoveredWallet } from "./wallet-config";
 import { useInstalledWallets } from "./useInstalledWallets";
 import {
@@ -102,6 +103,12 @@ export function useWalletAdapter(onClose?: () => void) {
       setConnectedAddress(address);
       setConnectedNamespace("eip155");
       setConnectionStatus("connected");
+      rememberWallet({
+        id: wallet.id,
+        connectorUid: wallet.connectorUid,
+        kind: "evm",
+        address,
+      });
     },
     [connectAsync, connectors, signMessageAsync],
   );
@@ -146,6 +153,12 @@ export function useWalletAdapter(onClose?: () => void) {
     setConnectedAddress(address);
     setConnectedNamespace("solana");
     setConnectionStatus("connected");
+    rememberWallet({
+      id: "phantom-solana",
+      connectorUid: null,
+      kind: "solana",
+      address,
+    });
   }, []);
 
   const connectWallet = useCallback(
@@ -187,6 +200,7 @@ export function useWalletAdapter(onClose?: () => void) {
     await fetch("/api/v1/auth/logout", { method: "POST", credentials: "same-origin" }).catch(
       () => undefined,
     );
+    forgetWallet();
     await resetState();
   }, [resetState]);
 

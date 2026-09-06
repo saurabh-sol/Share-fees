@@ -1,6 +1,6 @@
 # Trade2Credits
 
-Wallet-only rewards desk. Qualifying token swaps ($500+ USD notional) convert at a published ratio into **USDT** or **LLM credits**.
+Wallet-only rewards desk. Qualifying token swaps ($250+ USD notional) convert at a published ratio into **USDT** or **LLM credits**.
 
 Phases 0–4 are in this repo: landing, wallet login, LI.FI swap + historical claims, redeem, and admin / fraud holds.
 
@@ -17,6 +17,35 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). Connect a wallet on `/login`, then record a paper fill on `/app/swap`.
 
 `ALLOW_MOCK_SWAPS=true` is required for paper fills and is rejected in production.
+
+## Run with Docker
+
+Full stack (Next.js, Postgres 16, Redis 7, minute payout/settle jobs):
+
+```bash
+cp .env.example .env.local
+# set SESSION_SECRET (32+ chars), ADMIN_SECRET, and CRON_SECRET
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). Compose overrides `DATABASE_URL` and `REDIS_URL` to the internal services. Vendor keys still come from `.env.local`. `GET /api/v1/health` reports Postgres + Redis.
+
+Hostdev (deps only, Next on the machine):
+
+```bash
+docker compose up postgres redis
+```
+
+Point `.env.local` at:
+
+```
+DATABASE_URL=postgresql://t2c:t2c@localhost:5432/trade2credits
+REDIS_URL=redis://localhost:6379
+```
+
+then `npm run dev`.
+
+The image is `output: "standalone"` and can be reused off Vercel. Do not bake `TREASURY_PRIVATE_KEY` or vendor keys into the image. Vercel + Neon + Redis Cloud stay the production path unless you promote this image yourself.
 
 ## Phase 4
 

@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Rail = "usdt" | "llm_credits";
-
 const empty = {
   txHash: "",
   fromChain: "ethereum",
@@ -14,7 +12,6 @@ const empty = {
   fromAmount: "0.42",
   toAmount: "764.18",
   notionalUsd: "764.18",
-  rail: "usdt" as Rail,
 };
 
 export function PaperFillForm() {
@@ -42,7 +39,6 @@ export function PaperFillForm() {
         toAmount: form.toAmount,
         notionalUsdCents,
         executedAt: new Date().toISOString(),
-        rail: form.rail,
       }),
     });
     const data = (await response.json()) as {
@@ -60,7 +56,7 @@ export function PaperFillForm() {
     setMessage(
       data.alreadyExists
         ? "This tx hash was already booked. No second credit."
-        : `Booked ${data.status}. Credited $${((data.creditedCents ?? 0) / 100).toFixed(2)}.`,
+        : `Booked ${data.status}. Credited $${((data.creditedCents ?? 0) / 100).toFixed(2)} to website credit.`,
     );
     router.refresh();
   }
@@ -106,24 +102,8 @@ export function PaperFillForm() {
           onChange={(event) => setForm((prev) => ({ ...prev, notionalUsd: event.target.value }))}
           className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
         />
-        <span className="block text-xs text-zinc-600">Floor is $500.00. Below that, the swap is stored and the credit is skipped.</span>
+        <span className="block text-xs text-zinc-600">Floor is $250.00. Below that, the swap is stored and the credit is skipped.</span>
       </label>
-      <fieldset className="space-y-2">
-        <legend className="text-sm text-zinc-400">Reward rail</legend>
-        <div className="flex gap-6">
-          {(["usdt", "llm_credits"] as const).map((rail) => (
-            <label key={rail} className="flex items-center gap-2 text-sm text-zinc-200">
-              <input
-                type="radio"
-                name="rail"
-                checked={form.rail === rail}
-                onChange={() => setForm((prev) => ({ ...prev, rail }))}
-              />
-              {rail === "usdt" ? "USDT" : "LLM credits"}
-            </label>
-          ))}
-        </div>
-      </fieldset>
       <button
         type="submit"
         disabled={status === "loading"}

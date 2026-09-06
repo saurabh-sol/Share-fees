@@ -5,8 +5,8 @@ import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/securi
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { redeemRequestSchema } from "@/lib/validation/swap";
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(request: Request) {
+  const session = await getSession(request);
   if (!session) {
     return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
   }
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     await rateLimitOrThrow(`redeem:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }

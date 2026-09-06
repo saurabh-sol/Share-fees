@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useDisconnect } from "wagmi";
+import { forgetWallet } from "@/lib/wallet/remember";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function SignOutButton() {
     setBusy(true);
     try {
       await fetch("/api/v1/auth/logout", { method: "POST", credentials: "same-origin" });
+      forgetWallet();
       await disconnectAsync().catch(() => undefined);
       router.push("/login");
       router.refresh();

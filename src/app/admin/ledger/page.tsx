@@ -19,6 +19,10 @@ export default async function AdminLedgerPage() {
       </div>
       <dl className="grid grid-cols-2 gap-6 text-sm md:grid-cols-3">
         <div>
+          <dt className="text-zinc-500">Website credit</dt>
+          <dd className="mt-1 font-mono text-zinc-100">{money(totals.userCreditsCents)}</dd>
+        </div>
+        <div>
           <dt className="text-zinc-500">User USDT</dt>
           <dd className="mt-1 font-mono text-zinc-100">{money(totals.userUsdtCents)}</dd>
         </div>

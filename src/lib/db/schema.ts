@@ -132,10 +132,54 @@ export const wallets = pgTable("wallets", {
   userId: text("user_id")
     .primaryKey()
     .references(() => users.id),
+  creditCacheCents: integer("credit_cache_cents").notNull().default(0),
   usdtCacheCents: integer("usdt_cache_cents").notNull().default(0),
   llmCacheCents: integer("llm_cache_cents").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const creditConversions = pgTable(
+  "credit_conversions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    rail: text("rail").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("credit_conversions_user_idem").on(table.userId, table.idempotencyKey),
+    index("credit_conversions_user").on(table.userId),
+  ],
+);
+
+export const pendingSettles = pgTable(
+  "pending_settles",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    provider: text("provider").notNull(),
+    txHash: text("tx_hash").notNull(),
+    exchangeId: text("exchange_id"),
+    fromChain: text("from_chain").notNull(),
+    toChain: text("to_chain").notNull(),
+    status: text("status").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("pending_settles_provider_tx").on(table.provider, table.txHash),
+    index("pending_settles_status").on(table.status),
+    index("pending_settles_user").on(table.userId),
+  ],
+);
 
 export const discoveredSwaps = pgTable(
   "discovered_swaps",
@@ -283,6 +327,7 @@ export const payoutOutbox = pgTable(
     txHash: text("tx_hash"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
+    availableAt: timestamp("available_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -1,16 +1,27 @@
-import { getSession } from "@/lib/auth/session";
+import { cookies } from "next/headers";
+import { getSession, refreshUserSession, sessionCookieOptions } from "@/lib/auth/session";
+import { jsonError } from "@/lib/security/origin";
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(request: Request) {
+  const session = await getSession(request);
   if (!session) {
-    return Response.json({ user: null }, { status: 401 });
+    return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
   }
-  return Response.json({
-    user: {
-      id: session.user.id,
-      address: session.user.address,
-      chainNamespace: session.user.chainNamespace,
-      rewardPreference: session.user.rewardPreference,
+
+  const refreshed = await refreshUserSession(session);
+  const jar = await cookies();
+  const cookie = sessionCookieOptions();
+  jar.set(cookie.name, refreshed.token, cookie);
+
+  return Response.json(
+    {
+      user: {
+        id: session.user.id,
+        address: session.user.address,
+        chainNamespace: session.user.chainNamespace,
+      },
+      expiresAt: refreshed.expiresAt.toISOString(),
     },
-  });
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

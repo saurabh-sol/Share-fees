@@ -21,6 +21,9 @@ const envSchema = z.object({
   REDIS_PORT: z.string().optional(),
   REDIS_USERNAME: z.string().optional(),
   REDIS_PASSWORD: z.string().optional(),
+  CRON_SECRET: z.string().min(16).optional(),
+  LIFI_WEBHOOK_SECRET: z.string().min(8).optional(),
+  CHANGENOW_WEBHOOK_SECRET: z.string().min(8).optional(),
 });
 
 const parsed = envSchema.parse({
@@ -45,7 +48,12 @@ const parsed = envSchema.parse({
   REDIS_PORT: process.env.REDIS_PORT,
   REDIS_USERNAME: process.env.REDIS_USERNAME,
   REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+  CRON_SECRET: process.env.CRON_SECRET,
+  LIFI_WEBHOOK_SECRET: process.env.LIFI_WEBHOOK_SECRET,
+  CHANGENOW_WEBHOOK_SECRET: process.env.CHANGENOW_WEBHOOK_SECRET,
 });
+
+const isBuild = process.env.NEXT_PHASE === "phase-production-build";
 
 if (parsed.NODE_ENV === "production") {
   if (!parsed.SESSION_SECRET) {
@@ -53,6 +61,12 @@ if (parsed.NODE_ENV === "production") {
   }
   if (!parsed.APP_ORIGIN) {
     throw new Error("APP_ORIGIN is required in production.");
+  }
+  if (!isBuild && !parsed.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required in production.");
+  }
+  if (!isBuild && !parsed.REDIS_URL && !(parsed.REDIS_HOST && parsed.REDIS_PASSWORD)) {
+    throw new Error("Redis is required in production (REDIS_URL or REDIS_HOST+REDIS_PASSWORD).");
   }
 }
 
@@ -80,6 +94,9 @@ export const env = {
   redisPort: parsed.REDIS_PORT ? Number(parsed.REDIS_PORT) : 6379,
   redisUsername: parsed.REDIS_USERNAME ?? "default",
   redisPassword: parsed.REDIS_PASSWORD,
+  cronSecret: parsed.CRON_SECRET,
+  lifiWebhookSecret: parsed.LIFI_WEBHOOK_SECRET,
+  changeNowWebhookSecret: parsed.CHANGENOW_WEBHOOK_SECRET,
 };
 
 export function appDomain(): string {

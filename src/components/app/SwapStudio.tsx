@@ -8,10 +8,10 @@ import type { ChangeNowQuoteView } from "@/lib/changenow/types";
 import type { LifiChain, LifiQuote, LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
+import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
-type Rail = "usdt" | "llm_credits";
 type Provider = "lifi" | "changenow";
 
 type QuotePayload = {
@@ -52,8 +52,8 @@ function isChangeNowQuote(quote: LifiQuote | ChangeNowQuoteView): quote is Chang
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
-    credentials: "same-origin",
     ...init,
+    credentials: "include",
     headers: {
       "content-type": "application/json",
       ...(init?.headers ?? {}),
@@ -87,7 +87,6 @@ export function SwapStudio({
   const [fromToken, setFromToken] = useState(NATIVE);
   const [toToken, setToToken] = useState(NATIVE);
   const [amount, setAmount] = useState("0.25");
-  const [rail, setRail] = useState<Rail>("usdt");
   const [quote, setQuote] = useState<QuotePayload | null>(null);
   const [payin, setPayin] = useState<OpenedPayin | null>(null);
   const [phase, setPhase] = useState<"idle" | "quoting" | "executing" | "settling" | "success" | "error">("idle");
@@ -110,28 +109,38 @@ export function SwapStudio({
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
-    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${fromChainId}`).then((data) => {
-      setFromTokens(data.tokens);
-      setFromToken((current) => {
-        if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
-          return current;
-        }
-        return data.tokens[0]?.address ?? NATIVE;
+    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${fromChainId}`)
+      .then((data) => {
+        setFromTokens(data.tokens);
+        setFromToken((current) => {
+          if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
+            return current;
+          }
+          return data.tokens[0]?.address ?? NATIVE;
+        });
+      })
+      .catch((error: unknown) => {
+        setPhase("error");
+        setMessage(error instanceof Error ? error.message : "Could not load tokens.");
       });
-    });
   }, [fromChainId, chainNamespace]);
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
-    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${toChainId}`).then((data) => {
-      setToTokens(data.tokens);
-      setToToken((current) => {
-        if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
-          return current;
-        }
-        return data.tokens.find((token) => token.symbol === "ETH")?.address ?? data.tokens[0]?.address ?? NATIVE;
+    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${toChainId}`)
+      .then((data) => {
+        setToTokens(data.tokens);
+        setToToken((current) => {
+          if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
+            return current;
+          }
+          return data.tokens.find((token) => token.symbol === "ETH")?.address ?? data.tokens[0]?.address ?? NATIVE;
+        });
+      })
+      .catch((error: unknown) => {
+        setPhase("error");
+        setMessage(error instanceof Error ? error.message : "Could not load tokens.");
       });
-    });
   }, [toChainId, chainNamespace]);
 
   const toMeta = toTokens.find((token) => token.address.toLowerCase() === toToken.toLowerCase());
@@ -172,14 +181,13 @@ export function SwapStudio({
     for (let attempt = 0; attempt < 24; attempt += 1) {
       const response = await fetch("/api/v1/swaps/settle", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           provider,
           txHash,
           fromChain: String(fromChainId),
           toChain: String(toChainId),
-          rail,
           exchangeId,
         }),
       });
@@ -202,7 +210,7 @@ export function SwapStudio({
       setMessage(
         data.alreadyExists
           ? "This hash was already booked. No second credit."
-          : `Booked. Credited ${money(data.creditedCents ?? 0)} to ${rail === "usdt" ? "USDT" : "LLM credits"}.`,
+          : `Booked. Credited ${money(data.creditedCents ?? 0)} to website credit. Convert it on the desk.`,
       );
       router.refresh();
       return;
@@ -338,22 +346,6 @@ export function SwapStudio({
             required
           />
         </label>
-        <fieldset className="space-y-2">
-          <legend className="text-sm text-zinc-400">Reward rail</legend>
-          <div className="flex gap-6">
-            {(["usdt", "llm_credits"] as const).map((value) => (
-              <label key={value} className="flex items-center gap-2 text-sm text-zinc-200">
-                <input
-                  type="radio"
-                  name="rail"
-                  checked={rail === value}
-                  onChange={() => setRail(value)}
-                />
-                {value === "usdt" ? "USDT" : "LLM credits"}
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <button
           type="submit"
           disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
@@ -410,7 +402,7 @@ export function SwapStudio({
               <dd className="font-mono tabular-nums text-[#c23a3a]">{money(quote.estimatedRewardCents)}</dd>
             </div>
             <div className="flex justify-between py-3">
-              <dt className="text-zinc-500">$500 floor</dt>
+              <dt className="text-zinc-500">{money(quote.rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS)} floor</dt>
               <dd className="font-mono">{quote.qualifies ? "Clears" : "Held"}</dd>
             </div>
           </dl>
@@ -455,7 +447,7 @@ export function SwapStudio({
         ) : null}
         {quote && !quote.qualifies ? (
           <p className="text-sm text-zinc-500">
-            Below {money(quote.rule?.minNotionalUsdCents ?? 50_000)} the swap still runs. The credit is stored as
+            Below {money(quote.rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS)} the swap still runs. The credit is stored as
             below_threshold.
           </p>
         ) : null}

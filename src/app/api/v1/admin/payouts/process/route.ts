@@ -1,5 +1,5 @@
 import { AdminError, assertAdmin } from "@/lib/auth/admin";
-import { processPayoutOutbox } from "@/lib/redeem/treasury";
+import { processPayoutOutbox } from "@/lib/jobs/payouts";
 import { OriginError, assertSameOrigin, jsonError } from "@/lib/security/origin";
 
 export async function POST(request: Request) {

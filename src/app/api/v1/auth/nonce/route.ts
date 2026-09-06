@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     return jsonError(
       500,
       "nonce_failed",
-      error instanceof Error ? error.message : "Could not issue a login nonce.",
+      "Could not issue a login nonce. Check the database connection and try again.",
     );
   }
 }

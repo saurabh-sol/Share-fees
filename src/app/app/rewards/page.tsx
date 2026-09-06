@@ -34,7 +34,7 @@ export default async function RewardsPage() {
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-zinc-400">No ledger rows yet. Record a paper fill above the $500 floor.</p>
+        <p className="text-zinc-400">No ledger rows yet. Record a paper fill above the $250 floor.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">

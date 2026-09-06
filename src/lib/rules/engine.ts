@@ -2,21 +2,17 @@ import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { rewardRules, type RewardRule } from "@/lib/db/schema";
 
-export const MIN_NOTIONAL_USD_CENTS = 50_000;
-export const MAX_NOTIONAL_USD_CENTS = 1_000_000_000;
-
-export function computeRewardCents(
-  notionalUsdCents: number,
-  conversionBps: number,
-): number {
-  if (!Number.isInteger(notionalUsdCents) || notionalUsdCents < 0) {
-    throw new Error("invalid_notional");
-  }
-  if (!Number.isInteger(conversionBps) || conversionBps < 0 || conversionBps > 10_000) {
-    throw new Error("invalid_conversion_bps");
-  }
-  return Math.floor((notionalUsdCents * conversionBps) / 10_000);
-}
+export {
+  DEFAULT_CONVERSION_BPS,
+  DEFAULT_DAILY_CAP_USD_CENTS,
+  MAX_CONVERSION_BPS,
+  MAX_NOTIONAL_USD_CENTS,
+  MIN_CONVERSION_BPS,
+  MIN_NOTIONAL_USD_CENTS,
+  MIN_REWARD_CENTS,
+  assertConversionBps,
+  computeRewardCents,
+} from "./constants";
 
 export async function getActiveRuleOrNull(db?: Awaited<ReturnType<typeof getDb>>) {
   const client = db ?? (await getDb());

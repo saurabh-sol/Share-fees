@@ -2,10 +2,19 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { ledgerEntries, wallets } from "@/lib/db/schema";
 
+export type LedgerAccount = "user_credits" | "user_usdt" | "user_llm" | "payout_pool";
+
+export async function lockWalletRow(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+) {
+  await db.execute(sql`SELECT user_id FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
+}
+
 export async function sumAccountCents(
   db: Awaited<ReturnType<typeof getDb>>,
   userId: string,
-  account: "user_usdt" | "user_llm",
+  account: LedgerAccount,
 ): Promise<number> {
   const rows = await db
     .select({
@@ -21,12 +30,14 @@ export async function syncWalletCache(
   db: Awaited<ReturnType<typeof getDb>>,
   userId: string,
 ) {
+  const creditCents = await sumAccountCents(db, userId, "user_credits");
   const usdtCents = await sumAccountCents(db, userId, "user_usdt");
   const llmCents = await sumAccountCents(db, userId, "user_llm");
   await db
     .insert(wallets)
     .values({
       userId,
+      creditCacheCents: creditCents,
       usdtCacheCents: usdtCents,
       llmCacheCents: llmCents,
       updatedAt: new Date(),
@@ -34,10 +45,11 @@ export async function syncWalletCache(
     .onConflictDoUpdate({
       target: wallets.userId,
       set: {
+        creditCacheCents: creditCents,
         usdtCacheCents: usdtCents,
         llmCacheCents: llmCents,
         updatedAt: new Date(),
       },
     });
-  return { usdtCents, llmCents };
+  return { creditCents, usdtCents, llmCents };
 }

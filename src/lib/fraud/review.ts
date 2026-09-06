@@ -1,14 +1,13 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { creditEvents, fraudFlags, swaps } from "@/lib/db/schema";
-import { syncWalletCache } from "@/lib/ledger/balances";
+import { lockWalletRow, syncWalletCache } from "@/lib/ledger/balances";
 import {
   LedgerError,
   remainingDailyCapCents,
   writeRewardLegs,
-  type Rail,
 } from "@/lib/ledger/post-swap-reward";
-import { computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
+import { MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 
 export class ReviewError extends Error {
   constructor(
@@ -44,48 +43,46 @@ export async function resolveFraudFlag(input: {
   }
 
   if (input.action === "reject") {
-    await client
-      .update(swaps)
-      .set({ status: "rejected" })
-      .where(eq(swaps.id, swap.id));
-    await client
-      .update(fraudFlags)
-      .set({ status: "closed", reviewedBy: input.reviewer, reviewedAt: new Date() })
-      .where(eq(fraudFlags.id, flag.id));
+    await client.transaction(async (tx) => {
+      await tx.update(swaps).set({ status: "rejected" }).where(eq(swaps.id, swap.id));
+      await tx
+        .update(fraudFlags)
+        .set({ status: "closed", reviewedBy: input.reviewer, reviewedAt: new Date() })
+        .where(eq(fraudFlags.id, flag.id));
+    });
     return { flagId: flag.id, swapId: swap.id, status: "rejected", creditedCents: 0 };
   }
 
-  const [existingCredit] = await client
-    .select()
-    .from(creditEvents)
-    .where(eq(creditEvents.swapId, swap.id))
-    .limit(1);
-  if (existingCredit) {
-    await client
-      .update(fraudFlags)
-      .set({ status: "closed", reviewedBy: input.reviewer, reviewedAt: new Date() })
-      .where(eq(fraudFlags.id, flag.id));
-    return { flagId: flag.id, swapId: swap.id, status: "rewarded", creditedCents: 0 };
-  }
+  return client.transaction(async (tx) => {
+    await lockWalletRow(tx as never, swap.userId);
+    const [existingCredit] = await tx
+      .select()
+      .from(creditEvents)
+      .where(eq(creditEvents.swapId, swap.id))
+      .limit(1);
+    if (existingCredit) {
+      await tx
+        .update(fraudFlags)
+        .set({ status: "closed", reviewedBy: input.reviewer, reviewedAt: new Date() })
+        .where(eq(fraudFlags.id, flag.id));
+      return { flagId: flag.id, swapId: swap.id, status: "rewarded", creditedCents: 0 };
+    }
 
-  const rule = await getActiveRuleOrNull(client);
-  if (!rule) {
-    throw new ReviewError("rewards_paused", 409);
-  }
+    const rule = await getActiveRuleOrNull(tx as never);
+    if (!rule) {
+      throw new ReviewError("rewards_paused", 409);
+    }
 
-  const rail = (flag.rail === "llm_credits" ? "llm_credits" : "usdt") as Rail;
-  const reward = computeRewardCents(swap.notionalUsdCents, rule.conversionBps);
-  const remainingCap = await remainingDailyCapCents(client, swap.userId, rule.dailyCapUsdCents);
-  const credited = Math.min(reward, remainingCap);
-  if (credited <= 0) {
-    throw new LedgerError("daily_cap", 409);
-  }
+    const reward = computeRewardCents(swap.notionalUsdCents, rule.conversionBps);
+    const remainingCap = await remainingDailyCapCents(tx as never, swap.userId, rule.dailyCapUsdCents);
+    const credited = Math.min(reward, remainingCap);
+    if (credited < MIN_REWARD_CENTS) {
+      throw new LedgerError("daily_cap", 409);
+    }
 
-  await client.transaction(async (tx) => {
     await writeRewardLegs(tx, {
       userId: swap.userId,
       swapId: swap.id,
-      rail,
       ruleId: rule.id,
       amountCents: credited,
     });
@@ -95,7 +92,6 @@ export async function resolveFraudFlag(input: {
       .set({ status: "closed", reviewedBy: input.reviewer, reviewedAt: new Date() })
       .where(eq(fraudFlags.id, flag.id));
     await syncWalletCache(tx as never, swap.userId);
+    return { flagId: flag.id, swapId: swap.id, status: "rewarded", creditedCents: credited };
   });
-
-  return { flagId: flag.id, swapId: swap.id, status: "rewarded", creditedCents: credited };
 }

@@ -1,7 +1,7 @@
 export type PhantomSolana = {
   isPhantom?: boolean;
   publicKey?: { toString(): string };
-  connect: () => Promise<{ publicKey: { toString(): string } }>;
+  connect: (opts?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey: { toString(): string } }>;
   signMessage: (
     message: Uint8Array,
     encoding?: string,

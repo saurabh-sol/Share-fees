@@ -14,7 +14,7 @@ export async function POST(
     assertSameOrigin(request);
     await rateLimitOrThrow(`claim:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }
@@ -24,12 +24,13 @@ export async function POST(
       return jsonError(400, "invalid_claim_id", "Claim id failed validation.");
     }
 
-    const body = claimRequestSchema.parse(await request.json());
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      claimRequestSchema.parse(await request.json().catch(() => ({})));
+    }
     const result = await claimDiscoveredSwap({
       userId: session.user.id,
       address: session.user.address,
       claimId: id,
-      rail: body.rail,
     });
     return Response.json(result);
   } catch (error) {

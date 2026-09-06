@@ -2,6 +2,7 @@ import { sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
 import type { PgliteQueryResultHKT } from "drizzle-orm/pglite";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type * as schema from "./schema";
 
 type AnyDb = {
@@ -87,10 +88,12 @@ const STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS ledger_user ON ledger_entries (user_id)`,
   `CREATE TABLE IF NOT EXISTS wallets (
     user_id TEXT PRIMARY KEY REFERENCES users(id),
+    credit_cache_cents INTEGER NOT NULL DEFAULT 0,
     usdt_cache_cents INTEGER NOT NULL DEFAULT 0,
     llm_cache_cents INTEGER NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_cache_cents INTEGER NOT NULL DEFAULT 0`,
   `CREATE TABLE IF NOT EXISTS fraud_flags (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -170,11 +173,40 @@ const STATEMENTS = [
     tx_hash TEXT,
     attempts INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
+    available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE payout_outbox ADD COLUMN IF NOT EXISTS available_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
   `CREATE UNIQUE INDEX IF NOT EXISTS payout_outbox_redemption ON payout_outbox (redemption_id)`,
   `CREATE INDEX IF NOT EXISTS payout_outbox_status ON payout_outbox (status)`,
+  `CREATE TABLE IF NOT EXISTS credit_conversions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    rail TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS credit_conversions_user_idem ON credit_conversions (user_id, idempotency_key)`,
+  `CREATE INDEX IF NOT EXISTS credit_conversions_user ON credit_conversions (user_id)`,
+  `CREATE TABLE IF NOT EXISTS pending_settles (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    provider TEXT NOT NULL,
+    tx_hash TEXT NOT NULL,
+    exchange_id TEXT,
+    from_chain TEXT NOT NULL,
+    to_chain TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS pending_settles_provider_tx ON pending_settles (provider, tx_hash)`,
+  `CREATE INDEX IF NOT EXISTS pending_settles_status ON pending_settles (status)`,
+  `CREATE INDEX IF NOT EXISTS pending_settles_user ON pending_settles (user_id)`,
   `CREATE TABLE IF NOT EXISTS changenow_exchanges (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -202,8 +234,11 @@ const STATEMENTS = [
   `INSERT INTO reward_rules (
     id, version, conversion_bps, min_notional_usd_cents, daily_cap_usd_cents, enabled, active_from
   )
-  SELECT 'rule_v1', 1, 50, 50000, 250000, 1, NOW()
+  SELECT 'rule_v1', 1, 50, 25000, 250000, 1, NOW()
   WHERE NOT EXISTS (SELECT 1 FROM reward_rules WHERE version = 1)`,
+  `UPDATE reward_rules
+   SET min_notional_usd_cents = 25000
+   WHERE min_notional_usd_cents = 50000`,
 ];
 
 export async function applyMigrations(db: AnyDb) {
@@ -215,6 +250,11 @@ export async function applyMigrations(db: AnyDb) {
 export type SchemaTx =
   | PgTransaction<
       NeonQueryResultHKT,
+      typeof schema,
+      ExtractTablesWithRelations<typeof schema>
+    >
+  | PgTransaction<
+      PostgresJsQueryResultHKT,
       typeof schema,
       ExtractTablesWithRelations<typeof schema>
     >

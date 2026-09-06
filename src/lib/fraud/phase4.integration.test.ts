@@ -20,7 +20,6 @@ const outbound = {
   toAmount: "512.77",
   notionalUsdCents: 51277,
   executedAt: new Date("2026-09-06T12:00:00.000Z"),
-  rail: "usdt" as const,
 };
 
 const inbound = {
@@ -35,7 +34,7 @@ const inbound = {
 
 async function seedUser(db: Awaited<ReturnType<typeof createTestDb>>, id = "user_phase4_1") {
   await db.insert(users).values({ id, chainNamespace: "eip155", address: ADDRESS });
-  await db.insert(wallets).values({ userId: id, usdtCacheCents: 0, llmCacheCents: 0 });
+  await db.insert(wallets).values({ userId: id, creditCacheCents: 0, usdtCacheCents: 0, llmCacheCents: 0 });
   return id;
 }
 
@@ -62,16 +61,18 @@ describe("phase 4 holds + admin review", () => {
     const first = await postSwapReward({ ...outbound, userId }, db);
     expect(first.status).toBe("rewarded");
     expect(first.creditedCents).toBe(256);
+    expect(first.creditCents).toBe(256);
 
     const second = await postSwapReward({ ...inbound, userId }, db);
     expect(second.status).toBe("held");
     expect(second.creditedCents).toBe(0);
-    expect(second.usdtCents).toBe(256);
+    expect(second.creditCents).toBe(256);
+    expect(second.usdtCents).toBe(0);
 
     const flags = await db.select().from(fraudFlags);
     const open = flags.find((row) => row.status === "open");
     expect(open?.reason).toBe("wash_round_trip");
-    expect(open?.rail).toBe("usdt");
+    expect(open?.rail).toBe("credits");
 
     const released = await resolveFraudFlag({
       flagId: open!.id,
@@ -85,7 +86,8 @@ describe("phase 4 holds + admin review", () => {
     const credits = await db.select().from(creditEvents);
     expect(credits).toHaveLength(2);
     const overview = await adminOverview(db);
-    expect(overview.userUsdtCents).toBe(512);
+    expect(overview.userCreditsCents).toBe(512);
+    expect(overview.userUsdtCents).toBe(0);
     expect(overview.rewardsExpenseCents).toBe(512);
     expect(overview.openFlags).toBe(0);
   });

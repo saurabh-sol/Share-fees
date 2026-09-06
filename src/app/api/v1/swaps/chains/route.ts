@@ -3,6 +3,8 @@ import { NATIVE_TOKEN, ROBINHOOD_CHAIN_ID, robinhoodChain } from "@/lib/chains/r
 import { fetchLifiChains, type LifiChain } from "@/lib/lifi/http";
 import { jsonError } from "@/lib/security/origin";
 
+export const dynamic = "force-dynamic";
+
 const ROBINHOOD: LifiChain = {
   id: ROBINHOOD_CHAIN_ID,
   name: robinhoodChain.name,
@@ -18,15 +20,15 @@ const FALLBACK: LifiChain[] = [
   ROBINHOOD,
 ];
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(request: Request) {
+  const session = await getSession(request);
   if (!session) {
     return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
   }
   try {
     const chains = await fetchLifiChains();
-    return Response.json({ chains });
+    return Response.json({ chains }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
-    return Response.json({ chains: FALLBACK, degraded: true });
+    return Response.json({ chains: FALLBACK, degraded: true }, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

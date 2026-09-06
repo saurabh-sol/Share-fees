@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     await rateLimitOrThrow(`confirm:${clientIp(request)}`, 20, 15 * 60 * 1000);
 
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }
@@ -45,7 +45,6 @@ export async function POST(request: Request) {
       toAmount: body.toAmount,
       notionalUsdCents: body.notionalUsdCents,
       executedAt,
-      rail: body.rail,
     });
 
     return Response.json(result);

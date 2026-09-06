@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps } from "@/lib/db/schema";
-import { postSwapReward, type Rail } from "@/lib/ledger/post-swap-reward";
+import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { readVerifiedFill } from "@/lib/lifi/settle";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { fetchZerionTradeByHash } from "./zerion";
@@ -77,7 +77,6 @@ export async function claimDiscoveredSwap(input: {
   userId: string;
   address: string;
   claimId: string;
-  rail: Rail;
   reverify?: typeof reverifyCandidate;
   db?: Awaited<ReturnType<typeof getDb>>;
 }) {
@@ -116,7 +115,7 @@ export async function claimDiscoveredSwap(input: {
     throw new ClaimError("below_threshold", 400);
   }
 
-  const result = await postSwapReward(
+  return postSwapReward(
     {
       userId: input.userId,
       source: "historical",
@@ -129,15 +128,15 @@ export async function claimDiscoveredSwap(input: {
       toAmount: verified.toAmount,
       notionalUsdCents: verified.notionalUsdCents,
       executedAt: verified.executedAt,
-      rail: input.rail,
     },
     client,
+    {
+      afterWrite: async (tx) => {
+        await tx
+          .update(discoveredSwaps)
+          .set({ status: "claimed", claimedAt: new Date() })
+          .where(eq(discoveredSwaps.id, row.id));
+      },
+    },
   );
-
-  await client
-    .update(discoveredSwaps)
-    .set({ status: "claimed", claimedAt: new Date() })
-    .where(eq(discoveredSwaps.id, row.id));
-
-  return result;
 }

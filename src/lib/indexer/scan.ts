@@ -1,12 +1,20 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps, swaps, walletScans } from "@/lib/db/schema";
+import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 export const SCAN_COOLDOWN_MS = 5 * 60 * 1000;
+
+export function asDate(value: Date | string | number | null | undefined) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (value == null) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 export class ScanError extends Error {
   constructor(
@@ -36,6 +44,7 @@ export async function persistCandidates(
   const client = db ?? (await getDb());
   let inserted = 0;
   let skipped = 0;
+  let updated = 0;
 
   for (const candidate of candidates) {
     const [alreadyBooked] = await client
@@ -49,6 +58,41 @@ export async function persistCandidates(
       isClaimableKind(candidate.kind) &&
       candidate.notionalUsdCents >= minNotionalUsdCents;
     const status = alreadyBooked ? "booked" : qualifies ? "unclaimed" : "below_threshold";
+
+    const [existing] = await client
+      .select()
+      .from(discoveredSwaps)
+      .where(
+        and(eq(discoveredSwaps.txHash, candidate.txHash), eq(discoveredSwaps.fromChain, candidate.fromChain)),
+      )
+      .limit(1);
+
+    if (existing) {
+      if (
+        existing.status === "claimed" ||
+        existing.status === "booked" ||
+        existing.status === "volume_settled"
+      ) {
+        skipped += 1;
+        continue;
+      }
+      await client
+        .update(discoveredSwaps)
+        .set({
+          toChain: candidate.toChain,
+          fromToken: candidate.fromToken,
+          toToken: candidate.toToken,
+          fromAmount: candidate.fromAmount,
+          toAmount: candidate.toAmount,
+          notionalUsdCents: candidate.notionalUsdCents,
+          kind: candidate.kind,
+          executedAt: candidate.executedAt,
+          status,
+        })
+        .where(eq(discoveredSwaps.id, existing.id));
+      updated += 1;
+      continue;
+    }
 
     try {
       await client.insert(discoveredSwaps).values({
@@ -73,7 +117,7 @@ export async function persistCandidates(
     }
   }
 
-  return { inserted, skipped };
+  return { inserted, skipped, updated };
 }
 
 export async function scanWallet(input: {
@@ -90,10 +134,17 @@ export async function scanWallet(input: {
     .from(walletScans)
     .where(eq(walletScans.userId, input.userId))
     .limit(1);
+  const lastScannedAt = asDate(last?.scannedAt);
 
-  if (!input.force && last && Date.now() - last.scannedAt.getTime() < SCAN_COOLDOWN_MS) {
+  if (
+    !input.force &&
+    last &&
+    last.foundCount > 0 &&
+    lastScannedAt &&
+    Date.now() - lastScannedAt.getTime() < SCAN_COOLDOWN_MS
+  ) {
     const retryAfterSec = Math.ceil(
-      (SCAN_COOLDOWN_MS - (Date.now() - last.scannedAt.getTime())) / 1000,
+      (SCAN_COOLDOWN_MS - (Date.now() - lastScannedAt.getTime())) / 1000,
     );
     return {
       inserted: 0,
@@ -104,6 +155,7 @@ export async function scanWallet(input: {
       retryAfterSec,
       minNotionalUsdCents: (await getActiveRuleOrNull(client))?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
       windowDays: 90,
+      volumeReward: await settleScannedVolumeReward(input.userId, client),
     };
   }
 
@@ -114,8 +166,13 @@ export async function scanWallet(input: {
 
   for (const source of sources) {
     providers.push(source.name);
-    const batch = await source.fetchTrades(input.address, since);
-    candidates.push(...batch);
+    try {
+      const batch = await source.fetchTrades(input.address, since);
+      candidates.push(...batch);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "scan_source_failed";
+      throw new ScanError(message, 502);
+    }
   }
 
   const result = await persistCandidates(
@@ -148,5 +205,6 @@ export async function scanWallet(input: {
     providers,
     minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
     windowDays: 90,
+    volumeReward: await settleScannedVolumeReward(input.userId, client),
   };
 }

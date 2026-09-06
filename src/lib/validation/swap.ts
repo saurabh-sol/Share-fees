@@ -25,7 +25,7 @@ export const confirmSwapSchema = z.object({
   toAmount: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).max(40),
   notionalUsdCents: z.number().int().min(1).max(1_000_000_000),
   executedAt: z.string().datetime(),
-  rail: railSchema,
+  rail: railSchema.optional(),
 });
 
 export const quoteRequestSchema = z.object({
@@ -41,7 +41,7 @@ export const settleSwapSchema = z.object({
   txHash: z.string().min(64).max(90),
   fromChain: z.string().min(1).max(32),
   toChain: z.string().min(1).max(32),
-  rail: railSchema,
+  rail: railSchema.optional(),
   exchangeId: z.string().min(6).max(80).optional(),
 });
 
@@ -60,7 +60,13 @@ export const importHashSchema = z.object({
 });
 
 export const claimRequestSchema = z.object({
+  rail: railSchema.optional(),
+});
+
+export const convertCreditsSchema = z.object({
   rail: railSchema,
+  amountCents: z.number().int().min(1).max(10_000_000),
+  idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
 });
 
 export const redeemRequestSchema = z.object({
@@ -78,9 +84,9 @@ export const chatCompletionSchema = z
   .passthrough();
 
 export const rewardRuleSchema = z.object({
-  conversionBps: z.number().int().min(0).max(10_000),
-  minNotionalUsdCents: z.number().int().min(0).max(1_000_000_000),
-  dailyCapUsdCents: z.number().int().min(0).max(10_000_000_000),
+  conversionBps: z.number().int().min(25).max(100),
+  minNotionalUsdCents: z.number().int().min(25_000).max(1_000_000_000),
+  dailyCapUsdCents: z.number().int().min(100).max(10_000_000_000),
   enabled: z.boolean().default(true),
 });
 

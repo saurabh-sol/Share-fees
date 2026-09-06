@@ -17,16 +17,26 @@ export function assertSameOrigin(request: Request): void {
   const allowed = new URL(env.appOrigin);
 
   if (origin) {
-    const incoming = new URL(origin);
-    if (incoming.origin !== allowed.origin) {
+    try {
+      const incoming = new URL(origin);
+      if (incoming.origin !== allowed.origin) {
+        throw new OriginError("origin_mismatch");
+      }
+    } catch (error) {
+      if (error instanceof OriginError) throw error;
       throw new OriginError("origin_mismatch");
     }
     return;
   }
 
   if (referer) {
-    const incoming = new URL(referer);
-    if (incoming.origin !== allowed.origin) {
+    try {
+      const incoming = new URL(referer);
+      if (incoming.origin !== allowed.origin) {
+        throw new OriginError("referer_mismatch");
+      }
+    } catch (error) {
+      if (error instanceof OriginError) throw error;
       throw new OriginError("referer_mismatch");
     }
     return;
@@ -43,5 +53,8 @@ export class OriginError extends Error {
 }
 
 export function jsonError(status: number, code: string, message: string) {
-  return Response.json({ error: code, message }, { status });
+  return Response.json(
+    { error: code, message },
+    { status, headers: { "Cache-Control": "private, no-store" } },
+  );
 }

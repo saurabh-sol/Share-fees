@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TokenIcon } from "./TokenIcon";
 
-type Rail = "usdt" | "llm_credits";
-
 type Claim = {
   id: string;
   txHash: string;
@@ -19,6 +17,15 @@ type Claim = {
   provider: string;
   status: string;
   kind?: string;
+};
+
+type VolumeSummary = {
+  transferCount: number;
+  totalVolumeCents: number;
+  estimatedTotalRewardCents: number;
+  qualifiesVolume: boolean;
+  conversionBps: number;
+  minNotionalUsdCents: number;
 };
 
 function money(cents: number) {
@@ -39,17 +46,32 @@ function kindLabel(kind: string | undefined) {
   return "Transfer";
 }
 
-function statusLabel(row: Claim) {
+function statusLabel(row: Claim, minNotionalUsdCents: number) {
   if (row.status === "unclaimed") return `Claim ${money(row.estimatedRewardCents)}`;
-  if (row.status === "claimed" || row.status === "booked") return "Already credited";
-  if (row.status === "below_threshold") return "Below $500";
+  if (row.status === "claimed" || row.status === "booked" || row.status === "volume_settled") {
+    return "Already credited";
+  }
+  if (row.status === "below_threshold" && row.kind && row.kind !== "trade" && row.kind !== "execute") {
+    return "Listed";
+  }
+  if (row.status === "below_threshold") return `Under ${money(minNotionalUsdCents)}`;
   return row.status;
+}
+
+function formatWhen(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
-    credentials: "same-origin",
     ...init,
+    credentials: "include",
     headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
   });
   const data = (await response.json()) as T & { message?: string; error?: string };
@@ -61,27 +83,30 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function ClaimsInbox({
   initialClaims,
+  initialSummary,
   autoScan,
   minNotionalUsdCents,
+  conversionBps,
 }: {
   initialClaims: Claim[];
+  initialSummary: VolumeSummary;
   autoScan: boolean;
   minNotionalUsdCents: number;
+  conversionBps: number;
 }) {
   const router = useRouter();
   const [claims, setClaims] = useState(initialClaims);
-  const [rail, setRail] = useState<Rail>("usdt");
+  const [summary, setSummary] = useState(initialSummary);
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [importHash, setImportHash] = useState("");
   const [fromChain, setFromChain] = useState("8453");
   const [toChain, setToChain] = useState("8453");
 
-  const claimable = claims.filter((row) => row.status === "unclaimed").length;
-
   async function load() {
-    const data = await readJson<{ claims: Claim[] }>("/api/v1/swaps/claims");
+    const data = await readJson<{ claims: Claim[]; summary: VolumeSummary }>("/api/v1/swaps/claims");
     setClaims(data.claims);
+    setSummary(data.summary);
     setStatus("idle");
   }
 
@@ -92,6 +117,7 @@ export function ClaimsInbox({
       const result = await readJson<{
         inserted: number;
         scanned: number;
+        updated?: number;
         providers: string[];
         cooldown?: boolean;
         retryAfterSec?: number;
@@ -105,7 +131,7 @@ export function ClaimsInbox({
         setMessage(
           result.providers.length === 0
             ? "No history provider is configured. Import a hash LI.FI can verify, or set ZERION_API_KEY."
-            : `Found ${result.scanned} wallet transfers. ${result.inserted} new rows. Rewards start at ${money(minNotionalUsdCents)}.`,
+            : `Listed ${result.scanned} transfers. ${result.inserted} new · ${result.updated ?? 0} refreshed.`,
         );
       }
     } catch (error) {
@@ -137,14 +163,14 @@ export function ClaimsInbox({
     try {
       const result = await readJson<{ creditedCents: number; alreadyExists?: boolean }>(
         `/api/v1/swaps/claims/${id}/claim`,
-        { method: "POST", body: JSON.stringify({ rail }) },
+        { method: "POST", body: JSON.stringify({}) },
       );
       await load();
       router.refresh();
       setMessage(
         result.alreadyExists
           ? "That hash was already on the ledger."
-          : `Claimed ${money(result.creditedCents)} to ${rail === "usdt" ? "USDT" : "LLM credits"}.`,
+          : `Claimed ${money(result.creditedCents)} to website credit. Convert it on the desk.`,
       );
     } catch (error) {
       setStatus("error");
@@ -157,7 +183,7 @@ export function ClaimsInbox({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="max-w-[65ch] text-sm text-zinc-400">
           {autoScan
-            ? `Scan lists every confirmed wallet transfer from the last 90 days, with USD value. Only swaps at ${money(minNotionalUsdCents)}+ can be claimed.`
+            ? `Scan pulls confirmed wallet transfers from the last 90 days and totals the USD volume. Reward is shown only when that total clears ${money(minNotionalUsdCents)}.`
             : "Automatic scan needs ZERION_API_KEY. You can still import a hash that LI.FI (or Zerion) can prove is yours."}
         </p>
         <button
@@ -170,9 +196,31 @@ export function ClaimsInbox({
         </button>
       </div>
 
-      <p className="font-mono text-xs text-zinc-500">
-        {claims.length} transfer{claims.length === 1 ? "" : "s"} · {claimable} claimable
-      </p>
+      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="py-6 md:pr-8">
+          <dt className="text-sm text-zinc-500">Transfers</dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">{summary.transferCount}</dd>
+        </div>
+        <div className="py-6 md:px-8">
+          <dt className="text-sm text-zinc-500">Total volume</dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
+            {money(summary.totalVolumeCents)}
+          </dd>
+        </div>
+        <div className="py-6 md:pl-8">
+          <dt className="text-sm text-zinc-500">
+            {summary.qualifiesVolume ? `Total reward · ${conversionBps} bps` : "Total reward"}
+          </dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
+            {summary.qualifiesVolume ? money(summary.estimatedTotalRewardCents) : "—"}
+          </dd>
+          {!summary.qualifiesVolume ? (
+            <p className="mt-2 text-sm text-zinc-500">
+              Shown after volume clears {money(minNotionalUsdCents)}.
+            </p>
+          ) : null}
+        </div>
+      </dl>
 
       {claims.length === 0 ? (
         <p className="border-y border-white/8 py-8 text-zinc-400">
@@ -198,11 +246,11 @@ export function ClaimsInbox({
                   ) : null}
                 </p>
                 <p className="font-mono text-xs text-zinc-500">
-                  {claim.fromChain} · {claim.txHash.slice(0, 10)}… · {money(claim.notionalUsdCents)}
+                  {formatWhen(claim.executedAt)} · {claim.fromChain} · {claim.txHash.slice(0, 10)}…
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <p className="font-mono text-sm text-zinc-100">{money(claim.notionalUsdCents)}</p>
+                <p className="font-mono text-sm tabular-nums text-zinc-100">{money(claim.notionalUsdCents)}</p>
                 {claim.status === "unclaimed" ? (
                   <button
                     type="button"
@@ -210,28 +258,16 @@ export function ClaimsInbox({
                     disabled={status === "working"}
                     className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
                   >
-                    {statusLabel(claim)}
+                    {statusLabel(claim, minNotionalUsdCents)}
                   </button>
                 ) : (
-                  <p className="text-sm text-zinc-500">{statusLabel(claim)}</p>
+                  <p className="text-sm text-zinc-500">{statusLabel(claim, minNotionalUsdCents)}</p>
                 )}
               </div>
             </li>
           ))}
         </ul>
       )}
-
-      <fieldset className="space-y-2">
-        <legend className="text-sm text-zinc-400">Claim rail</legend>
-        <div className="flex gap-6">
-          {(["usdt", "llm_credits"] as const).map((value) => (
-            <label key={value} className="flex items-center gap-2 text-sm text-zinc-200">
-              <input type="radio" name="claim-rail" checked={rail === value} onChange={() => setRail(value)} />
-              {value === "usdt" ? "USDT" : "LLM credits"}
-            </label>
-          ))}
-        </div>
-      </fieldset>
 
       <form onSubmit={(event) => void onImport(event)} className="max-w-xl space-y-4 border-t border-white/8 pt-8">
         <p className="text-sm text-zinc-400">Import a source-chain hash. We verify ownership before it enters the list.</p>

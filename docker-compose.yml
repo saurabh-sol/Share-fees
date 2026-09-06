@@ -1,3 +1,7 @@
+# Full stack:   docker compose up --build
+# Hostdev deps: docker compose up postgres redis
+#               then npm run dev with localhost DATABASE_URL / REDIS_URL
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,6 +13,76 @@ services:
       - "5432:5432"
     volumes:
       - t2c_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U t2c -d trade2credits"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - t2c_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: development
+      ALLOW_MOCK_SWAPS: "true"
+      DATABASE_URL: postgresql://t2c:t2c@postgres:5432/trade2credits
+      REDIS_URL: redis://redis:6379
+      APP_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  cron:
+    image: curlimages/curl:8.12.1
+    depends_on:
+      app:
+        condition: service_healthy
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          curl -fsS -H "Authorization: Bearer $${CRON_SECRET}" http://app:3000/api/v1/jobs/payouts || true
+          curl -fsS -H "Authorization: Bearer $${CRON_SECRET}" http://app:3000/api/v1/jobs/settles || true
+          sleep 60
+        done
 
 volumes:
   t2c_pg:
+  t2c_redis:

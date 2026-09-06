@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions, users, virtualKeys, wallets } from "@/lib/db/schema";
 import { GatewayError, authenticateVirtualKey, consumeVirtualKey, handleChatCompletion } from "@/lib/gateway/service";
+import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
+import { processPayoutOutbox } from "@/lib/jobs/payouts";
 import { hashVirtualKey } from "./keys";
 import { RedeemError, redeem, revokeVirtualKey } from "./service";
-import { processPayoutOutbox, treasuryCanBroadcast } from "./treasury";
+import { treasuryCanBroadcast } from "./treasury";
 
 const ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -32,8 +34,34 @@ async function seedUser(
     chainNamespace: namespace,
     address: ADDRESS,
   });
-  await db.insert(wallets).values({ userId: id, usdtCacheCents: 0, llmCacheCents: 0 });
+  await db.insert(wallets).values({
+    userId: id,
+    creditCacheCents: 0,
+    usdtCacheCents: 0,
+    llmCacheCents: 0,
+  });
   return id;
+}
+
+async function claimThenConvert(
+  db: Awaited<ReturnType<typeof createTestDb>>,
+  userId: string,
+  rail: "usdt" | "llm_credits",
+  overrides: Partial<typeof fill> = {},
+) {
+  const posted = await postSwapReward({ ...fill, ...overrides, userId }, db);
+  if (posted.creditedCents > 0) {
+    await convertCredits(
+      {
+        userId,
+        rail,
+        amountCents: posted.creditedCents,
+        idempotencyKey: `cnv_${overrides.txHash ?? fill.txHash}`,
+      },
+      db,
+    );
+  }
+  return posted;
 }
 
 const chatBody = {
@@ -45,7 +73,7 @@ describe("phase 3 redeem + gateway", () => {
   it("issues an LLM key once, stores only the hash, and refuses a replay plaintext", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "llm_credits" }, db);
+    await claimThenConvert(db, userId, "llm_credits");
 
     const first = await redeem(
       {
@@ -88,7 +116,7 @@ describe("phase 3 redeem + gateway", () => {
   it("rejects a redeem above the available rail balance", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "usdt" }, db);
+    await postSwapReward({ ...fill, userId }, db);
 
     await expect(
       redeem(
@@ -108,7 +136,7 @@ describe("phase 3 redeem + gateway", () => {
   it("queues USDT to the session wallet without broadcasting when treasury is locked", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "usdt" }, db);
+    await claimThenConvert(db, userId, "usdt");
     expect(treasuryCanBroadcast()).toBe(false);
 
     const result = await redeem(
@@ -145,7 +173,7 @@ describe("phase 3 redeem + gateway", () => {
   it("marks the outbox sent when a broadcast function is injected", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "usdt" }, db);
+    await claimThenConvert(db, userId, "usdt");
     await redeem(
       {
         userId,
@@ -176,10 +204,42 @@ describe("phase 3 redeem + gateway", () => {
     expect(row?.status).toBe("fulfilled");
   });
 
+  it("refunds user_usdt after the payout worker exhausts attempts", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await claimThenConvert(db, userId, "usdt");
+    await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "usdt",
+        amountCents: 100,
+        idempotencyKey: "idem_usdt_fail",
+      },
+      db,
+    );
+    await db.update(payoutOutbox).set({ attempts: 7 });
+
+    const processed = await processPayoutOutbox({
+      db,
+      broadcast: async () => {
+        throw new Error("rpc_down");
+      },
+    });
+    expect(processed[0]?.status).toBe("failed");
+    const [outbox] = await db.select().from(payoutOutbox);
+    expect(outbox?.status).toBe("failed");
+    const [row] = await db.select().from(redemptions);
+    expect(row?.status).toBe("refunded");
+    const [wallet] = await db.select().from(wallets);
+    expect(wallet?.usdtCacheCents).toBe(382);
+  });
+
   it("rejects a bad gateway key and decrements cap through a mock forwarder", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "llm_credits" }, db);
+    await claimThenConvert(db, userId, "llm_credits");
     const issued = await redeem(
       {
         userId,
@@ -228,10 +288,65 @@ describe("phase 3 redeem + gateway", () => {
     });
   });
 
+  it("reserves the remaining cap so a parallel gateway call cannot overspend", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await claimThenConvert(db, userId, "llm_credits");
+    const issued = await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "llm_credits",
+        amountCents: 100,
+        idempotencyKey: "idem_gw_race",
+      },
+      db,
+    );
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const first = handleChatCompletion({
+      authorization: `Bearer ${issued.plaintextKey}`,
+      body: chatBody,
+      db,
+      forward: async () => {
+        await gate;
+        return {
+          response: Response.json({ id: "chat_1", choices: [] }),
+          promptTokens: 100,
+          completionTokens: 50,
+          model: "gpt-4o-mini",
+        };
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    await expect(
+      handleChatCompletion({
+        authorization: `Bearer ${issued.plaintextKey}`,
+        body: chatBody,
+        db,
+        forward: async () => ({
+          response: Response.json({ id: "chat_2", choices: [] }),
+          promptTokens: 100,
+          completionTokens: 50,
+          model: "gpt-4o-mini",
+        }),
+      }),
+    ).rejects.toMatchObject({ message: "insufficient_credits" });
+    release();
+    const response = await first;
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-T2C-Remaining-Cents")).toBe("99");
+  });
+
   it("rejects a revoked key on the next gateway request", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId, rail: "llm_credits" }, db);
+    await claimThenConvert(db, userId, "llm_credits");
     const issued = await redeem(
       {
         userId,
@@ -253,7 +368,7 @@ describe("phase 3 redeem + gateway", () => {
   it("blocks USDT redeem for a Solana session", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db, "user_sol_1", "solana");
-    await postSwapReward({ ...fill, userId, rail: "usdt", txHash: "0x" + "cd".repeat(32) }, db);
+    await postSwapReward({ ...fill, userId, txHash: "0x" + "cd".repeat(32) }, db);
     await expect(
       redeem(
         {

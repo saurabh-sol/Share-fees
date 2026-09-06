@@ -1,7 +1,7 @@
 import { DitherSwapArt } from "@/components/landing/DitherSwapArt";
 import { HowItPays } from "@/components/landing/HowItPays";
 import { NotchedCta } from "@/components/landing/NotchedCta";
-import { PeekAccountButton } from "@/components/landing/PeekAccountButton";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 const HOUSES = ["MetaMask", "Phantom", "Coinbase", "LI.FI", "ChangeNOW", "Robinhood"];
@@ -20,12 +20,11 @@ export default function HomePage() {
               You swap. We credit.
             </h1>
             <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400">
-              Qualifying $500+ fills convert at a published ratio. Take USDT to the same wallet, or LLM credits for
+              Qualifying $250+ fills convert at a published ratio. Take USDT to the same wallet, or LLM credits for
               Claude, OpenAI, and DeepSeek-compatible clients.
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-x-14 gap-y-10">
+            <div className="mt-10">
               <NotchedCta href="/login">Connect wallet</NotchedCta>
-              <PeekAccountButton href="/login" label="Open the desk" />
             </div>
             <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
               Detected from the extension · signed with SIWE / SIWS
@@ -66,9 +65,6 @@ export default function HomePage() {
                 LLM rail mints a t2c_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
                 balance. Claude, OpenAI, and DeepSeek marks on the desk control are the same rail.
               </p>
-              <div className="mt-10">
-                <PeekAccountButton href="/login" label="Connect account" />
-              </div>
             </article>
           </div>
         </section>
@@ -77,14 +73,12 @@ export default function HomePage() {
           <div className="mx-auto max-w-[1400px] px-4 py-20 pb-28 md:px-8">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Account</p>
             <h2 className="mt-4 max-w-[18ch] text-3xl tracking-tight text-zinc-100">
-              One wallet. Two rails. Hover the desk control.
+              One wallet. Two rails. Same session address.
             </h2>
-            <div className="mt-10">
-              <PeekAccountButton href="/login" label="Connect account" />
-            </div>
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -3,10 +3,10 @@ import { getRedemptionForUser } from "@/lib/redeem/service";
 import { jsonError } from "@/lib/security/origin";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
+  const session = await getSession(request);
   if (!session) {
     return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
   }

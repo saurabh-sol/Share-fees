@@ -4,8 +4,17 @@ import type { ActivityKind, HistoricalCandidate, TradeSource } from "./types";
 
 const ZERION_BASE = "https://api.zerion.io/v1";
 
-const CHAIN_SLUGS =
-  "ethereum,optimism,base,arbitrum,polygon,binance-smart-chain,avalanche,linea,scroll,blast";
+const ZERION_PAGE_SIZE = 50;
+const ZERION_MAX_PAGES = 10;
+
+function zerionAuthHeader() {
+  const raw = `${env.zerionApiKey}:`;
+  const encoded =
+    typeof Buffer !== "undefined"
+      ? Buffer.from(raw).toString("base64")
+      : btoa(raw);
+  return `Basic ${encoded}`;
+}
 
 type ZerionTransfer = {
   direction?: string;
@@ -29,8 +38,10 @@ type ZerionTx = {
 
 export function normalizeActivityKind(raw: string | undefined): ActivityKind {
   const value = (raw ?? "").toLowerCase();
+  if (value === "swap" || value === "trade") {
+    return "trade";
+  }
   if (
-    value === "trade" ||
     value === "execute" ||
     value === "send" ||
     value === "receive" ||
@@ -48,7 +59,11 @@ function notionalFromTransfers(transfers: ZerionTransfer[]): number {
     .filter((item) => typeof item.value === "number" && item.value > 0)
     .map((item) => item.value as number);
   if (valued.length === 0) return 0;
-  return usdToCents(Math.max(...valued));
+  try {
+    return usdToCents(Math.max(...valued));
+  } catch {
+    return 0;
+  }
 }
 
 function tokensFromTransfers(transfers: ZerionTransfer[]) {
@@ -87,10 +102,10 @@ export async function fetchZerionTrades(
 
   const found: HistoricalCandidate[] = [];
   let next: string | null =
-    `${ZERION_BASE}/wallets/${address}/transactions/?currency=usd&page[size]=50&filter[trash]=only_non_trash&filter[chain_ids]=${CHAIN_SLUGS}&filter[min_mined_at]=${since.getTime()}`;
-  const auth = `Basic ${Buffer.from(`${env.zerionApiKey}:`).toString("base64")}`;
+    `${ZERION_BASE}/wallets/${address}/transactions/?currency=usd&page[size]=${ZERION_PAGE_SIZE}&filter[trash]=only_non_trash&filter[min_mined_at]=${since.getTime()}`;
+  const auth = zerionAuthHeader();
 
-  for (let page = 0; page < 5 && next; page += 1) {
+  for (let page = 0; page < ZERION_MAX_PAGES && next; page += 1) {
     const response = await fetch(next, {
       headers: {
         accept: "application/json",
@@ -110,7 +125,12 @@ export async function fetchZerionTrades(
       const row = candidateFromZerion(item);
       if (row) found.push(row);
     }
-    next = body.links?.next ?? null;
+    const linked = body.links?.next ?? null;
+    next = !linked
+      ? null
+      : linked.startsWith("http")
+        ? linked
+        : new URL(linked, `${ZERION_BASE}/`).toString();
   }
 
   return found;
@@ -126,7 +146,7 @@ export async function fetchZerionTradeByHash(
   txHash: string,
 ): Promise<HistoricalCandidate | null> {
   if (!env.zerionApiKey) return null;
-  const auth = `Basic ${Buffer.from(`${env.zerionApiKey}:`).toString("base64")}`;
+  const auth = zerionAuthHeader();
   const url = `${ZERION_BASE}/wallets/${address}/transactions/?currency=usd&page[size]=5&filter[search_query]=${txHash}`;
   const response = await fetch(url, {
     headers: { accept: "application/json", authorization: auth },

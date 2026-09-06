@@ -10,7 +10,7 @@ import { changeNowCreateSchema } from "@/lib/validation/swap";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }

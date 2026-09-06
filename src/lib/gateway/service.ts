@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { virtualKeys } from "@/lib/db/schema";
 import { env } from "@/lib/env";
@@ -81,6 +81,41 @@ export async function consumeVirtualKey(keyId: string, cents: number, db?: Db) {
   return row.spendCapCents - nextUsed;
 }
 
+async function reserveVirtualKey(keyId: string, db: Db) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM virtual_keys WHERE id = ${keyId} FOR UPDATE`);
+    const [row] = await tx.select().from(virtualKeys).where(eq(virtualKeys.id, keyId)).limit(1);
+    if (!row || row.status !== "active") {
+      throw new GatewayError("invalid_api_key", 401);
+    }
+    const remaining = row.spendCapCents - row.spendUsedCents;
+    if (remaining <= 0) {
+      throw new GatewayError("insufficient_credits", 402);
+    }
+    await tx
+      .update(virtualKeys)
+      .set({ spendUsedCents: row.spendCapCents })
+      .where(eq(virtualKeys.id, keyId));
+    return { usedBefore: row.spendUsedCents, cap: row.spendCapCents };
+  });
+}
+
+async function settleReservation(
+  keyId: string,
+  usedBefore: number,
+  cap: number,
+  actualCents: number,
+  db: Db,
+) {
+  const nextUsed = Math.min(usedBefore + Math.max(0, actualCents), cap);
+  await db.update(virtualKeys).set({ spendUsedCents: nextUsed }).where(eq(virtualKeys.id, keyId));
+  return cap - nextUsed;
+}
+
+async function releaseReservation(keyId: string, usedBefore: number, db: Db) {
+  await db.update(virtualKeys).set({ spendUsedCents: usedBefore }).where(eq(virtualKeys.id, keyId));
+}
+
 export type ChatForwarder = (input: {
   body: unknown;
   signal?: AbortSignal;
@@ -135,21 +170,34 @@ export async function handleChatCompletion(input: {
     throw new GatewayError("stream_not_supported", 400);
   }
 
-  const forward = input.forward ?? forwardToOpenAI;
-  const result = await forward({ body: parsed });
-  const used = estimateUsageCents({
-    model: result.model,
-    promptTokens: result.promptTokens,
-    completionTokens: result.completionTokens,
-  });
-  const remainingCents = await consumeVirtualKey(key.id, used, input.db);
+  const client = input.db ?? (await getDb());
+  const reservation = await reserveVirtualKey(key.id, client);
+  try {
+    const forward = input.forward ?? forwardToOpenAI;
+    const result = await forward({ body: parsed });
+    const used = estimateUsageCents({
+      model: result.model,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+    });
+    const remainingCents = await settleReservation(
+      key.id,
+      reservation.usedBefore,
+      reservation.cap,
+      used,
+      client,
+    );
 
-  const headers = new Headers(result.response.headers);
-  headers.set("X-T2C-Remaining-Cents", String(remainingCents));
-  return new Response(result.response.body, {
-    status: result.response.status,
-    headers,
-  });
+    const headers = new Headers(result.response.headers);
+    headers.set("X-T2C-Remaining-Cents", String(remainingCents));
+    return new Response(result.response.body, {
+      status: result.response.status,
+      headers,
+    });
+  } catch (error) {
+    await releaseReservation(key.id, reservation.usedBefore, client);
+    throw error;
+  }
 }
 
 export class AiGateway {

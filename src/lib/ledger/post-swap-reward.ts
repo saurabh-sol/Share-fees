@@ -1,4 +1,5 @@
 import { and, eq, gte, sql } from "drizzle-orm";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { getDb } from "@/lib/db/client";
 import {
   creditEvents,
@@ -8,8 +9,12 @@ import {
   wallets,
 } from "@/lib/db/schema";
 import { findWashPrior } from "@/lib/fraud/wash";
-import { computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
-import { sumAccountCents } from "./balances";
+import {
+  MIN_REWARD_CENTS,
+  computeRewardCents,
+  getActiveRuleOrNull,
+} from "@/lib/rules/engine";
+import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
 
 export type Rail = "usdt" | "llm_credits";
 
@@ -25,7 +30,7 @@ export type PostSwapInput = {
   toAmount: string;
   notionalUsdCents: number;
   executedAt: Date;
-  rail: Rail;
+  rail?: Rail;
 };
 
 export type PostSwapResult = {
@@ -33,6 +38,7 @@ export type PostSwapResult = {
   status: string;
   creditedCents: number;
   alreadyExists: boolean;
+  creditCents: number;
   usdtCents: number;
   llmCents: number;
 };
@@ -58,25 +64,40 @@ export async function writeRewardLegs(
   input: {
     userId: string;
     swapId: string;
-    rail: Rail;
     ruleId: string;
     amountCents: number;
   },
 ) {
-  const userAccount = input.rail === "usdt" ? "user_usdt" : "user_llm";
   await tx.insert(creditEvents).values({
     id: newLedgerId("cred"),
     userId: input.userId,
     swapId: input.swapId,
     ruleId: input.ruleId,
-    rail: input.rail,
+    rail: "credits",
     amountCents: input.amountCents,
   });
+  await writeRewardLedgerOnly(tx, {
+    userId: input.userId,
+    swapId: input.swapId,
+    amountCents: input.amountCents,
+  });
+}
+
+export async function writeRewardLedgerOnly(
+  tx: {
+    insert: Awaited<ReturnType<typeof getDb>>["insert"];
+  },
+  input: {
+    userId: string;
+    swapId: string;
+    amountCents: number;
+  },
+) {
   await tx.insert(ledgerEntries).values([
     {
       id: newLedgerId("led"),
       userId: input.userId,
-      account: userAccount,
+      account: "user_credits",
       type: "credit",
       amountCents: input.amountCents,
       referenceType: "swap",
@@ -110,9 +131,26 @@ export async function remainingDailyCapCents(
   return Math.max(0, dailyCapUsdCents - Number(spentTodayRows[0]?.total ?? 0));
 }
 
+export async function readWallet(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+) {
+  const [row] = await db.select().from(wallets).where(eq(wallets.userId, userId)).limit(1);
+  return {
+    creditCents: row?.creditCacheCents ?? 0,
+    usdtCents: row?.usdtCacheCents ?? 0,
+    llmCents: row?.llmCacheCents ?? 0,
+  };
+}
+
+type RewardDb = Awaited<ReturnType<typeof getDb>>;
+
 export async function postSwapReward(
   input: PostSwapInput,
-  db = undefined as Awaited<ReturnType<typeof getDb>> | undefined,
+  db = undefined as RewardDb | undefined,
+  extras?: {
+    afterWrite?: (tx: RewardDb, result: PostSwapResult) => Promise<void>;
+  },
 ): Promise<PostSwapResult> {
   const client = db ?? (await getDb());
 
@@ -120,138 +158,147 @@ export async function postSwapReward(
     throw new LedgerError("notional_out_of_bounds");
   }
 
-  const existing = await client
-    .select()
-    .from(swaps)
-    .where(and(eq(swaps.txHash, input.txHash), eq(swaps.fromChain, input.fromChain)))
-    .limit(1);
+  try {
+    return await client.transaction(async (tx) => {
+      await lockWalletRow(tx as never, input.userId);
 
-  if (existing[0]) {
-    const balances = await readWallet(client, input.userId);
-    return {
-      swapId: existing[0].id,
-      status: existing[0].status,
-      creditedCents: 0,
-      alreadyExists: true,
-      ...balances,
-    };
-  }
+      const existing = await tx
+        .select()
+        .from(swaps)
+        .where(and(eq(swaps.txHash, input.txHash), eq(swaps.fromChain, input.fromChain)))
+        .limit(1);
 
-  return client.transaction(async (tx) => {
-    const swapId = newLedgerId("swap");
-    const rule = await getActiveRuleOrNull(tx as never);
-    const windowStart = new Date(input.executedAt.getTime() - 60 * 60 * 1000);
-    const recents = await tx
-      .select()
-      .from(swaps)
-      .where(and(eq(swaps.userId, input.userId), gte(swaps.executedAt, windowStart)));
-    const wash = findWashPrior(input, recents);
+      if (existing[0]) {
+        const balances = await readWallet(tx as never, input.userId);
+        const result = {
+          swapId: existing[0].id,
+          status: existing[0].status,
+          creditedCents: 0,
+          alreadyExists: true,
+          ...balances,
+        };
+        await extras?.afterWrite?.(tx as never, result);
+        return result;
+      }
 
-    let status = "rewarded";
-    let credited = 0;
+      const swapId = newLedgerId("swap");
+      const rule = await getActiveRuleOrNull(tx as never);
+      const windowStart = new Date(input.executedAt.getTime() - 60 * 60 * 1000);
+      const recents = await tx
+        .select()
+        .from(swaps)
+        .where(and(eq(swaps.userId, input.userId), gte(swaps.executedAt, windowStart)));
+      const wash = findWashPrior(input, recents);
 
-    if (!rule) {
-      status = "paused";
-    } else if (input.notionalUsdCents < rule.minNotionalUsdCents) {
-      status = "below_threshold";
-    } else if (wash) {
-      status = "held";
-    } else {
-      const reward = computeRewardCents(input.notionalUsdCents, rule.conversionBps);
-      const remainingCap = await remainingDailyCapCents(tx as never, input.userId, rule.dailyCapUsdCents);
-      credited = Math.min(reward, remainingCap);
-      if (credited === 0) status = "capped";
-    }
+      let status = "rewarded";
+      let credited = 0;
 
-    await tx.insert(swaps).values({
-      id: swapId,
-      userId: input.userId,
-      source: input.source,
-      txHash: input.txHash,
-      fromChain: input.fromChain,
-      toChain: input.toChain,
-      fromToken: input.fromToken,
-      toToken: input.toToken,
-      fromAmount: input.fromAmount,
-      toAmount: input.toAmount,
-      notionalUsdCents: input.notionalUsdCents,
-      status,
-      executedAt: input.executedAt,
+      if (!rule) {
+        status = "paused";
+      } else if (input.notionalUsdCents < rule.minNotionalUsdCents) {
+        status = "below_threshold";
+      } else {
+        const reward = computeRewardCents(input.notionalUsdCents, rule.conversionBps);
+        if (reward < MIN_REWARD_CENTS) {
+          status = "below_threshold";
+        } else if (wash) {
+          status = "held";
+        } else {
+          const remainingCap = await remainingDailyCapCents(
+            tx as never,
+            input.userId,
+            rule.dailyCapUsdCents,
+          );
+          credited = Math.min(reward, remainingCap);
+          if (credited === 0) status = "capped";
+          if (credited > 0 && credited < MIN_REWARD_CENTS) {
+            credited = 0;
+            status = "below_threshold";
+          }
+        }
+      }
+
+      await tx.insert(swaps).values({
+        id: swapId,
+        userId: input.userId,
+        source: input.source,
+        txHash: input.txHash,
+        fromChain: input.fromChain,
+        toChain: input.toChain,
+        fromToken: input.fromToken,
+        toToken: input.toToken,
+        fromAmount: input.fromAmount,
+        toAmount: input.toAmount,
+        notionalUsdCents: input.notionalUsdCents,
+        status,
+        executedAt: input.executedAt,
+      });
+
+      if (credited > 0 && rule) {
+        await writeRewardLegs(tx, {
+          userId: input.userId,
+          swapId,
+          ruleId: rule.id,
+          amountCents: credited,
+        });
+      } else if (status === "held" && wash) {
+        await tx.insert(fraudFlags).values({
+          id: newLedgerId("flag"),
+          userId: input.userId,
+          swapId,
+          reason: "wash_round_trip",
+          status: "open",
+          rail: "credits",
+          detail: JSON.stringify({
+            priorFromToken: wash.fromToken,
+            priorToToken: wash.toToken,
+            priorFromChain: wash.fromChain,
+            priorToChain: wash.toChain,
+            priorExecutedAt: wash.executedAt.toISOString(),
+          }),
+        });
+      } else if (status === "paused" || status === "below_threshold" || status === "capped") {
+        await tx.insert(fraudFlags).values({
+          id: newLedgerId("flag"),
+          userId: input.userId,
+          swapId,
+          reason: status === "paused" ? "rewards_paused" : status,
+          status: "closed",
+          rail: "credits",
+        });
+      }
+
+      const balances = await syncWalletCache(tx as never, input.userId);
+      const result = {
+        swapId,
+        status,
+        creditedCents: credited,
+        alreadyExists: false,
+        ...balances,
+      };
+      await extras?.afterWrite?.(tx as never, result);
+      return result;
     });
-
-    if (credited > 0 && rule) {
-      await writeRewardLegs(tx, {
-        userId: input.userId,
-        swapId,
-        rail: input.rail,
-        ruleId: rule.id,
-        amountCents: credited,
-      });
-    } else if (status === "held" && wash) {
-      await tx.insert(fraudFlags).values({
-        id: newLedgerId("flag"),
-        userId: input.userId,
-        swapId,
-        reason: "wash_round_trip",
-        status: "open",
-        rail: input.rail,
-        detail: JSON.stringify({
-          priorFromToken: wash.fromToken,
-          priorToToken: wash.toToken,
-          priorFromChain: wash.fromChain,
-          priorToChain: wash.toChain,
-          priorExecutedAt: wash.executedAt.toISOString(),
-        }),
-      });
-    } else if (status === "paused" || status === "below_threshold" || status === "capped") {
-      await tx.insert(fraudFlags).values({
-        id: newLedgerId("flag"),
-        userId: input.userId,
-        swapId,
-        reason: status === "paused" ? "rewards_paused" : status,
-        status: "closed",
-        rail: input.rail,
-      });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const balances = await readWallet(client, input.userId);
+      const [row] = await client
+        .select()
+        .from(swaps)
+        .where(and(eq(swaps.txHash, input.txHash), eq(swaps.fromChain, input.fromChain)))
+        .limit(1);
+      const result = {
+        swapId: row?.id ?? "unknown",
+        status: row?.status ?? "rewarded",
+        creditedCents: 0,
+        alreadyExists: true,
+        ...balances,
+      };
+      await extras?.afterWrite?.(client, result);
+      return result;
     }
-
-    const usdtCents = await sumAccountCents(tx as never, input.userId, "user_usdt");
-    const llmCents = await sumAccountCents(tx as never, input.userId, "user_llm");
-
-    await tx
-      .insert(wallets)
-      .values({
-        userId: input.userId,
-        usdtCacheCents: usdtCents,
-        llmCacheCents: llmCents,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: wallets.userId,
-        set: {
-          usdtCacheCents: usdtCents,
-          llmCacheCents: llmCents,
-          updatedAt: new Date(),
-        },
-      });
-
-    return {
-      swapId,
-      status,
-      creditedCents: credited,
-      alreadyExists: false,
-      usdtCents,
-      llmCents,
-    };
-  });
+    throw error;
+  }
 }
 
-export async function readWallet(
-  db: Awaited<ReturnType<typeof getDb>>,
-  userId: string,
-) {
-  const [row] = await db.select().from(wallets).where(eq(wallets.userId, userId)).limit(1);
-  return {
-    usdtCents: row?.usdtCacheCents ?? 0,
-    llmCents: row?.llmCacheCents ?? 0,
-  };
-}
+export { sumAccountCents };

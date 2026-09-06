@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Trade2Credits — Swap, then take USDT or LLM credits",
   description:
-    "Connect MetaMask, Phantom, or Coinbase. Qualifying $500+ swaps convert at a published ratio into USDT or LLM credits.",
+    "Connect MetaMask, Phantom, or Coinbase. Qualifying $250+ swaps convert at a published ratio into USDT or LLM credits.",
   openGraph: {
     title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDT or LLM credits above a $500 floor.",
+    description: "Cross-chain swaps that pay USDT or LLM credits above a $250 floor.",
     url: siteUrl,
     siteName: "Trade2Credits",
     type: "website",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDT or LLM credits above a $500 floor.",
+    description: "Cross-chain swaps that pay USDT or LLM credits above a $250 floor.",
   },
 };
 

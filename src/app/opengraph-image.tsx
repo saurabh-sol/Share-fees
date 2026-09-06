@@ -31,7 +31,7 @@ export default function OpengraphImage() {
             <div style={{ display: "flex" }}>Take USDT or LLM credit.</div>
           </div>
           <div style={{ display: "flex", fontSize: 22, color: "#a1a1aa" }}>
-            $500 floor · 50 bps · wallet-only session
+            $250 floor · 50 bps · wallet-only session
           </div>
         </div>
         <div
