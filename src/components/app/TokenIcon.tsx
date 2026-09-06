@@ -25,7 +25,7 @@ export function TokenIcon({
     return (
       <span
         aria-hidden
-        className="inline-flex shrink-0 items-center justify-center bg-[#1c1c1f] font-mono text-[10px] uppercase text-zinc-400"
+        className="inline-flex shrink-0 items-center justify-center bg-raised font-mono text-[10px] uppercase text-zinc-400"
         style={{ width: size, height: size }}
       >
         {symbol.slice(0, 1)}

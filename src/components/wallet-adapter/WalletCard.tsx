@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
-import { X, Loader2 } from "lucide-react";
+import { CircleNotch, X } from "@phosphor-icons/react";
 import { WalletList } from "./WalletList";
 import { ConnectedWallet } from "./ConnectedWallet";
 import { WalletError } from "./WalletError";
@@ -41,13 +41,13 @@ export function WalletCard({ adapter, onClose }: Props) {
       ref={cardRef}
       role="region"
       aria-label="Wallet adapter"
-      className="relative w-[min(340px,calc(100vw-32px))] rounded-[16px] border border-white/[0.08] bg-[#1c1c1f] shadow-[0_12px_48px_rgba(0,0,0,0.55)]"
+      className="relative w-[min(340px,calc(100vw-32px))] rounded-[16px] border border-white/[0.08] bg-raised shadow-[0_12px_48px_rgba(0,0,0,0.55)]"
     >
       <div className="p-4">
         <header className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-[2px] w-3.5 bg-[#c23a3a]" aria-hidden />
-            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#a1a1aa]">
+            <span className="inline-block h-[2px] w-3.5 bg-accent" aria-hidden />
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
               {isConnected ? "Wallet connected" : "Wallet adapter"}
             </span>
           </div>
@@ -63,8 +63,8 @@ export function WalletCard({ adapter, onClose }: Props) {
         </header>
 
         {adapter.isBusy && !isConnected ? (
-          <div className="mb-3 flex items-center gap-2 font-mono text-[10px] text-[#a1a1aa]">
-            <Loader2 className="size-3 animate-spin" aria-hidden />
+          <div className="mb-3 flex items-center gap-2 font-mono text-[10px] text-muted">
+            <CircleNotch className="size-3 animate-spin" aria-hidden />
             {adapter.connectionStatus === "signing"
               ? `Signing with ${adapter.selectedWallet?.name ?? "wallet"}…`
               : `Connecting to ${adapter.selectedWallet?.name ?? "wallet"}…`}
@@ -87,10 +87,10 @@ export function WalletCard({ adapter, onClose }: Props) {
         ) : (
           <>
             <div className="mb-3.5">
-              <h1 className="font-mono text-[22px] font-bold leading-none tracking-tight text-[#e4e4e7]">
+              <h1 className="font-mono text-[22px] font-bold leading-none tracking-tight text-foreground">
                 Connect Wallet
               </h1>
-              <p className="mt-2 text-[11px] leading-relaxed text-[#a1a1aa]">
+              <p className="mt-2 text-[11px] leading-relaxed text-muted">
                 Installed extensions appear here with their official icons.
               </p>
             </div>

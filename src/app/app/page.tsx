@@ -76,7 +76,7 @@ export default async function DeskPage() {
         queue Robinhood USDG.
       </p>
       <div className="flex flex-wrap gap-6">
-        <Link href="/app/swap" className="text-sm text-[#c23a3a]">
+        <Link href="/app/swap" className="text-sm text-accent">
           Claim a live fill
         </Link>
         <Link href="/app/claims" className="text-sm text-zinc-300">

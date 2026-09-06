@@ -22,7 +22,7 @@ export function WalletList({
 }: Props) {
   if (wallets.length === 0) {
     return (
-      <p className="rounded-[10px] border border-white/[0.08] px-3 py-4 font-mono text-[11px] leading-relaxed text-[#a1a1aa]">
+      <p className="rounded-[10px] border border-white/[0.08] px-3 py-4 font-mono text-[11px] leading-relaxed text-muted">
         No browser wallet detected. Install an extension, then refresh this page.
       </p>
     );

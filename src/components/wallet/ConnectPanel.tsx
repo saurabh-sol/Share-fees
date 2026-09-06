@@ -168,7 +168,7 @@ export function ConnectPanel() {
                   {wallet.label}
                 </span>
                 {ready ? (
-                  <span className="font-mono text-xs text-[#c23a3a]">Ready</span>
+                  <span className="font-mono text-xs text-accent">Ready</span>
                 ) : (
                   <a
                     href={wallet.installUrl}
@@ -200,7 +200,7 @@ export function ConnectPanel() {
       ) : null}
 
       {error ? (
-        <p className="text-sm text-[#c23a3a]" role="alert">
+        <p className="text-sm text-accent" role="alert">
           {error}
         </p>
       ) : null}

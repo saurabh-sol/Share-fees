@@ -37,7 +37,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    testTimeout: 20_000,
+    exclude: ["src/lib/gateway/live.e2e.test.ts"],
+    testTimeout: 30_000,
     env: poolKeysFromLocalEnv(),
   },
   resolve: {

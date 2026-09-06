@@ -80,6 +80,9 @@ if (parsed.NODE_ENV === "production") {
   if (!isBuild && !parsed.REDIS_URL && !(parsed.REDIS_HOST && parsed.REDIS_PASSWORD)) {
     throw new Error("Redis is required in production (REDIS_URL or REDIS_HOST+REDIS_PASSWORD).");
   }
+  if (!isBuild && !parsed.CRON_SECRET) {
+    throw new Error("CRON_SECRET is required in production (min 16 chars).");
+  }
 }
 
 export const env = {

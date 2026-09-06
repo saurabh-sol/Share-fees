@@ -21,7 +21,7 @@ function renderInline(text: string, keyPrefix: string) {
       parts.push(
         <code
           key={`${keyPrefix}-c-${index}`}
-          className="rounded-sm bg-[#141416] px-1 py-0.5 font-mono text-[12px] text-zinc-200"
+          className="rounded-sm bg-background px-1 py-0.5 font-mono text-[12px] text-zinc-200"
         >
           {token.slice(1, -1)}
         </code>,
@@ -115,7 +115,7 @@ export function ChatMarkdown({ text }: { text: string }) {
           return (
             <pre
               key={key}
-              className="overflow-x-auto border border-white/8 bg-[#141416] px-3 py-3 font-mono text-[12px] leading-relaxed text-zinc-300"
+              className="overflow-x-auto border border-white/8 bg-background px-3 py-3 font-mono text-[12px] leading-relaxed text-zinc-300"
             >
               {block.lang ? (
                 <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">

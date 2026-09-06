@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { getSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { ledgerEntries, swaps } from "@/lib/db/schema";
@@ -34,7 +35,13 @@ export default async function RewardsPage() {
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-zinc-400">No ledger rows yet. Record a paper fill above the $250 floor.</p>
+        <EmptyState
+          eyebrow="Immutable log"
+          title="No ledger rows yet."
+          body="Every credit, convert, and redeem posts a row here. Claim a qualifying $250+ fill and the first entry appears."
+          ctaHref="/app/swap"
+          ctaLabel="Claim a fill"
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -63,7 +70,15 @@ export default async function RewardsPage() {
       <div>
         <h2 className="text-xl tracking-tight text-zinc-100">Fills</h2>
         {fills.length === 0 ? (
-          <p className="mt-4 text-zinc-400">No fills booked to this address.</p>
+          <div className="mt-4">
+            <EmptyState
+              eyebrow="Fills"
+              title="No fills booked to this address."
+              body="Swap on the desk or import a confirmed transaction from Activity — booked fills and their status land here."
+              ctaHref="/app/claims"
+              ctaLabel="Scan wallet activity"
+            />
+          </div>
         ) : (
           <ul className="mt-4 divide-y divide-white/8 border-y border-white/8">
             {fills.map((fill) => (

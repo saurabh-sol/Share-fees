@@ -1,14 +1,14 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-# Lockfile was written by a newer npm than node:22-alpine ships; install still pins from the lock.
-RUN npm install --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-time placeholders only. Runtime secrets come from Compose / the host.
 ENV SESSION_SECRET=docker-build-session-secret-min-32-chars
 ENV APP_ORIGIN=http://localhost:3000
 RUN npm run build

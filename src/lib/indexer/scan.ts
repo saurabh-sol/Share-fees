@@ -120,13 +120,27 @@ export async function persistCandidates(
   return { inserted, skipped, updated };
 }
 
+export type WalletScanResult = {
+  inserted: number;
+  skipped: number;
+  updated?: number;
+  scanned: number;
+  providers: string[];
+  cooldown?: boolean;
+  cached?: boolean;
+  retryAfterSec?: number;
+  minNotionalUsdCents: number;
+  windowDays: number;
+  volumeReward: Awaited<ReturnType<typeof settleScannedVolumeReward>>;
+};
+
 export async function scanWallet(input: {
   userId: string;
   address: string;
   sources?: TradeSource[];
   force?: boolean;
   db?: Awaited<ReturnType<typeof getDb>>;
-}) {
+}): Promise<WalletScanResult> {
   const client = input.db ?? (await getDb());
   const sources = input.sources ?? defaultTradeSources();
   const [last] = await client

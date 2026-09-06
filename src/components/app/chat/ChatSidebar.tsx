@@ -32,7 +32,7 @@ export function ChatSidebar({
   return (
     <>
       <div
-        className={`fixed inset-0 z-20 bg-[#141416]/40 backdrop-blur-sm md:hidden ${open ? "" : "hidden"}`}
+        className={`fixed inset-0 z-20 bg-background/40 backdrop-blur-sm md:hidden ${open ? "" : "hidden"}`}
         onClick={onToggle}
       />
       <aside
@@ -86,7 +86,7 @@ export function ChatSidebar({
                       type="button"
                       aria-label={`Delete ${thread.title}`}
                       onClick={() => onDelete(thread.id)}
-                      className="px-2 text-zinc-600 hover:text-[#c23a3a]"
+                      className="px-2 text-zinc-600 hover:text-accent"
                     >
                       <Trash size={14} />
                     </button>

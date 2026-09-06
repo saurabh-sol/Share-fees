@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, type LlmProvider } from "@/lib/gateway/catalog";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { NotchedButton } from "@/components/ui/NotchedButton";
 import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 
@@ -237,7 +239,7 @@ export function RedeemDesk({
             inputMode="decimal"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           />
           <span className="block text-xs text-zinc-500">
             Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00. Pays only to the
@@ -245,13 +247,9 @@ export function RedeemDesk({
           </span>
         </label>
 
-        <button
-          type="submit"
-          disabled={status === "working" || available < 100}
-          className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
-        >
+        <NotchedButton type="submit" disabled={status === "working" || available < 100}>
           {status === "working" ? "Working…" : "Redeem"}
-        </button>
+        </NotchedButton>
       </form>
 
       <OpenAiKeyIssue
@@ -262,15 +260,26 @@ export function RedeemDesk({
       />
 
       {message ? (
-        <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
-          {message}
-        </p>
+        status === "error" ? (
+          <div role="alert" className="max-w-2xl border border-accent/40 px-5 py-4">
+            <p className="text-sm text-zinc-100">Nothing was redeemed — your balances are unchanged.</p>
+            <p className="mt-1 text-sm text-zinc-400">{message}</p>
+          </div>
+        ) : (
+          <p className="max-w-2xl text-sm text-zinc-300" role="status">
+            {message}
+          </p>
+        )
       ) : null}
 
       <section className="space-y-4">
         <h2 className="text-xl tracking-tight text-zinc-100">Virtual keys</h2>
         {keys.length === 0 ? (
-          <p className="text-zinc-400">No keys yet. Redeem LLM credits to issue one.</p>
+          <EmptyState
+            eyebrow="Virtual keys"
+            title="No keys minted yet."
+            body="Redeem LLM credits above and a capped t2c_ key is issued instantly. Paste it into any OpenAI-compatible client; usage burns the credit."
+          />
         ) : (
           <ul className="divide-y divide-white/8 border-y border-white/8">
             {keys.map((key) => (
@@ -295,14 +304,13 @@ export function RedeemDesk({
                   </div>
                 </div>
                 {key.status === "active" ? (
-                  <button
-                    type="button"
-                    onClick={() => void onRevoke(key.id)}
+                  <NotchedButton
+                    variant="ghost"
                     disabled={status === "working"}
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
+                    onClick={() => void onRevoke(key.id)}
                   >
                     Revoke
-                  </button>
+                  </NotchedButton>
                 ) : null}
               </li>
             ))}
@@ -313,7 +321,11 @@ export function RedeemDesk({
       <section className="space-y-4">
         <h2 className="text-xl tracking-tight text-zinc-100">Redemptions</h2>
         {redemptions.length === 0 ? (
-          <p className="text-zinc-400">Nothing withdrawn yet.</p>
+          <EmptyState
+            eyebrow="Redemptions"
+            title="Nothing withdrawn yet."
+            body="USDG redemptions queue here and pay to the signed-in wallet on Robinhood. LLM redemptions land as keys above."
+          />
         ) : (
           <ul className="divide-y divide-white/8 border-y border-white/8">
             {redemptions.map((row) => (

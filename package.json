@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:live": "vitest run src/lib/gateway/live.e2e.test.ts",
+    "ci": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -20,7 +23,6 @@
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^13.2.0",
     "jose": "^6.2.12",
-    "lucide-react": "^1.41.0",
     "next": "16.3.4",
     "postgres": "^3.4.9",
     "react": "19.2.8",

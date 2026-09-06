@@ -40,7 +40,7 @@ export function FaqList() {
     <section id="faq" className="border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-end gap-10 px-4 py-16 md:grid-cols-[1fr_1.2fr] md:px-8 md:py-24">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[10] Questions</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[10] Questions</p>
           <h2 className="mt-5 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             Before you connect.
           </h2>

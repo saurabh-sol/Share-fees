@@ -21,7 +21,7 @@ export function PixelChatWell({ talking }: { talking: boolean }) {
               className={`size-2 ${
                 on
                   ? talking
-                    ? "bg-[#c23a3a]/50"
+                    ? "bg-accent/50"
                     : "bg-zinc-500/35"
                   : "bg-transparent"
               }`}

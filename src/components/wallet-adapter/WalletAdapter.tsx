@@ -14,7 +14,7 @@ export function WalletAdapter() {
   const adapter = useWalletAdapter(() => setOpen(false));
 
   return (
-    <div className="wallet-grid-bg relative min-h-[100dvh] overflow-hidden bg-[#141416]">
+    <div className="wallet-grid-bg relative min-h-[100dvh] overflow-hidden bg-background">
       <PixelWalletArt />
       <PixelWalletArtMobile />
       <DecorativeAscii />
@@ -23,7 +23,7 @@ export function WalletAdapter() {
         <header className="flex items-center justify-between px-5 py-4 sm:px-8">
           <Link
             href="/"
-            className="font-mono text-xs tracking-[0.22em] text-[#c23a3a] transition-opacity hover:opacity-80"
+            className="font-mono text-xs tracking-[0.22em] text-accent transition-opacity hover:opacity-80"
           >
             T2C
           </Link>

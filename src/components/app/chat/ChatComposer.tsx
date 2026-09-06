@@ -74,17 +74,17 @@ export function ChatComposer({
           type="submit"
           disabled={!canSend}
           aria-label="Send"
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#c23a3a] text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
         >
           {working ? <CircleNotch size={16} className="animate-spin" /> : <ArrowUp size={16} />}
         </button>
       </div>
       {disabledReason ? (
-        <p className="border-t border-white/8 px-4 py-2 text-sm text-[#c23a3a]" role="status">
+        <p className="border-t border-white/8 px-4 py-2 text-sm text-accent" role="status">
           {disabledReason}
         </p>
       ) : over ? (
-        <p className="border-t border-white/8 px-4 py-2 text-sm text-[#c23a3a]" role="status">
+        <p className="border-t border-white/8 px-4 py-2 text-sm text-accent" role="status">
           Message is over {MAX_CHAT_MESSAGE_CHARS.toLocaleString()} characters.
         </p>
       ) : null}

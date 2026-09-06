@@ -30,7 +30,7 @@ export function PublishedLimits() {
     <section id="limits" className="border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-10 px-4 py-16 md:grid-cols-[1.2fr_0.8fr] md:px-8 md:py-24">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[07] Published numbers</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[07] Published numbers</p>
           <h2 className="mt-5 max-w-[14ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             The desk does not hide the ratio.
           </h2>

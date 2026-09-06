@@ -161,7 +161,7 @@ export function OpenAiKeyIssue({
       {issuedKey ? (
         <section className="space-y-6 border-y border-white/8 py-8">
           <div className="space-y-3">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#c23a3a]">Show once</p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent">Show once</p>
             <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-400">
               This is the plaintext API key. It is not stored. Paste it as the official{" "}
               {issuedProvider === "anthropic"

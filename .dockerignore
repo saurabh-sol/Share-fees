@@ -11,6 +11,7 @@ coverage
 .env
 .env.*
 !.env.example
+!.env.production.example
 AGENTS.md
 CLAUDE.md
 DESIGN.md
@@ -18,3 +19,6 @@ DESIGN.md
 *.pem
 *.tsbuildinfo
 next-env.d.ts
+**/*.test.ts
+public/footer-art.png
+public/footer-halftone.jpg

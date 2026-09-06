@@ -17,7 +17,7 @@ export function SocialButtons() {
           target={href.startsWith("http") ? "_blank" : undefined}
           rel={href.startsWith("http") ? "noreferrer" : undefined}
           aria-label={label}
-          className="inline-flex h-10 w-10 items-center justify-center border border-white/8 text-zinc-300 transition-colors hover:border-[#c23a3a] hover:text-[#c23a3a] focus-visible:border-[#c23a3a] focus-visible:outline-none"
+          className="inline-flex h-10 w-10 items-center justify-center border border-white/8 text-zinc-300 transition-colors hover:border-accent hover:text-accent focus-visible:border-accent focus-visible:outline-none"
         >
           <Icon size={16} />
         </a>

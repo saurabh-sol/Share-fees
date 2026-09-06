@@ -69,7 +69,7 @@ export function HowItPays() {
     <section id="mechanics" className="border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-end gap-10 px-4 py-16 md:grid-cols-[1.2fr_0.8fr] md:px-8 md:py-24">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[04] How it pays</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[04] How it pays</p>
           <h2 className="mt-5 max-w-[14ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             Wallet in. Credit out.
           </h2>
@@ -106,12 +106,12 @@ export function HowItPays() {
               {step.id}
             </span>
             <div className="relative flex items-center gap-3">
-              <step.Icon size={18} className="text-[#c23a3a]" />
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">{step.id}</p>
+              <step.Icon size={18} className="text-accent" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">{step.id}</p>
             </div>
             <h3 className="relative mt-5 max-w-[16ch] text-2xl tracking-tight text-zinc-100">{step.title}</h3>
             <p className="relative mt-3 max-w-[46ch] text-base leading-relaxed text-zinc-400">{step.body}</p>
-            <span className="absolute bottom-0 left-0 h-px w-16 origin-left scale-x-0 bg-[#c23a3a] transition-transform group-hover:scale-x-100" />
+            <span className="absolute bottom-0 left-0 h-px w-16 origin-left scale-x-0 bg-accent transition-transform group-hover:scale-x-100" />
           </motion.article>
         ))}
       </motion.div>
@@ -121,7 +121,7 @@ export function HowItPays() {
           <div className="border-b border-white/8 px-4 py-16 md:border-b-0 md:border-r md:px-8 md:py-20">
             <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">Worked example</p>
             <p className="mt-6 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">$1,842.60 notional × 50 bps</p>
-            <p className="mt-3 font-mono text-5xl tabular-nums tracking-tighter text-[#c23a3a] sm:text-6xl md:text-8xl">
+            <p className="mt-3 font-mono text-5xl tabular-nums tracking-tighter text-accent sm:text-6xl md:text-8xl">
               $9.21
             </p>
             <p className="mt-6 max-w-[54ch] text-base leading-relaxed text-zinc-400">

@@ -233,7 +233,7 @@ export function DeskChat({
           {turns.length === 0 ? (
             <div className="mx-auto flex w-full max-w-3xl items-start justify-between gap-8">
               <div className="max-w-[52ch] space-y-3">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#c23a3a]">Room</p>
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Room</p>
                 <p className="text-3xl tracking-tight text-zinc-100">Pick a model. Send a turn.</p>
                 <p className="text-sm leading-relaxed text-zinc-500">
                   Sessions stay in this browser. Token cost comes off this wallet. Website credit

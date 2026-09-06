@@ -125,7 +125,11 @@ export const ledgerEntries = pgTable(
     referenceId: text("reference_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("ledger_user").on(table.userId)],
+  (table) => [
+    index("ledger_user").on(table.userId),
+    index("ledger_user_account").on(table.userId, table.account),
+    index("ledger_user_account_ref").on(table.userId, table.account, table.referenceId),
+  ],
 );
 
 export const wallets = pgTable("wallets", {

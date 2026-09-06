@@ -33,7 +33,7 @@ export async function ClaimsBanner({ userId }: { userId: string }) {
           : ` · reward listed after ${money(summary.minNotionalUsdCents)} swap volume`}
         . {claims.length} swap{claims.length === 1 ? "" : "s"} ready to claim.
       </p>
-      <Link href="/app/claims" className="text-sm text-[#c23a3a]">
+      <Link href="/app/claims" className="text-sm text-accent">
         Open activity
       </Link>
     </div>

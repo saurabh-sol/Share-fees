@@ -53,7 +53,7 @@ export function ChatModelSelect({
         onClick={() => setOpen((value) => !value)}
         className="desk-glass-raised relative flex w-full items-center gap-2.5 border border-white/10 px-2.5 py-2 text-left transition-transform active:scale-[0.98]"
       >
-        <span className="absolute inset-y-0 left-0 w-0.5 bg-[#c23a3a]" />
+        <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" />
         <span className="pl-1 font-mono text-[10px] tabular-nums text-zinc-600">
           {String(selectedIndex + 1).padStart(2, "0")}
         </span>
@@ -84,7 +84,7 @@ export function ChatModelSelect({
             <div className="max-h-80 overflow-y-auto">
               {LLM_CATALOG.map((house) => (
                 <div key={house.id}>
-                  <p className="sticky top-0 border-b border-white/8 bg-[#141416]/80 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 backdrop-blur-sm">
+                  <p className="sticky top-0 border-b border-white/8 bg-background/80 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 backdrop-blur-sm">
                     {house.label}
                   </p>
                   <ul>
@@ -108,7 +108,7 @@ export function ChatModelSelect({
                             }`}
                           >
                             {active ? (
-                              <span className="absolute inset-y-0 left-0 w-0.5 bg-[#c23a3a]" />
+                              <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" />
                             ) : null}
                             <span className="font-mono text-[10px] tabular-nums text-zinc-600">
                               {String(index + 1).padStart(2, "0")}

@@ -1,5 +1,6 @@
 import { AccountStrip } from "@/components/landing/AccountStrip";
 import { ApiSurface } from "@/components/landing/ApiSurface";
+import { CreditCalculator } from "@/components/landing/CreditCalculator";
 import { DeskMap } from "@/components/landing/DeskMap";
 import { DitherSwapArt } from "@/components/landing/DitherSwapArt";
 import { FaqList } from "@/components/landing/FaqList";
@@ -19,7 +20,7 @@ export default function HomePage() {
       <main>
         <section className="mx-auto grid min-h-[100dvh] max-w-[1400px] grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 md:grid-cols-[1.05fr_0.95fr] md:px-8">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
               [01] Wallet-native rewards
             </p>
             <h1 className="mt-6 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 sm:text-5xl md:text-7xl">
@@ -32,7 +33,10 @@ export default function HomePage() {
             <div className="mt-10">
               <NotchedCta href="/login">Connect wallet</NotchedCta>
             </div>
-            <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+            <div className="mt-10">
+              <CreditCalculator />
+            </div>
+            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
               Detected from the extension · signed with SIWE / SIWS
             </p>
           </div>

@@ -223,6 +223,28 @@ Then point `.env.local` at `postgresql://t2c:t2c@localhost:5432/trade2credits` a
 
 Never put treasury or vendor keys in git or an image.
 
+## Production
+
+Frontend and API are one Next.js build. Before a deploy:
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build
+```
+
+`GET /api/v1/health` must report database + Redis. Production also requires `CRON_SECRET`.
+
+Vercel: push `main`. Set the production secrets on the project. Minute jobs are already in `vercel.json`.
+
+Docker:
+
+```bash
+cp .env.production.example .env.production
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+```
+
 ---
 
 ## Walk it once

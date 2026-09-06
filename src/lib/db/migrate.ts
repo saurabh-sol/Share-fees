@@ -243,6 +243,8 @@ const STATEMENTS = [
    WHERE min_notional_usd_cents = 50000`,
   `ALTER TABLE virtual_keys ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'openai'`,
   `ALTER TABLE virtual_keys ADD COLUMN IF NOT EXISTS model TEXT NOT NULL DEFAULT 'gpt-4o-mini'`,
+  `CREATE INDEX IF NOT EXISTS ledger_user_account ON ledger_entries (user_id, account)`,
+  `CREATE INDEX IF NOT EXISTS ledger_user_account_ref ON ledger_entries (user_id, account, reference_id)`,
 ];
 
 export async function applyMigrations(db: AnyDb) {

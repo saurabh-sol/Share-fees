@@ -3,7 +3,8 @@ import { createTestDb } from "@/lib/db/client";
 import { ledgerEntries, users, wallets } from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { spendableLlmCents } from "@/lib/ledger/desk-chat";
-import { GatewayError, handleDeskChat } from "./desk-chat";
+import { handleDeskChat } from "./desk-chat";
+import { GatewayError } from "./errors";
 
 const ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 

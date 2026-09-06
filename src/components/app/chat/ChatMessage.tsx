@@ -27,7 +27,7 @@ export function ChatMessage({
       <div className={`flex w-full max-w-[min(40rem,100%)] flex-col ${you ? "items-end" : "items-start"}`}>
         <p
           className={`font-mono text-[11px] uppercase tracking-[0.16em] ${
-            accent ? "text-[#c23a3a]" : "text-zinc-500"
+            accent ? "text-accent" : "text-zinc-500"
           }`}
         >
           {label}

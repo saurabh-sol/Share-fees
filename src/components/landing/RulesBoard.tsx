@@ -30,7 +30,7 @@ export function RulesBoard() {
     <section id="rules" className="border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 md:grid-cols-[0.9fr_1.1fr]">
         <div className="border-b border-white/8 px-4 py-16 md:border-b-0 md:border-r md:px-8 md:py-24">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[09] Rules</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[09] Rules</p>
           <h2 className="mt-5 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             What the desk will not do.
           </h2>

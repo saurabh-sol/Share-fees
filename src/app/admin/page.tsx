@@ -17,7 +17,7 @@ export default async function AdminHomePage() {
   return (
     <div className="space-y-10">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 4</p>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Operations</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Overview</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
           User balances are liability. Expense is what the desk has already booked. Pools are redeemed but not yet

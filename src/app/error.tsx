@@ -1,15 +1,30 @@
 "use client";
 
+import { useEffect } from "react";
 import { ErrorScreen } from "@/components/error/ErrorScreen";
 
-export default function AppError({ reset }: { reset: () => void }) {
+export default function AppError({
+  error,
+  retry,
+}: {
+  error: Error & { digest?: string };
+  retry: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
     <ErrorScreen
-      code="404"
+      code="500"
       title="Desk failed."
-      body="A request did not complete. Treat it as a 404 on this field. Try again when the network or database answers."
+      body={
+        error.digest
+          ? `A request did not complete. Nothing was recorded against your balances. Reference ${error.digest}. Try again — the retry re-fetches the page.`
+          : "A request did not complete. Nothing was recorded against your balances. Try again — the retry re-fetches the page."
+      }
       retryLabel="Try again"
-      onRetry={reset}
+      onRetry={retry}
     />
   );
 }

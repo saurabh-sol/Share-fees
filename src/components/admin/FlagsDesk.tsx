@@ -74,7 +74,7 @@ export function FlagsDesk({ initialFlags }: { initialFlags: FlagRow[] }) {
                 type="button"
                 disabled={busyId === flag.id}
                 onClick={() => void resolve(flag.id, "release")}
-                className="rounded-full bg-[#c23a3a] px-4 py-2 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+                className="bg-accent px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98] disabled:opacity-40"
               >
                 Release
               </button>
@@ -82,7 +82,7 @@ export function FlagsDesk({ initialFlags }: { initialFlags: FlagRow[] }) {
                 type="button"
                 disabled={busyId === flag.id}
                 onClick={() => void resolve(flag.id, "reject")}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
+                className="border border-white/12 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98] disabled:opacity-40"
               >
                 Reject
               </button>

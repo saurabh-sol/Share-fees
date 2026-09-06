@@ -112,6 +112,34 @@ docker compose up postgres redis
 
 Point `.env.local` at `postgresql://t2c:t2c@localhost:5432/trade2credits` and `redis://localhost:6379`, then `npm run dev`.
 
+## Production
+
+The same Next.js app is the frontend and the API. Check it locally before a deploy:
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build
+```
+
+`GET /api/v1/health` must return `ok: true` with `database` and `redis` true. Production also requires `CRON_SECRET` so payout and settle jobs can run.
+
+### Vercel
+
+Push `main`. Set production env on the project: `SESSION_SECRET`, `APP_ORIGIN`, `NEXT_PUBLIC_APP_URL`, `DATABASE_URL`, `REDIS_URL`, `CRON_SECRET`, plus `AI_GATEWAY_API_KEY` (or rely on Vercel OIDC). `vercel.json` already ticks `/api/v1/jobs/payouts` and `/api/v1/jobs/settles` every minute.
+
+### Docker
+
+```bash
+cp .env.production.example .env.production
+# fill SESSION_SECRET, APP_ORIGIN, POSTGRES_PASSWORD, CRON_SECRET
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+curl -fsS http://localhost:3000/api/v1/health
+```
+
+Postgres and Redis stay on the Docker network. Only the app port is published. Paper fills are off. Treasury stays queued until `TREASURY_ENABLED=true`, `TREASURY_LIVE=true`, and `TREASURY_PRIVATE_KEY` are set.
+
 ## Configuration
 
 Copy `.env.example` to `.env.local`. Keys the desk actually uses:

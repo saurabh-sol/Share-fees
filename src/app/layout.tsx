@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full overflow-x-clip bg-[#141416] font-sans text-zinc-200">
+      <body className="min-h-full overflow-x-clip bg-background font-sans text-zinc-200">
         <NetworkGuard>{children}</NetworkGuard>
       </body>
     </html>

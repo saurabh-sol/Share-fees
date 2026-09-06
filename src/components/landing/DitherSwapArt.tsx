@@ -12,8 +12,104 @@ const BAYER = [
   [15, 7, 13, 5],
 ];
 
-const ETH_SRC = "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/eth.png";
-const SOL_SRC = "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/sol.png";
+/**
+ * Pixel-art token glyphs. Each entry is an inclusive [start, end] column span
+ * per row (null = empty row); tones are resolved per pixel so facets and
+ * dither gradients stay data-driven. Rendered as crisp SVG pixel grids in the
+ * desk's zinc tones — no external icon CDNs.
+ */
+type PixelSpan = [number, number] | null;
+
+const PIXEL_TONES = ["#e4e4e7", "rgba(228, 228, 231, 0.6)", "rgba(228, 228, 231, 0.32)"] as const;
+
+// Ethereum octahedron: light left facet, mid right facet, dimmer base.
+const ETH_COLS = 15;
+const ETH_SPANS: PixelSpan[] = [
+  [7, 7],
+  [6, 8],
+  [6, 8],
+  [5, 9],
+  [5, 9],
+  [4, 10],
+  [4, 10],
+  [3, 11],
+  [2, 12],
+  [1, 13],
+  null,
+  [2, 12],
+  [4, 10],
+  [5, 9],
+  [6, 8],
+  [7, 7],
+];
+
+function ethToneAt(x: number, y: number): number {
+  if (y <= 9) return x <= 7 ? 0 : 1;
+  return x <= 7 ? 1 : 2;
+}
+
+// Solana bars: three parallel slanted bars with a dithered left-to-right ramp.
+const SOL_COLS = 16;
+const SOL_SPANS: PixelSpan[] = [
+  [4, 15],
+  [3, 14],
+  [2, 13],
+  null,
+  null,
+  null,
+  [2, 13],
+  [1, 12],
+  [0, 11],
+  null,
+  null,
+  null,
+  [4, 15],
+  [3, 14],
+  [2, 13],
+];
+
+function solToneAt(x: number, y: number): number {
+  if (x < 5) return 1;
+  if (x < 11) return (x + y) % 2 === 0 ? 0 : 1;
+  return 0;
+}
+
+function PixelTokenGlyph({
+  spans,
+  cols,
+  toneAt,
+}: {
+  spans: PixelSpan[];
+  cols: number;
+  toneAt: (x: number, y: number) => number;
+}) {
+  const rects: React.ReactNode[] = [];
+  spans.forEach((span, y) => {
+    if (!span) return;
+    for (let x = span[0]; x <= span[1]; x += 1) {
+      rects.push(
+        <rect
+          key={`${x}-${y}`}
+          x={x + 0.08}
+          y={y + 0.08}
+          width={0.84}
+          height={0.84}
+          fill={PIXEL_TONES[toneAt(x, y)]}
+        />,
+      );
+    }
+  });
+  return (
+    <svg
+      viewBox={`0 0 ${cols} ${spans.length}`}
+      shapeRendering="crispEdges"
+      className="h-10 w-10 sm:h-14 sm:w-14"
+      aria-hidden
+    >
+      {rects}
+    </svg>
+  );
+}
 
 function rot(x: number, y: number, a: number) {
   const c = Math.cos(a);
@@ -100,24 +196,28 @@ export function DitherSwapArt() {
       aria-label="Ethereum to Solana swap, then swap equals LLM credits"
     >
       <div className="flex items-center justify-between gap-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[02] Ratio tape</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[02] Ratio tape</p>
         <span ref={hintRef} className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
           Hover the field
         </span>
       </div>
 
-      <div className="relative mt-4 border border-white/10 bg-[#1c1c1f]/40">
-        <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-[#c23a3a]" />
-        <span className="absolute -right-px -top-px h-3 w-3 border-r border-t border-[#c23a3a]" />
-        <span className="absolute -bottom-px -left-px h-3 w-3 border-b border-l border-[#c23a3a]" />
-        <span className="absolute -bottom-px -right-px h-3 w-3 border-b border-r border-[#c23a3a]" />
+      <div className="relative mt-4 border border-white/10 bg-raised/40">
+        <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-accent" />
+        <span className="absolute -right-px -top-px h-3 w-3 border-r border-t border-accent" />
+        <span className="absolute -bottom-px -left-px h-3 w-3 border-b border-l border-accent" />
+        <span className="absolute -bottom-px -right-px h-3 w-3 border-b border-r border-accent" />
         <canvas ref={canvasRef} className="aspect-square h-auto w-full" aria-hidden />
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex items-center gap-4 transition-opacity duration-300 group-hover:opacity-0 group-focus-within:opacity-0">
-            <TokenFace src={ETH_SRC} label="ETH" name="Ethereum" />
-            <ArrowRight size={28} className="text-[#c23a3a]" />
-            <TokenFace src={SOL_SRC} label="SOL" name="Solana" />
+            <TokenFace label="ETH" name="Ethereum">
+              <PixelTokenGlyph spans={ETH_SPANS} cols={ETH_COLS} toneAt={ethToneAt} />
+            </TokenFace>
+            <ArrowRight size={28} className="text-accent" />
+            <TokenFace label="SOL" name="Solana">
+              <PixelTokenGlyph spans={SOL_SPANS} cols={SOL_COLS} toneAt={solToneAt} />
+            </TokenFace>
           </div>
           <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
             <div className="flex flex-col items-center gap-2">
@@ -126,8 +226,8 @@ export function DitherSwapArt() {
             </div>
             <span className="font-mono text-2xl text-zinc-500">=</span>
             <div className="flex flex-col items-center gap-2">
-              <Coins size={36} className="text-[#c23a3a]" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#c23a3a]">Credits</span>
+              <Coins size={36} className="text-accent" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Credits</span>
             </div>
           </div>
         </div>
@@ -143,7 +243,7 @@ export function DitherSwapArt() {
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-3xl tabular-nums tracking-tighter text-[#c23a3a] md:text-4xl">50</p>
+          <p className="font-mono text-3xl tabular-nums tracking-tighter text-accent md:text-4xl">50</p>
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">bps out</p>
         </div>
       </figcaption>
@@ -151,11 +251,19 @@ export function DitherSwapArt() {
   );
 }
 
-function TokenFace({ src, label, name }: { src: string; label: string; name: string }) {
+function TokenFace({
+  label,
+  name,
+  children,
+}: {
+  label: string;
+  name: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex w-20 flex-col items-center gap-2 sm:w-28">
-      <span className="flex h-14 w-14 items-center justify-center border border-white/10 bg-[#141416] sm:h-20 sm:w-20">
-        <img src={src} alt="" width={56} height={56} className="h-10 w-10 object-contain sm:h-14 sm:w-14" />
+      <span className="flex h-14 w-14 items-center justify-center border border-white/10 bg-background sm:h-20 sm:w-20">
+        {children}
       </span>
       <span className="font-mono text-sm tracking-[0.16em] text-zinc-100">{label}</span>
       <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">{name}</span>

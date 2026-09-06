@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { WarningCircle } from "@phosphor-icons/react";
 
 type Props = {
   title?: string;
@@ -12,18 +12,18 @@ export function WalletError({ title = "Connection failed", message, onRetry }: P
   return (
     <div
       role="alert"
-      className="rounded-[10px] border border-[#c23a3a]/30 bg-[#c23a3a]/[0.06] px-3 py-2"
+      className="rounded-[10px] border border-accent/30 bg-accent/[0.06] px-3 py-2"
     >
       <div className="flex items-start gap-2">
-        <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-[#c23a3a]" aria-hidden />
+        <WarningCircle className="mt-0.5 size-3.5 shrink-0 text-accent" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[12px] text-[#e4e4e7]">{title}</p>
-          <p className="mt-0.5 text-[11px] text-[#a1a1aa]">{message}</p>
+          <p className="font-mono text-[12px] text-foreground">{title}</p>
+          <p className="mt-0.5 text-[11px] text-muted">{message}</p>
           {onRetry ? (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-[#c23a3a] hover:underline"
+              className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-accent hover:underline"
             >
               Try again
             </button>

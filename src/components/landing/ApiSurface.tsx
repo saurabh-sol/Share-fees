@@ -41,7 +41,7 @@ export function ApiSurface() {
     <section id="api" className="border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-end gap-10 px-4 py-16 md:grid-cols-[1.15fr_0.85fr] md:px-8 md:py-24">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[08] LLM API</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[08] LLM API</p>
           <h2 className="mt-5 max-w-[16ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             Official APIs. Desk points.
           </h2>
@@ -63,7 +63,7 @@ export function ApiSurface() {
             className="grid grid-cols-1 border-b border-white/8 md:grid-cols-[0.7fr_1.3fr]"
           >
             <div className="flex items-center gap-4 border-b border-white/8 px-4 py-10 md:border-b-0 md:border-r md:px-8">
-              <span className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-[#1c1c1f] ring-1 ring-white/8">
+              <span className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-raised ring-1 ring-white/8">
                 {item.mark === "openai" ? (
                   <OpenAiLogo size={22} weight="regular" className="text-zinc-100" />
                 ) : item.mark === "google" ? (

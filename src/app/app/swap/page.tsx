@@ -11,7 +11,7 @@ export default async function SwapPage() {
   return (
     <div className="space-y-16">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 4</p>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Execution</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Swap studio</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
           LI.FI covers the usual EVM pairs. Robinhood Chain ETH and any pair LI.FI will not quote use a

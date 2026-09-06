@@ -31,7 +31,7 @@ export function WalletIcon({ name, iconUrl, size = 28 }: Props) {
   return (
     <span
       aria-hidden
-      className="flex items-center justify-center rounded-[6px] bg-white/[0.06] font-mono text-[10px] text-[#e4e4e7]"
+      className="flex items-center justify-center rounded-[6px] bg-white/[0.06] font-mono text-[10px] text-foreground"
       style={{ width: size, height: size }}
     >
       {initials || "W"}

@@ -25,7 +25,7 @@ export function ProviderMark({
 }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#141416] ring-1 ring-white/8"
+      className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-background ring-1 ring-white/8"
       style={{ width: size, height: size }}
     >
       {provider === "openai" ? (
@@ -92,7 +92,7 @@ export function LlmModelPicker({
         className={`flex w-full items-center text-left transition-transform active:scale-[0.98] ${
           compact
             ? "gap-2 border border-white/10 px-3 py-2"
-            : "mt-3 gap-3 border border-white/8 bg-[#1c1c1f] px-3 py-2.5"
+            : "mt-3 gap-3 border border-white/8 bg-raised px-3 py-2.5"
         }`}
       >
         <ProviderMark provider={provider} size={compact ? 22 : 32} />
@@ -118,7 +118,7 @@ export function LlmModelPicker({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: compact ? 6 : -6 }}
             transition={spring}
-            className={`absolute z-30 overflow-hidden border border-white/8 bg-[#1c1c1f] ${
+            className={`absolute z-30 overflow-hidden border border-white/8 bg-raised ${
               compact
                 ? "bottom-[calc(100%+8px)] right-0 w-[min(22rem,calc(100vw-2rem))]"
                 : "left-0 right-0 top-[calc(100%+8px)]"
@@ -167,7 +167,7 @@ export function LlmModelPicker({
                           ${item.inputPerMillion}/M in · ${item.outputPerMillion}/M out
                         </span>
                       </span>
-                      {active ? <Check size={16} className="text-[#c23a3a]" /> : null}
+                      {active ? <Check size={16} className="text-accent" /> : null}
                     </button>
                   );
                 })}

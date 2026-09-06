@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { NotchedButton } from "@/components/ui/NotchedButton";
 import { TokenIcon } from "./TokenIcon";
 
 type Claim = {
@@ -191,14 +193,9 @@ export function ClaimsInbox({
             ? `Scan lists 90 days of transfers and sums swap volume. The history key is shared, so a busy minute reuses your last scan. Import a hash if you need one fill now. Reward shows after volume clears ${money(minNotionalUsdCents)}.`
             : "Wallet scan needs ZERION_API_KEY. You can still import a hash that LI.FI can prove is yours."}
         </p>
-        <button
-          type="button"
-          onClick={() => void onScan()}
-          disabled={status === "working"}
-          className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
-        >
+        <NotchedButton disabled={status === "working"} onClick={() => void onScan()}>
           {status === "working" ? "Working…" : "Scan wallet"}
-        </button>
+        </NotchedButton>
       </div>
 
       <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
@@ -228,9 +225,11 @@ export function ClaimsInbox({
       </dl>
 
       {claims.length === 0 ? (
-        <p className="border-y border-white/8 py-8 text-zinc-400">
-          No wallet transfers in this scan yet. Run a scan to pull history.
-        </p>
+        <EmptyState
+          eyebrow="Activity"
+          title="No wallet transfers in this scan yet."
+          body="Run Scan wallet above to pull 90 days of history, or import a single transaction hash below — verified fills appear here with their claim status."
+        />
       ) : (
         <ul className="divide-y divide-white/8 border-y border-white/8">
           {claims.map((claim) => (
@@ -257,14 +256,13 @@ export function ClaimsInbox({
               <div className="flex items-center gap-4">
                 <p className="font-mono text-sm tabular-nums text-zinc-100">{money(claim.notionalUsdCents)}</p>
                 {claim.status === "unclaimed" ? (
-                  <button
-                    type="button"
-                    onClick={() => void onClaim(claim.id)}
+                  <NotchedButton
+                    variant="ghost"
                     disabled={status === "working"}
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
+                    onClick={() => void onClaim(claim.id)}
                   >
                     {statusLabel(claim, minNotionalUsdCents)}
-                  </button>
+                  </NotchedButton>
                 ) : (
                   <p className="text-sm text-zinc-500">{statusLabel(claim, minNotionalUsdCents)}</p>
                 )}
@@ -282,7 +280,7 @@ export function ClaimsInbox({
             required
             value={importHash}
             onChange={(event) => setImportHash(event.target.value)}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
             placeholder="0x followed by 64 hex chars"
           />
         </label>
@@ -293,7 +291,7 @@ export function ClaimsInbox({
               required
               value={fromChain}
               onChange={(event) => setFromChain(event.target.value)}
-              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
             />
           </label>
           <label className="block space-y-2">
@@ -302,21 +300,17 @@ export function ClaimsInbox({
               required
               value={toChain}
               onChange={(event) => setToChain(event.target.value)}
-              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
             />
           </label>
         </div>
-        <button
-          type="submit"
-          disabled={status === "working"}
-          className="rounded-full border border-white/10 px-5 py-2.5 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
-        >
+        <NotchedButton type="submit" variant="ghost" disabled={status === "working"}>
           Verify hash
-        </button>
+        </NotchedButton>
       </form>
 
       {message ? (
-        <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
+        <p className={status === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"} role="status">
           {message}
         </p>
       ) : null}

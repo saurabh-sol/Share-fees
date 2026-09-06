@@ -54,7 +54,7 @@ export function PayoutsDesk({ initialPayouts }: { initialPayouts: Payout[] }) {
         type="button"
         disabled={status === "working"}
         onClick={() => void processQueue()}
-        className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+        className="bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98] disabled:opacity-40"
       >
         {status === "working" ? "Processing…" : "Process outbox"}
       </button>
@@ -76,7 +76,7 @@ export function PayoutsDesk({ initialPayouts }: { initialPayouts: Payout[] }) {
         </ul>
       )}
       {message ? (
-        <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"}>{message}</p>
+        <p className={status === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"}>{message}</p>
       ) : null}
     </div>
   );

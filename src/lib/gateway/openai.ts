@@ -99,10 +99,10 @@ export function reshapeProviderCompletion(
   const promptTokens = Number(usage.prompt_tokens ?? 0);
   const completionTokens = Number(usage.completion_tokens ?? 0);
   const rawChoices = Array.isArray(record.choices) ? record.choices : [];
-  const choices = rawChoices.map((choice, index) => {
+  const choices: OpenAiChatCompletion["choices"] = rawChoices.map((choice, index) => {
     const row = asRecord(choice);
     const message = asRecord(row.message);
-    const role =
+    const role: OpenAiChatCompletion["choices"][number]["message"]["role"] =
       message.role === "user" || message.role === "system" || message.role === "assistant"
         ? message.role
         : "assistant";

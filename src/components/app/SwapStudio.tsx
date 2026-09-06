@@ -308,7 +308,7 @@ export function SwapStudio({
             <select
               value={fromChainId}
               onChange={(event) => setFromChainId(Number(event.target.value))}
-              className="w-full border border-white/10 bg-[#141416] px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+              className="w-full border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-accent"
             >
               {chains.map((chain) => (
                 <option key={chain.id} value={chain.id}>
@@ -322,7 +322,7 @@ export function SwapStudio({
             <select
               value={toChainId}
               onChange={(event) => setToChainId(Number(event.target.value))}
-              className="w-full border border-white/10 bg-[#141416] px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
+              className="w-full border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-accent"
             >
               {chains.map((chain) => (
                 <option key={chain.id} value={chain.id}>
@@ -341,7 +341,7 @@ export function SwapStudio({
           <input
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
             inputMode="decimal"
             required
           />
@@ -349,7 +349,7 @@ export function SwapStudio({
         <button
           type="submit"
           disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
-          className="rounded-full border border-white/10 px-5 py-2.5 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="border border-white/12 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98] disabled:opacity-40"
         >
           {phase === "quoting" ? "Quoting…" : "Get route"}
         </button>
@@ -374,7 +374,7 @@ export function SwapStudio({
             <button
               type="button"
               onClick={() => void reconnect()}
-              className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98]"
+              className="bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98]"
             >
               Reconnect wallet
             </button>
@@ -399,7 +399,7 @@ export function SwapStudio({
             </div>
             <div className="flex justify-between py-3">
               <dt className="text-zinc-500">Reward at {quote.rule?.conversionBps ?? 0} bps</dt>
-              <dd className="font-mono tabular-nums text-[#c23a3a]">{money(quote.estimatedRewardCents)}</dd>
+              <dd className="font-mono tabular-nums text-accent">{money(quote.estimatedRewardCents)}</dd>
             </div>
             <div className="flex justify-between py-3">
               <dt className="text-zinc-500">{money(quote.rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS)} floor</dt>
@@ -435,13 +435,13 @@ export function SwapStudio({
           type="button"
           disabled={!quote || !walletMatches || phase === "executing" || phase === "settling"}
           onClick={() => void onSwap()}
-          className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98] disabled:opacity-40"
         >
           {phase === "executing" ? "Signing…" : phase === "settling" ? "Settling…" : "Swap"}
         </button>
         {progress ? <p className="font-mono text-xs text-zinc-500">{progress}</p> : null}
         {message ? (
-          <p className={phase === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
+          <p className={phase === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"} role="status">
             {message}
           </p>
         ) : null}

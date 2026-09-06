@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Rail } from "@/lib/ledger/post-swap-reward";
+import { NotchedButton } from "@/components/ui/NotchedButton";
 
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", {
@@ -14,6 +16,18 @@ function money(cents: number) {
 function newIdempotencyKey() {
   return `cnv_${crypto.randomUUID().replaceAll("-", "")}`;
 }
+
+const RAIL_LABELS: Record<Rail, string> = {
+  llm_credits: "LLM credits",
+  usdt: "USDG",
+};
+
+type Step =
+  | { kind: "form" }
+  | { kind: "review"; rail: Rail; amountCents: number; reference: string }
+  | { kind: "working"; rail: Rail; amountCents: number; reference: string }
+  | { kind: "success"; rail: Rail; amountCents: number; reference: string }
+  | { kind: "error"; rail: Rail; amountCents: number; reference: string; reason: string };
 
 export function ConvertDesk({
   creditCents,
@@ -28,36 +42,54 @@ export function ConvertDesk({
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState((creditCents / 100).toFixed(2));
-  const [status, setStatus] = useState<"idle" | "working" | "error" | "success">("idle");
-  const [message, setMessage] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>({ kind: "form" });
+  const [formError, setFormError] = useState<string | null>(null);
 
-  async function convert(rail: Rail) {
-    setStatus("working");
-    setMessage(null);
-    const amountCents = Math.round(Number.parseFloat(amount) * 100);
+  function review(rail: Rail) {
+    setFormError(null);
+    const parsed = Number.parseFloat(amount);
+    const amountCents = Math.round(parsed * 100);
+    if (!Number.isFinite(amountCents) || amountCents < 100) {
+      setFormError("Minimum move is $1.00.");
+      return;
+    }
+    if (amountCents > creditCents) {
+      setFormError(`Only ${money(creditCents)} of website credit is available.`);
+      return;
+    }
+    setStep({ kind: "review", rail, amountCents, reference: newIdempotencyKey() });
+  }
+
+  // The reference (idempotency key) is minted once per review session and
+  // reused on retry, so a retried request can never double-post.
+  async function confirm(rail: Rail, amountCents: number, reference: string) {
+    setStep({ kind: "working", rail, amountCents, reference });
     try {
       const response = await fetch("/api/v1/credits/convert", {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          rail,
-          amountCents,
-          idempotencyKey: newIdempotencyKey(),
-        }),
+        body: JSON.stringify({ rail, amountCents, idempotencyKey: reference }),
       });
       const data = (await response.json()) as { message?: string; amountCents?: number };
       if (!response.ok) {
-        throw new Error(data.message ?? "Convert failed.");
+        throw new Error(data.message ?? "The ledger did not accept the move.");
       }
-      setStatus("success");
-      setMessage(
-        `Moved ${money(data.amountCents ?? amountCents)} to ${rail === "usdt" ? "USDG" : "LLM credits"}. Redeem from those balances.`,
-      );
+      setStep({
+        kind: "success",
+        rail,
+        amountCents: data.amountCents ?? amountCents,
+        reference,
+      });
       router.refresh();
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Convert failed.");
+      setStep({
+        kind: "error",
+        rail,
+        amountCents,
+        reference,
+        reason: error instanceof Error ? error.message : "The ledger did not accept the move.",
+      });
     }
   }
 
@@ -71,35 +103,126 @@ export function ConvertDesk({
           credit · {money(dailyCapUsdCents)} daily cap).
         </p>
       </div>
-      <label className="block max-w-sm space-y-2">
-        <span className="text-sm text-zinc-400">Amount (max {money(creditCents)})</span>
-        <input
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          inputMode="decimal"
-          className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
-        />
-      </label>
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={status === "working" || creditCents <= 0}
-          onClick={() => void convert("llm_credits")}
-          className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
-        >
-          {status === "working" ? "Moving…" : "To LLM credits"}
-        </button>
-        <button
-          type="button"
-          disabled={status === "working" || creditCents <= 0}
-          onClick={() => void convert("usdt")}
-          className="rounded-full border border-white/10 px-5 py-2.5 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
-        >
-          To USDG
-        </button>
-      </div>
-      {message ? (
-        <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"}>{message}</p>
+
+      {step.kind === "form" ? (
+        <>
+          <label className="block max-w-sm space-y-2">
+            <span className="text-sm text-zinc-400">Amount (max {money(creditCents)})</span>
+            <input
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              inputMode="decimal"
+              aria-invalid={formError ? true : undefined}
+              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm tabular-nums outline-none focus:border-accent"
+            />
+          </label>
+          {formError ? (
+            <p role="alert" className="text-sm text-accent">
+              {formError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            <NotchedButton disabled={creditCents <= 0} onClick={() => review("llm_credits")}>
+              To LLM credits
+            </NotchedButton>
+            <NotchedButton variant="ghost" disabled={creditCents <= 0} onClick={() => review("usdt")}>
+              To USDG
+            </NotchedButton>
+          </div>
+        </>
+      ) : null}
+
+      {step.kind === "review" ? (
+        <div className="max-w-xl border border-white/10">
+          <p className="border-b border-white/8 px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            Review before it posts
+          </p>
+          <dl className="divide-y divide-white/8 px-5 text-sm">
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Move</dt>
+              <dd className="font-mono tabular-nums text-zinc-100">{money(step.amountCents)}</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">From</dt>
+              <dd className="text-zinc-100">Website credit</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">To</dt>
+              <dd className="text-zinc-100">{RAIL_LABELS[step.rail]}</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Rate</dt>
+              <dd className="text-zinc-100">1:1 — no further fee; {conversionBps} bps already ran at claim</dd>
+            </div>
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Timing</dt>
+              <dd className="text-zinc-100">Posts to your desk balance immediately</dd>
+            </div>
+          </dl>
+          <div className="flex flex-wrap gap-3 border-t border-white/8 px-5 py-4">
+            <NotchedButton onClick={() => void confirm(step.rail, step.amountCents, step.reference)}>
+              Confirm move
+            </NotchedButton>
+            <NotchedButton variant="ghost" onClick={() => setStep({ kind: "form" })}>
+              Back
+            </NotchedButton>
+          </div>
+        </div>
+      ) : null}
+
+      {step.kind === "working" ? (
+        <div role="status" className="max-w-xl border border-white/10 px-5 py-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Posting</p>
+          <p className="mt-2 text-sm text-zinc-300">
+            Moving {money(step.amountCents)} to {RAIL_LABELS[step.rail]}. This is a ledger write — it usually
+            completes in under a second.
+          </p>
+        </div>
+      ) : null}
+
+      {step.kind === "success" ? (
+        <div role="status" className="max-w-xl border border-white/10">
+          <p className="border-b border-white/8 px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
+            Posted
+          </p>
+          <div className="space-y-2 px-5 py-4 text-sm text-zinc-300">
+            <p>
+              {money(step.amountCents)} moved to {RAIL_LABELS[step.rail]}. The balance above already reflects it.
+            </p>
+            <p className="font-mono text-xs text-zinc-500">Reference {step.reference.slice(0, 22)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 border-t border-white/8 px-5 py-4">
+            <Link
+              href="/app/redeem"
+              className="inline-flex items-center justify-center bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98]"
+            >
+              Redeem it
+            </Link>
+            <NotchedButton variant="ghost" onClick={() => setStep({ kind: "form" })}>
+              Move more
+            </NotchedButton>
+          </div>
+        </div>
+      ) : null}
+
+      {step.kind === "error" ? (
+        <div role="alert" className="max-w-xl border border-accent/40">
+          <p className="border-b border-accent/30 px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
+            Did not post
+          </p>
+          <div className="space-y-2 px-5 py-4 text-sm">
+            <p className="text-zinc-100">No credit left your balance.</p>
+            <p className="text-zinc-400">{step.reason}</p>
+          </div>
+          <div className="flex flex-wrap gap-3 border-t border-accent/30 px-5 py-4">
+            <NotchedButton onClick={() => void confirm(step.rail, step.amountCents, step.reference)}>
+              Try again
+            </NotchedButton>
+            <NotchedButton variant="ghost" onClick={() => setStep({ kind: "form" })}>
+              Change amount
+            </NotchedButton>
+          </div>
+        </div>
       ) : null}
     </section>
   );

@@ -30,6 +30,15 @@ const GLYPHS: Record<string, number[][]> = {
     [1, 0, 0, 0, 1],
     [0, 1, 1, 1, 0],
   ],
+  "5": [
+    [1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0],
+    [1, 1, 1, 1, 0],
+    [0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1],
+    [0, 1, 1, 1, 0],
+  ],
 };
 
 function stamp(field: Uint8Array, ch: string, ox: number, oy: number) {
@@ -68,7 +77,7 @@ export function PixelErrorArt({ label = "404" }: { label?: string }) {
     let alive = true;
 
     const field = new Uint8Array(COLS * ROWS);
-    const word = label.replace(/[^40]/g, "").slice(0, 3) || "404";
+    const word = label.replace(/[^405]/g, "").slice(0, 3) || "404";
     const glyphW = 10;
     const startX = Math.floor((COLS - word.length * (glyphW + 2) + 2) / 2);
     const startY = 7;

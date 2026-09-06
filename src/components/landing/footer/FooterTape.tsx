@@ -7,13 +7,13 @@ const ROWS = [
 
 export function FooterTape() {
   return (
-    <aside className="relative border border-white/8 bg-[#1c1c1f]/85 px-5 py-6 md:px-6 md:py-7">
-      <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-[#c23a3a]" />
-      <span className="absolute -right-px -top-px h-3 w-3 border-r border-t border-[#c23a3a]" />
-      <span className="absolute -bottom-px -left-px h-3 w-3 border-b border-l border-[#c23a3a]" />
-      <span className="absolute -bottom-px -right-px h-3 w-3 border-b border-r border-[#c23a3a]" />
+    <aside className="relative border border-white/8 bg-raised/85 px-5 py-6 md:px-6 md:py-7">
+      <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-accent" />
+      <span className="absolute -right-px -top-px h-3 w-3 border-r border-t border-accent" />
+      <span className="absolute -bottom-px -left-px h-3 w-3 border-b border-l border-accent" />
+      <span className="absolute -bottom-px -right-px h-3 w-3 border-b border-r border-accent" />
 
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[07] Published ratio</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[07] Published ratio</p>
       <div className="mt-6 flex items-end justify-between gap-6">
         <div>
           <p className="font-mono text-2xl tracking-tight text-zinc-100">ETH → SOL</p>
@@ -22,7 +22,7 @@ export function FooterTape() {
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-5xl tabular-nums tracking-tighter text-[#c23a3a]">50</p>
+          <p className="font-mono text-5xl tabular-nums tracking-tighter text-accent">50</p>
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">bps out</p>
         </div>
       </div>

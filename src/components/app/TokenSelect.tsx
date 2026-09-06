@@ -48,7 +48,7 @@ export function TokenSelect({
           aria-expanded={open}
           aria-controls={listId}
           onClick={() => setOpen((current) => !current)}
-          className="flex w-full items-center gap-2 border border-white/10 bg-[#141416] px-3 py-2 text-left outline-none focus:border-[#c23a3a]"
+          className="flex w-full items-center gap-2 border border-white/10 bg-background px-3 py-2 text-left outline-none focus:border-accent"
         >
           {selected ? (
             <>
@@ -67,7 +67,7 @@ export function TokenSelect({
           <ul
             id={listId}
             role="listbox"
-            className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto border border-white/10 bg-[#141416]"
+            className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto border border-white/10 bg-background"
           >
             {tokens.map((token) => {
               const active = token.address.toLowerCase() === value.toLowerCase();

@@ -25,7 +25,7 @@ export function AccountStrip() {
           <div className="px-4 py-10 md:px-8">
             <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Health</dt>
             <dd className="mt-3 text-lg tracking-tight text-zinc-100">
-              <a href="/api/v1/health" className="hover:text-[#c23a3a]">
+              <a href="/api/v1/health" className="hover:text-accent">
                 GET /api/v1/health
               </a>
             </dd>

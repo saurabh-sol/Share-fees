@@ -57,7 +57,7 @@ export function DeskMap() {
           After the wallet signs, the desk is four pages. Credit lives on the address. There is no email profile.
         </p>
         <div className="md:order-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[06] The desk</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[06] The desk</p>
           <h2 className="mt-5 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-6xl">
             Four pages. One ledger.
           </h2>
@@ -83,7 +83,7 @@ export function DeskMap() {
               page.wide ? "md:col-span-7" : "md:col-span-5"
             } ${index % 2 === 0 ? "md:border-r" : ""}`}
           >
-            <page.Icon size={18} className="text-[#c23a3a]" />
+            <page.Icon size={18} className="text-accent" />
             <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">{page.id}</p>
             <h3 className="mt-3 text-2xl tracking-tight text-zinc-100">{page.title}</h3>
             <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-zinc-400">{page.body}</p>

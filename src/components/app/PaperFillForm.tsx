@@ -69,7 +69,7 @@ export function PaperFillForm() {
           required
           value={form.txHash}
           onChange={(event) => setForm((prev) => ({ ...prev, txHash: event.target.value }))}
-          className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+          className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           placeholder="0x followed by 64 hex chars"
         />
       </label>
@@ -80,7 +80,7 @@ export function PaperFillForm() {
             required
             value={form.fromChain}
             onChange={(event) => setForm((prev) => ({ ...prev, fromChain: event.target.value }))}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           />
         </label>
         <label className="block space-y-2">
@@ -89,7 +89,7 @@ export function PaperFillForm() {
             required
             value={form.toChain}
             onChange={(event) => setForm((prev) => ({ ...prev, toChain: event.target.value }))}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           />
         </label>
       </div>
@@ -100,19 +100,19 @@ export function PaperFillForm() {
           inputMode="decimal"
           value={form.notionalUsd}
           onChange={(event) => setForm((prev) => ({ ...prev, notionalUsd: event.target.value }))}
-          className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-[#c23a3a]"
+          className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
         />
         <span className="block text-xs text-zinc-600">Floor is $250.00. Below that, the swap is stored and the credit is skipped.</span>
       </label>
       <button
         type="submit"
         disabled={status === "loading"}
-        className="rounded-full bg-[#c23a3a] px-5 py-2.5 text-sm text-zinc-50 transition-transform active:scale-[0.98] disabled:opacity-40"
+        className="bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98] disabled:opacity-40"
       >
         {status === "loading" ? "Booking…" : "Record fill"}
       </button>
       {message ? (
-        <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
+        <p className={status === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"} role="status">
           {message}
         </p>
       ) : null}

@@ -8,10 +8,10 @@ import { SocialButtons } from "./SocialButtons";
 function Mark() {
   return (
     <span className="grid grid-cols-4 gap-px" aria-hidden>
-      <span className="h-1.5 w-1.5 bg-[#c23a3a]" />
-      <span className="h-1.5 w-1.5 bg-[#c23a3a]" />
-      <span className="h-1.5 w-1.5 bg-[#9f2f2f]" />
-      <span className="h-1.5 w-1.5 bg-[#c23a3a]" />
+      <span className="h-1.5 w-1.5 bg-accent" />
+      <span className="h-1.5 w-1.5 bg-accent" />
+      <span className="h-1.5 w-1.5 bg-accent-press" />
+      <span className="h-1.5 w-1.5 bg-accent" />
     </span>
   );
 }
@@ -19,7 +19,7 @@ function Mark() {
 function FooterBrand() {
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[12] Close</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[12] Close</p>
       <Link href="/" className="mt-5 inline-flex items-center gap-3">
         <Mark />
         <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">Trade2Credits</span>
@@ -47,8 +47,8 @@ function FooterBottom() {
       <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-3 px-4 py-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 md:flex-row md:items-center md:px-8">
         <p>© 2026 Trade2Credits. All rights reserved.</p>
         <p className="text-zinc-300">
-          <span className="text-[#c23a3a]">+</span> Built for qualifying fills{" "}
-          <span className="text-[#c23a3a]">+</span>
+          <span className="text-accent">+</span> Built for qualifying fills{" "}
+          <span className="text-accent">+</span>
         </p>
         <p>Swap / Credit / Own</p>
       </div>
@@ -58,7 +58,7 @@ function FooterBottom() {
 
 export function Footer() {
   return (
-    <footer className="relative isolate overflow-hidden border-t border-white/8 bg-[#141416]">
+    <footer className="relative isolate overflow-hidden border-t border-white/8 bg-background">
       <FooterField />
       <div className="relative z-10 mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-4 py-16 md:grid-cols-2 md:px-8 md:py-20 lg:grid-cols-[1.1fr_0.95fr_0.85fr] lg:items-start lg:gap-16">
         <FooterBrand />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, LogOut, ArrowRight } from "lucide-react";
+import { ArrowRight, Copy, SignOut } from "@phosphor-icons/react";
 import type { DiscoveredWallet } from "./wallet-config";
 import { WalletIcon } from "./WalletIcon";
 import { shortenAddress } from "./wallet-utils";
@@ -53,35 +53,35 @@ export function ConnectedWallet({
           <WalletIcon name={wallet.name} iconUrl={wallet.iconUrl} size={24} />
         </span>
         <div>
-          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#c23a3a]">Connected</p>
-          <h2 className="font-mono text-[15px] tracking-tight text-[#e4e4e7]">{wallet.name}</h2>
-          <p className="font-mono text-[11px] text-[#a1a1aa]">{shortenAddress(address, 8, 6)}</p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-accent">Connected</p>
+          <h2 className="font-mono text-[15px] tracking-tight text-foreground">{wallet.name}</h2>
+          <p className="font-mono text-[11px] text-muted">{shortenAddress(address, 8, 6)}</p>
         </div>
       </div>
 
       <dl className="divide-y divide-white/[0.08] border-y border-white/[0.08] font-mono text-xs">
         <div className="flex justify-between py-2.5">
-          <dt className="text-[#a1a1aa]">Wallet</dt>
-          <dd className="text-[#e4e4e7]">{wallet.name}</dd>
+          <dt className="text-muted">Wallet</dt>
+          <dd className="text-foreground">{wallet.name}</dd>
         </div>
         <div className="flex justify-between py-2.5">
-          <dt className="text-[#a1a1aa]">Address</dt>
-          <dd className="text-[#e4e4e7]">{shortenAddress(address, 10, 6)}</dd>
+          <dt className="text-muted">Address</dt>
+          <dd className="text-foreground">{shortenAddress(address, 10, 6)}</dd>
         </div>
         <div className="flex justify-between py-2.5">
-          <dt className="text-[#a1a1aa]">Network</dt>
-          <dd className="text-[#e4e4e7]">{networkLabel}</dd>
+          <dt className="text-muted">Network</dt>
+          <dd className="text-foreground">{networkLabel}</dd>
         </div>
         {namespace === "eip155" && chainId ? (
           <div className="flex justify-between py-2.5">
-            <dt className="text-[#a1a1aa]">Chain ID</dt>
-            <dd className="text-[#e4e4e7]">{chainId}</dd>
+            <dt className="text-muted">Chain ID</dt>
+            <dd className="text-foreground">{chainId}</dd>
           </div>
         ) : null}
         {balance && namespace === "eip155" ? (
           <div className="flex justify-between py-2.5">
-            <dt className="text-[#a1a1aa]">Balance</dt>
-            <dd className="tabular-nums text-[#e4e4e7]">
+            <dt className="text-muted">Balance</dt>
+            <dd className="tabular-nums text-foreground">
               {balance} {balanceSymbol}
             </dd>
           </div>
@@ -92,7 +92,7 @@ export function ConnectedWallet({
         <button
           type="button"
           onClick={onCopy}
-          className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#e4e4e7] transition-colors hover:border-white/[0.14] hover:bg-white/[0.04] active:bg-[#9f2f2f]/20"
+          className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-foreground transition-colors hover:border-white/[0.14] hover:bg-white/[0.04] active:bg-accent-press/20"
         >
           <Copy className="size-3" aria-hidden />
           {copied ? "Copied" : "Copy address"}
@@ -100,15 +100,15 @@ export function ConnectedWallet({
         <button
           type="button"
           onClick={onDisconnect}
-          className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#a1a1aa] transition-colors hover:border-white/[0.14] hover:text-[#e4e4e7] active:bg-[#9f2f2f]/20"
+          className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted transition-colors hover:border-white/[0.14] hover:text-foreground active:bg-accent-press/20"
         >
-          <LogOut className="size-3" aria-hidden />
+          <SignOut className="size-3" aria-hidden />
           Disconnect
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#c23a3a] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-white transition-colors hover:bg-[#d04444] active:bg-[#9f2f2f]"
+          className="inline-flex items-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-white transition-colors hover:bg-accent-press active:bg-accent-press"
         >
           Enter desk
           <ArrowRight className="size-3" aria-hidden />

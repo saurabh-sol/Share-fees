@@ -1,14 +1,14 @@
 function AsciiBlock({ lines, className = "" }: { lines: string[]; className?: string }) {
   return (
     <div
-      className={`font-mono text-[9px] uppercase leading-[1.7] tracking-[0.32em] text-[#a1a1aa] ${className}`}
+      className={`font-mono text-[9px] uppercase leading-[1.7] tracking-[0.32em] text-muted ${className}`}
     >
       {lines.map((line) => (
         <p key={line} className="whitespace-nowrap">
           {line}
         </p>
       ))}
-      <span className="mt-1.5 block h-px w-7 bg-[#c23a3a]" />
+      <span className="mt-1.5 block h-px w-7 bg-accent" />
     </div>
   );
 }

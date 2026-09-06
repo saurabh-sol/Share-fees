@@ -2,8 +2,11 @@
 
 @theme inline {
   --color-background: #141416;
+  --color-raised: #1c1c1f;
   --color-foreground: #e4e4e7;
   --color-accent: #c23a3a;
+  --color-accent-press: #9f2f2f;
+  --color-muted: #a1a1aa;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -41,6 +44,32 @@ pre {
 
 ::selection {
   background: rgba(194, 58, 58, 0.35);
+}
+
+:focus-visible {
+  outline: 2px solid #c23a3a;
+  outline-offset: 2px;
+}
+
+@keyframes desk-shimmer {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.desk-skeleton {
+  animation: desk-shimmer 1.6s ease-in-out infinite;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-skeleton {
+    animation: none;
+  }
 }
 
 .wallet-grid-bg {

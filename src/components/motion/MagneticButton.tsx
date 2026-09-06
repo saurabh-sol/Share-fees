@@ -32,7 +32,7 @@ export function MagneticButton({
 
   const palette =
     variant === "primary"
-      ? "bg-[#c23a3a] text-zinc-50 hover:bg-[#9f2f2f]"
+      ? "bg-accent text-zinc-50 hover:bg-accent-press"
       : "border border-white/10 bg-transparent text-zinc-200 hover:bg-white/5";
 
   const shared = {
