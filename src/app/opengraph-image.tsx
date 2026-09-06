@@ -28,7 +28,7 @@ export default function OpengraphImage() {
           <div style={{ display: "flex", fontSize: 18, letterSpacing: 6, color: "#c23a3a" }}>T2C</div>
           <div style={{ display: "flex", flexDirection: "column", fontSize: 64, lineHeight: 1.05, letterSpacing: -2 }}>
             <div style={{ display: "flex" }}>Swap any chain.</div>
-            <div style={{ display: "flex" }}>Take USDT or LLM credit.</div>
+            <div style={{ display: "flex" }}>Take USDG or LLM credit.</div>
           </div>
           <div style={{ display: "flex", fontSize: 22, color: "#a1a1aa" }}>
             $250 floor · 50 bps · wallet-only session
@@ -49,7 +49,7 @@ export default function OpengraphImage() {
           <div style={{ display: "flex", fontFamily: "monospace", fontSize: 20 }}>ETH / USDC  $1,842.60</div>
           <div style={{ display: "flex", fontFamily: "monospace", fontSize: 20 }}>Reward      $9.21</div>
           <div style={{ display: "flex", fontFamily: "monospace", fontSize: 20, color: "#c23a3a" }}>
-            Rail        USDT or LLM
+            Rail        USDG or LLM
           </div>
         </div>
       </div>

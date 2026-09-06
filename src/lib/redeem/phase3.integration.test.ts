@@ -164,6 +164,7 @@ describe("phase 3 redeem + gateway", () => {
 
     const [outbox] = await db.select().from(payoutOutbox);
     expect(outbox?.status).toBe("queued");
+    expect(outbox?.chain).toBe("ethereum");
     expect(outbox?.destination).toBe(ADDRESS);
     expect(outbox?.txHash).toBeNull();
 

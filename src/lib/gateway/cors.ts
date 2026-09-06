@@ -1,7 +1,8 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Allow-Headers":
+    "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta",
   "Access-Control-Max-Age": "86400",
 };
 

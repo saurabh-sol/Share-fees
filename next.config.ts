@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@lifi/sdk", "@lifi/sdk-provider-ethereum"],
   async rewrites() {
     return [
+      { source: "/chat/completions", destination: "/api/v1/chat/completions" },
       { source: "/v1/:path*", destination: "/api/v1/:path*" },
       { source: "/gateway/v1/:path*", destination: "/api/gateway/v1/:path*" },
     ];
@@ -20,7 +21,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
         ],
       },
       {
@@ -28,7 +29,79 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/v1/messages",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/api/v1/messages",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/chat/completions",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/v1/chat/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/v1/models",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/v1/models/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/api/v1/chat/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/api/v1/models",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
+        ],
+      },
+      {
+        source: "/api/v1/models/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, anthropic-version, anthropic-beta" },
         ],
       },
       {

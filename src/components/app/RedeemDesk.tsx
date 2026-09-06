@@ -2,14 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy } from "@phosphor-icons/react";
-import {
-  DEFAULT_LLM_MODEL,
-  DEFAULT_LLM_PROVIDER,
-  LLM_CATALOG,
-  modelsForProvider,
-  type LlmProvider,
-} from "@/lib/gateway/catalog";
+import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, type LlmProvider } from "@/lib/gateway/catalog";
+import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
+import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 
 type Rail = "usdt" | "llm_credits";
 
@@ -81,7 +76,8 @@ export function RedeemDesk({
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState<"key" | "url" | null>(null);
+  const [issuedModel, setIssuedModel] = useState(DEFAULT_LLM_MODEL);
+  const [issuedProvider, setIssuedProvider] = useState<LlmProvider>(DEFAULT_LLM_PROVIDER);
   const [redemptions, setRedemptions] = useState(initialRedemptions);
   const [keys, setKeys] = useState(initialKeys);
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
@@ -131,6 +127,8 @@ export function RedeemDesk({
       });
       if (result.plaintextKey) {
         setIssuedKey(result.plaintextKey);
+        setIssuedModel(model);
+        setIssuedProvider(provider);
       }
       await refreshLists();
       router.refresh();
@@ -139,8 +137,8 @@ export function RedeemDesk({
         result.alreadyExists
           ? "That idempotency key already posted. The plaintext key is not shown again."
           : rail === "usdt"
-            ? `Queued ${money(amountCents)} USDT to this wallet on Arbitrum. It stays queued until treasury is unlocked.`
-            : `Issued a ${money(amountCents)} ${provider} key for ${model}. That is the hard API cap. Copy it now — it is not stored in plaintext.`,
+            ? `Queued ${money(amountCents)} USDG to this wallet on Ethereum. It stays queued until treasury is unlocked.`
+            : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
       setStatus("error");
@@ -163,11 +161,6 @@ export function RedeemDesk({
     }
   }
 
-  async function copy(value: string, which: "key" | "url") {
-    await navigator.clipboard.writeText(value);
-    setCopied(which);
-  }
-
   return (
     <div className="space-y-12">
       <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
@@ -178,7 +171,7 @@ export function RedeemDesk({
           </dd>
         </div>
         <div className="py-8 md:px-8">
-          <dt className="text-sm text-zinc-500">USDT available</dt>
+          <dt className="text-sm text-zinc-500">USDG available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(balances.usdtCents)}
           </dd>
@@ -191,7 +184,7 @@ export function RedeemDesk({
         </div>
       </dl>
 
-      <form onSubmit={(event) => void onRedeem(event)} className="max-w-xl space-y-6">
+      <form onSubmit={(event) => void onRedeem(event)} className="max-w-2xl space-y-6">
         <fieldset className="space-y-2">
           <legend className="text-sm text-zinc-400">Rail</legend>
           <div className="flex gap-6">
@@ -203,7 +196,7 @@ export function RedeemDesk({
                 disabled={!evmOnly}
                 onChange={() => setRail("usdt")}
               />
-              USDT on Arbitrum
+              USDG on ETH
             </label>
             <label className="flex items-center gap-2 text-sm text-zinc-200">
               <input
@@ -216,47 +209,23 @@ export function RedeemDesk({
             </label>
           </div>
           {!evmOnly ? (
-            <p className="text-sm text-zinc-500">USDT withdraw is EVM-only. This session is Solana.</p>
+            <p className="text-sm text-zinc-500">USDG withdraw is EVM-only. This session is Solana.</p>
           ) : null}
         </fieldset>
 
         {rail === "llm_credits" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block space-y-2">
-              <span className="text-sm text-zinc-400">Provider</span>
-              <select
-                value={provider}
-                onChange={(event) => {
-                  const next = event.target.value as LlmProvider;
-                  setProvider(next);
-                  const first = modelsForProvider(next)[0];
-                  if (first) setModel(first.id);
-                }}
-                className="w-full border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
-              >
-                {LLM_CATALOG.map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#1c1c1f]">
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm text-zinc-400">API model</span>
-              <select
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                className="w-full border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#c23a3a]"
-              >
-                {modelsForProvider(provider).map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#1c1c1f]">
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="sm:col-span-2 text-xs text-zinc-500">
-              Redeem $1.00 and this key can spend at most $1.00 on {provider}. Extra tokens are rejected.
+          <div className="space-y-3">
+            <LlmModelPicker
+              provider={provider}
+              model={model}
+              onChange={(next) => {
+                setProvider(next.provider);
+                setModel(next.model);
+              }}
+            />
+            <p className="text-xs leading-relaxed text-zinc-500">
+              Redeem $1.00 and this key can spend at most $1.00 on the official {provider} API. Extra
+              tokens are rejected. After claim, redeem here to mint the key.
             </p>
           </div>
         ) : null}
@@ -285,43 +254,12 @@ export function RedeemDesk({
         </button>
       </form>
 
-      <section className="max-w-[65ch] space-y-3 border-y border-white/8 py-8">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">OpenAI-compatible setup</p>
-        <p className="text-sm text-zinc-400">
-          Base URL for any OpenAI-compatible client. Paste a virtual key issued below. The pool key never leaves the server.
-        </p>
-        <div className="flex items-center justify-between gap-4">
-          <code className="font-mono text-sm text-zinc-100">{gatewayBaseUrl}</code>
-          <button
-            type="button"
-            onClick={() => void copy(gatewayBaseUrl, "url")}
-            className="inline-flex items-center gap-2 text-sm text-zinc-300"
-          >
-            {copied === "url" ? <Check size={16} /> : <Copy size={16} />}
-            {copied === "url" ? "Copied" : "Copy"}
-          </button>
-        </div>
-      </section>
-
-      {issuedKey ? (
-        <section className="space-y-3 border-y border-white/8 py-8">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#c23a3a]">Show once</p>
-          <p className="text-sm text-zinc-400">
-            This plaintext key is not stored. If you leave the page, redeem again for a new key.
-          </p>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <code className="break-all font-mono text-sm text-zinc-100">{issuedKey}</code>
-            <button
-              type="button"
-              onClick={() => void copy(issuedKey, "key")}
-              className="inline-flex items-center gap-2 text-sm text-zinc-300"
-            >
-              {copied === "key" ? <Check size={16} /> : <Copy size={16} />}
-              {copied === "key" ? "Copied" : "Copy key"}
-            </button>
-          </div>
-        </section>
-      ) : null}
+      <OpenAiKeyIssue
+        gatewayBaseUrl={gatewayBaseUrl}
+        issuedKey={issuedKey}
+        issuedModel={issuedKey ? issuedModel : model}
+        issuedProvider={issuedKey ? issuedProvider : provider}
+      />
 
       {message ? (
         <p className={status === "error" ? "text-sm text-[#c23a3a]" : "text-sm text-zinc-300"} role="status">
@@ -337,12 +275,20 @@ export function RedeemDesk({
           <ul className="divide-y divide-white/8 border-y border-white/8">
             {keys.map((key) => (
               <li key={key.id} className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-mono text-sm text-zinc-100">{key.prefix}…</p>
-                  <p className="font-mono text-xs text-zinc-500">
-                    {money(key.remainingCents)} left of {money(key.spendCapCents)} · {key.provider ?? "openai"} ·{" "}
-                    {key.model ?? "gpt-4o-mini"} · {key.status}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <ProviderMark
+                    provider={
+                      key.provider === "anthropic" || key.provider === "deepseek" ? key.provider : "openai"
+                    }
+                    size={28}
+                  />
+                  <div>
+                    <p className="font-mono text-sm text-zinc-100">{key.prefix}…</p>
+                    <p className="font-mono text-xs text-zinc-500">
+                      {money(key.remainingCents)} left of {money(key.spendCapCents)} · {key.provider ?? "openai"} ·{" "}
+                      {key.model ?? "gpt-4o-mini"} · {key.status}
+                    </p>
+                  </div>
                 </div>
                 {key.status === "active" ? (
                   <button
@@ -370,7 +316,7 @@ export function RedeemDesk({
               <li key={row.id} className="flex items-center justify-between py-4">
                 <div>
                   <p className="font-mono text-sm text-zinc-100">
-                    {row.rail === "usdt" ? "USDT" : "LLM"} · {money(row.amountCents)}
+                    {row.rail === "usdt" ? "USDG" : "LLM"} · {money(row.amountCents)}
                   </p>
                   <p className="font-mono text-xs text-zinc-500">{row.id.slice(0, 18)}…</p>
                 </div>

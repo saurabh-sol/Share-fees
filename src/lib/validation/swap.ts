@@ -85,6 +85,16 @@ export const chatCompletionSchema = z
   })
   .passthrough();
 
+export const anthropicMessagesSchema = z
+  .object({
+    model: z.string().min(1).max(80),
+    max_tokens: z.number().int().min(1).max(200_000),
+    messages: z.array(z.unknown()).min(1).max(200),
+    stream: z.boolean().optional(),
+    system: z.unknown().optional(),
+  })
+  .passthrough();
+
 export const rewardRuleSchema = z.object({
   conversionBps: z.number().int().min(25).max(100),
   minNotionalUsdCents: z.number().int().min(25_000).max(1_000_000_000),

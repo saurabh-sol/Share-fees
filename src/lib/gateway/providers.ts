@@ -35,7 +35,12 @@ function asChatBody(body: unknown) {
   const messages = Array.isArray(record.messages) ? (record.messages as ChatMessage[]) : [];
   return {
     model: typeof record.model === "string" ? record.model : "",
-    maxTokens: typeof record.max_tokens === "number" ? record.max_tokens : 1024,
+    maxTokens:
+      typeof record.max_tokens === "number"
+        ? record.max_tokens
+        : typeof record.max_completion_tokens === "number"
+          ? record.max_completion_tokens
+          : 1024,
     messages,
   };
 }
@@ -44,6 +49,7 @@ async function readJson(response: Response) {
   return (await response.json()) as Record<string, unknown>;
 }
 
+/** Pool keys stay server-side. Clients send only Authorization: Bearer t2c_… */
 export function poolKeyFor(provider: LlmProvider) {
   if (provider === "anthropic") return env.anthropicApiKey;
   if (provider === "deepseek") return env.deepseekApiKey;
@@ -92,7 +98,7 @@ export const forwardToOpenAI: ChatForwarder = async ({ body, signal }) => {
 export const forwardToDeepSeek: ChatForwarder = async ({ body, signal }) => {
   const key = env.deepseekApiKey;
   if (!key) throw new GatewayError("provider_pool_empty", 503);
-  return forwardOpenAICompatible("https://api.deepseek.com/chat/completions", key, body, signal);
+  return forwardOpenAICompatible("https://api.deepseek.com/v1/chat/completions", key, body, signal);
 };
 
 export const forwardToAnthropic: ChatForwarder = async ({ body, signal }) => {
@@ -141,20 +147,25 @@ export const forwardToAnthropic: ChatForwarder = async ({ body, signal }) => {
     })
     .join("");
   const usage = (json.usage ?? {}) as { input_tokens?: number; output_tokens?: number };
+  const promptTokens = usage.input_tokens ?? 0;
+  const completionTokens = usage.output_tokens ?? 0;
   const openaiShaped = {
-    id: json.id ?? "chatcmpl_anthropic",
+    id: typeof json.id === "string" ? json.id : "chatcmpl_anthropic",
     object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
     model: parsed.model,
     choices: [
       {
         index: 0,
         message: { role: "assistant", content: text },
         finish_reason: "stop",
+        logprobs: null,
       },
     ],
     usage: {
-      prompt_tokens: usage.input_tokens ?? 0,
-      completion_tokens: usage.output_tokens ?? 0,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: promptTokens + completionTokens,
     },
   };
   return {
@@ -162,6 +173,34 @@ export const forwardToAnthropic: ChatForwarder = async ({ body, signal }) => {
     promptTokens: usage.input_tokens ?? 0,
     completionTokens: usage.output_tokens ?? 0,
     model: parsed.model,
+  };
+};
+
+export const forwardAnthropicMessages: ChatForwarder = async ({ body, signal }) => {
+  const key = env.anthropicApiKey;
+  if (!key) throw new GatewayError("provider_pool_empty", 503);
+  const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ ...record, stream: false }),
+    signal,
+  });
+  const json = await readJson(response);
+  if (!response.ok) {
+    const err = json.error as { message?: string } | undefined;
+    throw new GatewayError(err?.message ?? "provider_error", 502);
+  }
+  const usage = (json.usage ?? {}) as { input_tokens?: number; output_tokens?: number };
+  return {
+    response: Response.json(json),
+    promptTokens: usage.input_tokens ?? 0,
+    completionTokens: usage.output_tokens ?? 0,
+    model: typeof json.model === "string" ? json.model : asChatBody(body).model,
   };
 };
 

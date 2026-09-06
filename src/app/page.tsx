@@ -1,6 +1,12 @@
+import { AccountStrip } from "@/components/landing/AccountStrip";
+import { ApiSurface } from "@/components/landing/ApiSurface";
+import { DeskMap } from "@/components/landing/DeskMap";
 import { DitherSwapArt } from "@/components/landing/DitherSwapArt";
+import { FaqList } from "@/components/landing/FaqList";
 import { HowItPays } from "@/components/landing/HowItPays";
 import { NotchedCta } from "@/components/landing/NotchedCta";
+import { PublishedLimits } from "@/components/landing/PublishedLimits";
+import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
@@ -11,16 +17,16 @@ export default function HomePage() {
     <div className="min-h-[100dvh]">
       <SiteHeader />
       <main>
-        <section className="mx-auto grid min-h-[100dvh] max-w-[1400px] grid-cols-1 items-center gap-10 px-4 py-16 md:grid-cols-[1.05fr_0.95fr] md:px-8">
+        <section className="mx-auto grid min-h-[100dvh] max-w-[1400px] grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 md:grid-cols-[1.05fr_0.95fr] md:px-8">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">
               [01] Wallet-native rewards
             </p>
-            <h1 className="mt-6 max-w-[12ch] text-5xl tracking-tighter leading-none text-zinc-100 md:text-7xl">
+            <h1 className="mt-6 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 sm:text-5xl md:text-7xl">
               You swap. We credit.
             </h1>
             <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400">
-              Qualifying $250+ fills convert at a published ratio. Take USDT to the same wallet, or LLM credits for
+              Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits for
               Claude, OpenAI, and DeepSeek-compatible clients.
             </p>
             <div className="mt-10">
@@ -52,9 +58,9 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-[1400px] grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
             <article className="border-b border-white/8 px-4 py-16 md:border-b-0 md:border-r md:px-8 md:py-20">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">[05] Rails</p>
-              <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">USDT to the same wallet.</h2>
+              <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">USDG to the same wallet.</h2>
               <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-zinc-400">
-                Pick USDT before the credit posts. The outbox queues a payout to the session EVM address on Arbitrum.
+                Pick USDG before the credit posts. The outbox queues a payout to the session EVM address on Ethereum.
                 No other destination. You redeem from the desk when you want the transfer.
               </p>
             </article>
@@ -69,14 +75,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="account" className="border-t border-white/8">
-          <div className="mx-auto max-w-[1400px] px-4 py-20 pb-28 md:px-8">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Account</p>
-            <h2 className="mt-4 max-w-[18ch] text-3xl tracking-tight text-zinc-100">
-              One wallet. Two rails. Same session address.
-            </h2>
-          </div>
-        </section>
+        <DeskMap />
+        <PublishedLimits />
+        <ApiSurface />
+        <RulesBoard />
+        <FaqList />
+        <AccountStrip />
       </main>
       <SiteFooter />
     </div>

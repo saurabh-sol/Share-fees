@@ -53,7 +53,7 @@ export default async function DeskPage() {
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">{money(creditCents)}</dd>
         </div>
         <div className="py-8 md:px-8">
-          <dt className="text-sm text-zinc-500">USDT</dt>
+          <dt className="text-sm text-zinc-500">USDG</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
             {money(wallet?.usdtCacheCents ?? 0)}
           </dd>
@@ -72,8 +72,8 @@ export default async function DeskPage() {
         dailyCapUsdCents={dailyCapUsdCents}
       />
       <p className="max-w-[65ch] text-zinc-400">
-        Claim a qualifying fill first. Credit sits on this wallet. Convert 1:1 to LLM or USDT, then redeem a key or
-        queue Arbitrum USDT.
+        Claim a qualifying fill first. Credit sits on this wallet. Convert 1:1 to LLM or USDG, then redeem a key or
+        queue Ethereum USDG.
       </p>
       <div className="flex flex-wrap gap-6">
         <Link href="/app/swap" className="text-sm text-[#c23a3a]">

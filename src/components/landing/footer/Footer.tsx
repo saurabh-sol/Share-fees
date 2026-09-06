@@ -19,7 +19,7 @@ function Mark() {
 function FooterBrand() {
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[06] Desk</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#c23a3a]">[12] Close</p>
       <Link href="/" className="mt-5 inline-flex items-center gap-3">
         <Mark />
         <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">Trade2Credits</span>
@@ -28,7 +28,7 @@ function FooterBrand() {
         You swap. We credit.
       </h2>
       <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-zinc-400">
-        Qualifying $250+ fills convert at 50 bps. Take USDT to the same wallet, or LLM credits for Claude, OpenAI,
+        Qualifying $250+ fills convert at 50 bps. Take USDG to the same wallet, or LLM credits for Claude, OpenAI,
         and DeepSeek-compatible clients.
       </p>
       <div className="mt-8">
@@ -60,10 +60,12 @@ export function Footer() {
   return (
     <footer className="relative isolate overflow-hidden border-t border-white/8 bg-[#141416]">
       <FooterField />
-      <div className="relative z-10 mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-4 py-16 md:px-8 md:py-20 lg:grid-cols-[1.1fr_0.95fr_0.85fr] lg:items-start lg:gap-16">
+      <div className="relative z-10 mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-4 py-16 md:grid-cols-2 md:px-8 md:py-20 lg:grid-cols-[1.1fr_0.95fr_0.85fr] lg:items-start lg:gap-16">
         <FooterBrand />
         <FooterNav />
-        <FooterTape />
+        <div className="md:col-span-2 lg:col-span-1">
+          <FooterTape />
+        </div>
       </div>
       <div className="relative z-10">
         <FooterBottom />

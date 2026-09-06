@@ -19,12 +19,12 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     <WalletProvider>
       <div className="min-h-[100dvh]">
         <header className="sticky top-0 z-20 border-b border-white/8 bg-[#141416]/80 backdrop-blur-xl">
-          <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 md:px-8">
+          <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-8">
             <Link href="/app" className="flex shrink-0 items-baseline gap-3">
               <span className="font-mono text-xs tracking-[0.22em] text-[#c23a3a]">T2C</span>
               <span className="hidden text-sm text-zinc-200 sm:inline">Desk</span>
             </Link>
-            <nav className="flex min-w-0 items-center gap-4 overflow-x-auto text-sm text-zinc-400 md:gap-6">
+            <nav className="flex min-w-0 items-center gap-4 overflow-x-auto overscroll-x-contain text-sm text-zinc-400 [-ms-overflow-style:none] [scrollbar-width:none] md:gap-6 [&::-webkit-scrollbar]:hidden">
               <Link href="/app" className="shrink-0 hover:text-zinc-100">
                 Balances
               </Link>

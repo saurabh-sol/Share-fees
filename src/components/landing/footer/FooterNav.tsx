@@ -6,14 +6,14 @@ const COLUMNS = [
     links: [
       { href: "#mechanics", label: "How it pays" },
       { href: "#rails", label: "Rails" },
-      { href: "/app/rewards", label: "Rewards" },
+      { href: "#api", label: "LLM API" },
       { href: "/app/swap", label: "Swap" },
     ],
   },
   {
     title: "Desk",
     links: [
-      { href: "#account", label: "Account" },
+      { href: "#desk", label: "Four pages" },
       { href: "/login", label: "Sign in" },
       { href: "/app/claims", label: "Activity" },
       { href: "/app/redeem", label: "Redeem" },
@@ -22,17 +22,17 @@ const COLUMNS = [
   {
     title: "Rules",
     links: [
-      { href: "#mechanics", label: "$250 floor" },
-      { href: "#mechanics", label: "50 bps" },
-      { href: "#mechanics", label: "Terms" },
-      { href: "#mechanics", label: "Privacy" },
+      { href: "#limits", label: "Limits" },
+      { href: "#rules", label: "Will not do" },
+      { href: "#faq", label: "FAQ" },
+      { href: "/api/v1/health", label: "Health" },
     ],
   },
 ];
 
 export function FooterNav() {
   return (
-    <nav aria-label="Footer" className="grid grid-cols-3 gap-6 md:gap-10">
+    <nav aria-label="Footer" className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6 md:gap-10">
       {COLUMNS.map((column) => (
         <div key={column.title}>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">{column.title}</p>

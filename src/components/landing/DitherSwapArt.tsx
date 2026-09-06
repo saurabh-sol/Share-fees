@@ -153,9 +153,9 @@ export function DitherSwapArt() {
 
 function TokenFace({ src, label, name }: { src: string; label: string; name: string }) {
   return (
-    <div className="flex w-28 flex-col items-center gap-2">
-      <span className="flex h-20 w-20 items-center justify-center border border-white/10 bg-[#141416]">
-        <img src={src} alt="" width={56} height={56} className="h-14 w-14 object-contain" />
+    <div className="flex w-20 flex-col items-center gap-2 sm:w-28">
+      <span className="flex h-14 w-14 items-center justify-center border border-white/10 bg-[#141416] sm:h-20 sm:w-20">
+        <img src={src} alt="" width={56} height={56} className="h-10 w-10 object-contain sm:h-14 sm:w-14" />
       </span>
       <span className="font-mono text-sm tracking-[0.16em] text-zinc-100">{label}</span>
       <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">{name}</span>

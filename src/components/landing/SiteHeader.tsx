@@ -18,26 +18,49 @@ export function SiteHeader({
             <span className="h-1.5 w-1.5 bg-[#9f2f2f]" />
             <span className="h-1.5 w-1.5 bg-[#c23a3a]" />
           </span>
-          <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">Trade2Credits</span>
+          <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">
+            <span className="sm:hidden">T2C</span>
+            <span className="hidden sm:inline">Trade2Credits</span>
+          </span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
           <a href="#mechanics" className="hover:text-zinc-100">
             How it pays
           </a>
-          <a href="#rails" className="hover:text-zinc-100">
-            Rails
+          <a href="#desk" className="hover:text-zinc-100">
+            Desk
           </a>
-          <a href="#account" className="hover:text-zinc-100">
-            Account
+          <a href="#api" className="hover:text-zinc-100">
+            API
+          </a>
+          <a href="#faq" className="hover:text-zinc-100">
+            FAQ
           </a>
         </nav>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 sm:gap-5">
           <Link href="/login" className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-300 md:inline">
             Sign in
           </Link>
           <NotchedCta href={ctaHref}>{ctaLabel}</NotchedCta>
         </div>
       </div>
+      <nav className="flex gap-5 overflow-x-auto border-t border-white/8 px-4 py-2.5 text-sm text-zinc-400 md:hidden">
+        <a href="#mechanics" className="shrink-0 hover:text-zinc-100">
+          How it pays
+        </a>
+        <a href="#desk" className="shrink-0 hover:text-zinc-100">
+          Desk
+        </a>
+        <a href="#api" className="shrink-0 hover:text-zinc-100">
+          API
+        </a>
+        <a href="#faq" className="shrink-0 hover:text-zinc-100">
+          FAQ
+        </a>
+        <Link href="/login" className="shrink-0 hover:text-zinc-100">
+          Sign in
+        </Link>
+      </nav>
     </header>
   );
 }

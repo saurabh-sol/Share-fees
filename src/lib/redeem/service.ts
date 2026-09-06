@@ -53,6 +53,7 @@ export function publicVirtualKey(row: typeof virtualKeys.$inferSelect) {
   };
 }
 
+/** Working map: credit → convert 1:1 → redeem(provider, model) → t2c_ (LLM) or session EVM address (USDT). */
 export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof getDb>>) {
   const client = db ?? (await getDb());
 
@@ -195,7 +196,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
         userId: input.userId,
         destination,
         amountCents: input.amountCents,
-        chain: "arbitrum",
+        chain: "ethereum",
         status: "queued",
       });
     }

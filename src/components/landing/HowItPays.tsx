@@ -51,7 +51,7 @@ const STEPS: {
   {
     id: "05",
     title: "Claim, then convert",
-    body: "BPS posts website credit first. Convert 1:1 to LLM or USDT any time. Redeem a t2c_ key or queue Arbitrum USDT after that.",
+    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a t2c_ key or queue Ethereum USDG after that.",
     Icon: Coins,
     span: "md:col-span-7",
   },
@@ -75,7 +75,7 @@ export function HowItPays() {
           </h2>
         </div>
         <p className="max-w-[42ch] text-base leading-relaxed text-zinc-400">
-          A qualifying swap is priced once. You take USDT or LLM credits. Six steps, same ledger, no second
+          A qualifying swap is priced once. You take USDG or LLM credits. Six steps, same ledger, no second
           balance.
         </p>
       </div>
@@ -121,7 +121,9 @@ export function HowItPays() {
           <div className="border-b border-white/8 px-4 py-16 md:border-b-0 md:border-r md:px-8 md:py-20">
             <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">Worked example</p>
             <p className="mt-6 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">$1,842.60 notional × 50 bps</p>
-            <p className="mt-3 font-mono text-6xl tabular-nums tracking-tighter text-[#c23a3a] md:text-8xl">$9.21</p>
+            <p className="mt-3 font-mono text-5xl tabular-nums tracking-tighter text-[#c23a3a] sm:text-6xl md:text-8xl">
+              $9.21
+            </p>
             <p className="mt-6 max-w-[54ch] text-base leading-relaxed text-zinc-400">
               Notional is the USD value of the fill, not the token amount. Below $250 the swap can still run; the
               ledger stores it as below_threshold and no credit posts.
@@ -129,8 +131,8 @@ export function HowItPays() {
           </div>
           <div className="grid grid-rows-2">
             <div className="border-b border-white/8 px-4 py-10 md:px-8">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">USDT rail</p>
-              <p className="mt-3 text-xl tracking-tight text-zinc-100">Same wallet. Arbitrum.</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">USDG rail</p>
+              <p className="mt-3 text-xl tracking-tight text-zinc-100">Same wallet. Ethereum.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                 Redeem from the desk. Destination is the session EVM address only.
               </p>

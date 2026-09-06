@@ -52,7 +52,7 @@ export function ConvertDesk({
       }
       setStatus("success");
       setMessage(
-        `Moved ${money(data.amountCents ?? amountCents)} to ${rail === "usdt" ? "USDT" : "LLM credits"}. Redeem from those balances.`,
+        `Moved ${money(data.amountCents ?? amountCents)} to ${rail === "usdt" ? "USDG" : "LLM credits"}. Redeem from those balances.`,
       );
       router.refresh();
     } catch (error) {
@@ -95,7 +95,7 @@ export function ConvertDesk({
           onClick={() => void convert("usdt")}
           className="rounded-full border border-white/10 px-5 py-2.5 text-sm text-zinc-100 transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          To USDT
+          To USDG
         </button>
       </div>
       {message ? (

@@ -72,7 +72,7 @@ export function PeekAccountButton({
         <PeekMark src="/openai.png" invert />
       </motion.div>
 
-      <span className="relative z-10 inline-flex min-w-[228px] items-center justify-center border border-white/35 bg-[#1c1c1f] px-8 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-100 transition-transform group-active:scale-[0.98]">
+      <span className="relative z-10 inline-flex w-[min(228px,calc(100vw-48px))] items-center justify-center border border-white/35 bg-[#1c1c1f] px-6 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-100 transition-transform group-active:scale-[0.98] sm:px-8">
         {label}
       </span>
     </>

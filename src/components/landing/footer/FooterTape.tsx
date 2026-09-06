@@ -1,7 +1,7 @@
 const ROWS = [
   { k: "Floor", v: "$250 USD" },
   { k: "Ratio", v: "50 bps" },
-  { k: "USDT", v: "Same wallet" },
+  { k: "USDG", v: "Same wallet" },
   { k: "LLM", v: "t2c_ key" },
 ];
 

@@ -1,11 +1,11 @@
 import { createWalletClient, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { arbitrum } from "viem/chains";
+import { mainnet } from "viem/chains";
 import { env } from "@/lib/env";
 
-export const ARBITRUM_USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
+export const ETHEREUM_USDG = "0xe343167631d89B6Ffc58B88d6b7fB0228795491D";
 
-const usdtAbi = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
+const usdgAbi = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
 
 export function treasuryCanBroadcast() {
   if (!env.treasuryEnabled || !env.treasuryPrivateKey) return false;
@@ -18,20 +18,20 @@ export type BroadcastUsdt = (input: {
   amountCents: number;
 }) => Promise<string>;
 
-export const broadcastArbitrumUsdt: BroadcastUsdt = async ({ destination, amountCents }) => {
+export const broadcastEthereumUsdg: BroadcastUsdt = async ({ destination, amountCents }) => {
   if (!treasuryCanBroadcast() || !env.treasuryPrivateKey) {
     throw new Error("treasury_disabled");
   }
   const account = privateKeyToAccount(env.treasuryPrivateKey as `0x${string}`);
   const client = createWalletClient({
     account,
-    chain: arbitrum,
+    chain: mainnet,
     transport: http(),
   });
   const units = BigInt(amountCents) * BigInt(10_000);
   return client.writeContract({
-    address: ARBITRUM_USDT,
-    abi: usdtAbi,
+    address: ETHEREUM_USDG,
+    abi: usdgAbi,
     functionName: "transfer",
     args: [destination as `0x${string}`, units],
   });

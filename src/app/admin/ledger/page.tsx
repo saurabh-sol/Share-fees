@@ -23,7 +23,7 @@ export default async function AdminLedgerPage() {
           <dd className="mt-1 font-mono text-zinc-100">{money(totals.userCreditsCents)}</dd>
         </div>
         <div>
-          <dt className="text-zinc-500">User USDT</dt>
+          <dt className="text-zinc-500">User USDG</dt>
           <dd className="mt-1 font-mono text-zinc-100">{money(totals.userUsdtCents)}</dd>
         </div>
         <div>

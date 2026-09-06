@@ -72,6 +72,7 @@ export function allGatewayModels() {
     provider.models.map((model) => ({
       id: model.id,
       object: "model" as const,
+      created: 1_704_067_200,
       owned_by: provider.id,
     })),
   );

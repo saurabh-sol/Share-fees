@@ -24,11 +24,11 @@ export default async function RedeemPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Phase 3</p>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">After a claim</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Activity total reward lands here. Pick USDT or LLM and redeem it. USDT queues an Arbitrum
-          transfer to this wallet. LLM credits issue a metered virtual key.
+          Claimed swap credit lands here. Take USDG to this wallet, or mint an official OpenAI-shaped
+          API key. That key calls the real provider. Usage spends your points.
         </p>
       </div>
       <RedeemDesk
@@ -36,7 +36,7 @@ export default async function RedeemPage() {
         usdtCents={wallet?.usdtCacheCents ?? 0}
         llmCents={wallet?.llmCacheCents ?? 0}
         chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}
-        gatewayBaseUrl={`${env.publicAppUrl.replace(/\/$/, "")}/gateway/v1`}
+        gatewayBaseUrl={`${env.publicAppUrl.replace(/\/$/, "")}/v1`}
         initialRedemptions={redemptions}
         initialKeys={keys}
       />

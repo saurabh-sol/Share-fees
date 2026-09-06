@@ -29,7 +29,7 @@ export default async function AdminHomePage() {
           <dt className="text-sm text-zinc-500">User liability</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">{money(overview.liabilityCents)}</dd>
           <p className="mt-2 font-mono text-xs text-zinc-500">
-            Credit {money(overview.userCreditsCents)} · USDT {money(overview.userUsdtCents)} · LLM{" "}
+            Credit {money(overview.userCreditsCents)} · USDG {money(overview.userUsdtCents)} · LLM{" "}
             {money(overview.userLlmCents)}
           </p>
         </div>
