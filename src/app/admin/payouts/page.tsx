@@ -17,8 +17,8 @@ export default async function AdminPayoutsPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Treasury</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Payouts</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Process only broadcasts on-chain `payClaim` when the vault and treasury are unlocked.
-          Otherwise the outbox stays queued.
+          Process only broadcasts payClaim when the vault and treasury are unlocked. Otherwise the
+          outbox stays queued.
         </p>
       </div>
       <PayoutsDesk initialPayouts={payouts} />

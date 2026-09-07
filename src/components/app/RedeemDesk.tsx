@@ -12,7 +12,7 @@ import {
   redemptionClaimId,
   type OnChainClaimVoucher,
   type OnChainRewardClaim,
-} from "@/lib/redeem/reward-vault";
+} from "@/lib/redeem/reward-vault-core";
 import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 
@@ -90,6 +90,7 @@ export function RedeemDesk({
   );
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [claimTxHash, setClaimTxHash] = useState<string | null>(null);
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
   const [issuedModel, setIssuedModel] = useState(DEFAULT_LLM_MODEL);
   const [issuedProvider, setIssuedProvider] = useState<LlmProvider>(DEFAULT_LLM_PROVIDER);
@@ -115,6 +116,7 @@ export function RedeemDesk({
     event.preventDefault();
     setStatus("working");
     setMessage(null);
+    setClaimTxHash(null);
     setIssuedKey(null);
     try {
       const amountCents = Math.round(Number(amount) * 100);
@@ -167,11 +169,13 @@ export function RedeemDesk({
               recipient: result.onChainClaim!.recipient,
               amountCents,
               claimedAt: Math.floor(Date.now() / 1000),
+              txHash,
             },
             ...prev.filter((row) => row.redemptionId !== result.redemptionId),
           ]);
           await refreshLists();
           router.refresh();
+          setClaimTxHash(txHash);
           onChainNote = ` On-chain claim ${txHash.slice(0, 10)}… is on Robinhood.`;
         } catch (error) {
           onChainNote =
@@ -200,14 +204,16 @@ export function RedeemDesk({
     setStatus("working");
     setClaimingId(redemptionId);
     setMessage(null);
+    setClaimTxHash(null);
     try {
       const detail = await readJson<{ onChainClaim: OnChainClaimVoucher | null }>(
         `/api/v1/redeem/${redemptionId}`,
       );
-      if (!detail.onChainClaim) {
+      const voucher = detail.onChainClaim;
+      if (!voucher) {
         throw new Error("No on-chain voucher yet. Unlock treasury and the vault first.");
       }
-      const txHash = await submitUsdgRewardClaim(detail.onChainClaim);
+      const txHash = await submitUsdgRewardClaim(voucher);
       await readJson(`/api/v1/redeem/${redemptionId}/confirm`, {
         method: "POST",
         body: JSON.stringify({ txHash }),
@@ -216,16 +222,18 @@ export function RedeemDesk({
         {
           claimId: redemptionClaimId(redemptionId),
           redemptionId,
-          recipient: detail.onChainClaim.recipient,
+          recipient: voucher.recipient,
           amountCents:
             redemptions.find((row) => row.id === redemptionId)?.amountCents ?? 0,
           claimedAt: Math.floor(Date.now() / 1000),
+          txHash,
         },
         ...prev.filter((row) => row.redemptionId !== redemptionId),
       ]);
       await refreshLists();
       router.refresh();
       setStatus("idle");
+      setClaimTxHash(txHash);
       setMessage(`On-chain claim landed. ${txHash.slice(0, 10)}…`);
     } catch (error) {
       setStatus("error");
@@ -353,9 +361,20 @@ export function RedeemDesk({
             <p className="mt-1 text-sm text-zinc-400">{message}</p>
           </div>
         ) : (
-          <p className="max-w-2xl text-sm text-zinc-300" role="status">
-            {message}
-          </p>
+          <div className="max-w-2xl space-y-1" role="status">
+            <p className="text-sm text-zinc-300">{message}</p>
+            {claimTxHash ? (
+              <a
+                href={robinhoodTxUrl(claimTxHash)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-mono text-xs text-zinc-300 hover:text-zinc-50"
+              >
+                View transaction on Blockscout
+                <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+              </a>
+            ) : null}
+          </div>
         )
       ) : null}
 
@@ -437,16 +456,22 @@ export function RedeemDesk({
                     </a>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-start gap-2 md:items-end">
                   <p className="font-mono text-sm text-zinc-400">{row.status}</p>
-                  {row.rail === "usdt" && row.status === "queued" && evmOnly && rewardVaultAddress ? (
-                    <NotchedButton
-                      variant="ghost"
-                      disabled={status === "working"}
-                      onClick={() => void onSubmitQueuedClaim(row.id)}
-                    >
-                      {claimingId === row.id ? "Claiming…" : "Claim on-chain"}
-                    </NotchedButton>
+                  {row.rail === "usdt" && row.status === "queued" && evmOnly ? (
+                    rewardVaultAddress ? (
+                      <NotchedButton
+                        variant="ghost"
+                        disabled={status === "working"}
+                        onClick={() => void onSubmitQueuedClaim(row.id)}
+                      >
+                        {claimingId === row.id ? "Claiming…" : "Claim on-chain"}
+                      </NotchedButton>
+                    ) : (
+                      <p className="max-w-[28ch] font-mono text-xs text-zinc-500">
+                        Queued until UsdgRewardVault is set. No explorer link until the claim lands.
+                      </p>
+                    )
                   ) : null}
                 </div>
               </li>
@@ -483,11 +508,37 @@ export function RedeemDesk({
                 <div>
                   <p className="font-mono text-sm text-zinc-100">{money(claim.amountCents)} USDG</p>
                   <p className="font-mono text-xs text-zinc-500">
-                    {claim.redemptionId.slice(0, 18)}… ·{" "}
-                    {new Date(claim.claimedAt * 1000).toLocaleString()}
+                    {claim.redemptionId.slice(0, 18)}…
+                    {claim.claimedAt > 0
+                      ? ` · ${new Date(claim.claimedAt * 1000).toLocaleString()}`
+                      : null}
                   </p>
+                  {claim.txHash ? (
+                    <a
+                      href={robinhoodTxUrl(claim.txHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 font-mono text-xs text-zinc-300 hover:text-zinc-50"
+                    >
+                      View on Blockscout {claim.txHash.slice(0, 10)}…
+                      <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+                    </a>
+                  ) : rewardVaultAddress ? (
+                    <a
+                      href={robinhoodAddressUrl(rewardVaultAddress)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 font-mono text-xs text-zinc-500 hover:text-zinc-300"
+                    >
+                      {claim.claimId.slice(0, 10)}…
+                      <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+                    </a>
+                  ) : (
+                    <p className="mt-1 font-mono text-xs text-zinc-500">
+                      {claim.claimId.slice(0, 10)}…
+                    </p>
+                  )}
                 </div>
-                <p className="font-mono text-xs text-zinc-500">{claim.claimId.slice(0, 10)}…</p>
               </li>
             ))}
           </ul>

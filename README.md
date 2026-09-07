@@ -27,7 +27,7 @@ Notional is the **USD value of the fill**, not the token amount. A $40 swap in a
 2. **Swap live, or bring history.** Swap Studio quotes and executes through LI.FI or Robinhood ETH. Activity can scan the same wallet (last 90 days, when a scan key is configured) or accept a verified transaction hash.
 3. **Clear the $250 floor.** Confirmed swap volume on the connected wallet must reach $250 before BPS is listed. Smaller swaps still count toward that total. Sends do not. A live fill below $250 still executes; it does not pay on its own.
 4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
-5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it.
+5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. USDG redeem is an on-chain vault claim on Robinhood. LLM redeem stays a `t2c_` key.
 6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
 
 Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, and Robinhood.
@@ -47,9 +47,15 @@ Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, and Robinhood.
 
 ### USDG
 
-Pick the USDG rail before the credit is consumed. Redeem queues a payout to the **session EVM address on Robinhood Chain**. Gas is Robinhood ETH. The token is Robinhood USDG, not Paxos USDG on Ethereum mainnet. No other destination is accepted.
+Pick the USDG rail before the credit is consumed. Redeem is **not paid** until `UsdgRewardVault` on **Robinhood Chain** stores the claim and transfers Robinhood USDG to the signed-in EVM address. The wallet can submit `claim()` with a desk signature, or treasury submits `payClaim()`. Either path writes the same on-chain record. A raw USDG `transfer` is not a reward claim. Gas is Robinhood ETH. The token is Robinhood USDG, not Paxos USDG on Ethereum mainnet. No other destination is accepted.
 
-The redeem still books when treasury is off. Locally a valid `TREASURY_PRIVATE_KEY` is enough to broadcast unless `TREASURY_ENABLED=false`. Production also needs `TREASURY_ENABLED=true` and `TREASURY_LIVE=true`. Until then, the desk shows the redeem as queued, not broadcast.
+The redeem still books when the vault is unset. Locally a valid `TREASURY_PRIVATE_KEY` plus `REWARD_VAULT_ADDRESS` is enough to broadcast unless `TREASURY_ENABLED=false`. Production also needs `TREASURY_ENABLED=true` and `TREASURY_LIVE=true`. Until then, the desk shows the redeem as queued, not claimed on-chain.
+
+Deploy the vault, fund it with USDG, then set the address:
+
+```bash
+npx tsx scripts/deploy-reward-vault.ts
+```
 
 ### LLM credits
 
@@ -138,7 +144,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up --build 
 curl -fsS http://localhost:3000/api/v1/health
 ```
 
-Postgres and Redis stay on the Docker network. Only the app port is published. Paper fills are off. Treasury stays queued until `TREASURY_ENABLED=true`, `TREASURY_LIVE=true`, and `TREASURY_PRIVATE_KEY` are set.
+Postgres and Redis stay on the Docker network. Only the app port is published. Paper fills are off. USDG claims stay queued until `TREASURY_ENABLED=true`, `TREASURY_LIVE=true`, `TREASURY_PRIVATE_KEY`, and `REWARD_VAULT_ADDRESS` are set.
 
 ## Configuration
 
@@ -157,7 +163,8 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 | `ZERION_API_KEY` | Shared 90-day wallet scan key. Calls are queued (2/sec) and a scan is reused for 15 minutes. Without it, users can still import a verified hash. |
 | `AI_GATEWAY_API_KEY` | One Vercel AI Gateway key for OpenAI, Anthropic, and DeepSeek. On Vercel, `VERCEL_OIDC_TOKEN` is enough. |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY` | Optional fallbacks if Gateway is unset. Virtual `t2c_` keys never see these. |
-| `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | Signs Robinhood USDG transfers. Locally a valid key is enough unless `TREASURY_ENABLED=false`. Production also needs enabled + live. The private key stays server-only. |
+| `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | Signs Robinhood USDG claim vouchers and `payClaim`. Locally a valid key is enough unless `TREASURY_ENABLED=false`. Production also needs enabled + live. The private key stays server-only. |
+| `REWARD_VAULT_ADDRESS` | Deployed `UsdgRewardVault` on Robinhood Chain. Required for live USDG claims. |
 | `CRON_SECRET` | Authorizes the payout and settle jobs. Local `next dev` ticks them every minute. Vercel Cron uses the same secret. |
 | `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for provider settle webhooks. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional. WalletConnect stays hidden if empty. |

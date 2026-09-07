@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:live": "vitest run src/lib/gateway/live.e2e.test.ts",
-    "ci": "npm run typecheck && npm test && npm run build"
+    "ci": "npm run typecheck && npm test && npm run build",
+    "deploy:reward-vault": "npx tsx scripts/deploy-reward-vault.ts",
+    "recover:reward-vault": "node scripts/recover-reward-vault.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

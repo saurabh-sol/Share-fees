@@ -155,6 +155,7 @@ describe("phase 3 redeem + gateway", () => {
     );
     expect(result.status).toBe("queued");
     expect(result.usdtCents).toBe(232);
+    expect(result.onChainClaim).toBeNull();
 
     const entries = await db.select().from(ledgerEntries);
     expect(entries.some((row) => row.account === "user_usdt" && row.type === "debit" && row.amountCents === 150)).toBe(

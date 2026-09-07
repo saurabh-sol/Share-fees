@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { USDG_REWARD_VAULT, robinhoodAddressUrl } from "@/lib/chains/robinhood";
 
-const COLUMNS = [
+const COLUMNS: Array<{
+  title: string;
+  links: Array<{ href: string; label: string; external?: boolean }>;
+}> = [
   {
     title: "Product",
     links: [
@@ -26,9 +30,13 @@ const COLUMNS = [
       { href: "#rules", label: "Will not do" },
       { href: "#faq", label: "FAQ" },
       { href: "/api/v1/health", label: "Health" },
+      { href: robinhoodAddressUrl(USDG_REWARD_VAULT), label: "Contract", external: true },
     ],
   },
 ];
+
+const linkClass =
+  "text-sm text-zinc-400 transition-colors hover:text-zinc-100 focus-visible:text-zinc-100 focus-visible:outline-none";
 
 export function FooterNav() {
   return (
@@ -39,12 +47,15 @@ export function FooterNav() {
           <ul className="mt-5 space-y-3">
             {column.links.map((link) => (
               <li key={link.label}>
-                <Link
-                  href={link.href}
-                  className="text-sm text-zinc-400 transition-colors hover:text-zinc-100 focus-visible:text-zinc-100 focus-visible:outline-none"
-                >
-                  {link.label}
-                </Link>
+                {link.external ? (
+                  <a href={link.href} target="_blank" rel="noreferrer" className={linkClass}>
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link href={link.href} className={linkClass}>
+                    {link.label}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

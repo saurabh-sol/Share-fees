@@ -216,7 +216,7 @@ Then point `.env.local` at `postgresql://t2c:t2c@localhost:5432/trade2credits` a
 | `AI_GATEWAY_API_KEY` | One key for OpenAI, Anthropic, DeepSeek, Google |
 | `LIFI_API_KEY` | Optional. Public quotes still work |
 | `ZERION_API_KEY` | Shared 90-day scan. Without it, import a hash |
-| `TREASURY_*` | Robinhood USDG broadcast. Private key stays server-only |
+| `TREASURY_*` / `REWARD_VAULT_ADDRESS` | Robinhood USDG on-chain claims. Private key stays server-only |
 | `ADMIN_SECRET` | Operator console |
 | `CRON_SECRET` | Payout and settle jobs |
 | `ALLOW_MOCK_SWAPS` | Local paper fills only |

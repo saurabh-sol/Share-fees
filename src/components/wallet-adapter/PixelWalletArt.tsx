@@ -7,6 +7,10 @@ const COLORS = {
   1: { fill: "#9a9aa3", opacity: 0.22 },
   2: { fill: "#d6d6db", opacity: 0.55 },
   3: { fill: "#c23a3a", opacity: 0.92 },
+  // ETH mark facets — same tones as the hero pixel glyph.
+  4: { fill: "#e4e4e7", opacity: 0.95 },
+  5: { fill: "#e4e4e7", opacity: 0.6 },
+  6: { fill: "#e4e4e7", opacity: 0.32 },
 } as const;
 
 const CROSSES = [
@@ -60,11 +64,21 @@ export function PixelWalletArt() {
   );
 }
 
+// Body pixels stay faint on mobile; the ETH mark renders at full strength
+// so it stays legible on small screens.
+const MOBILE_COLORS: Record<number, { fill: string; opacity: number }> = {
+  2: { fill: "#a1a1aa", opacity: 0.14 },
+  3: { fill: "#c23a3a", opacity: 0.35 },
+  4: { fill: "#e4e4e7", opacity: 0.95 },
+  5: { fill: "#e4e4e7", opacity: 0.6 },
+  6: { fill: "#e4e4e7", opacity: 0.32 },
+};
+
 export function PixelWalletArtMobile() {
   const cell = 3;
   return (
     <div
-      className="pointer-events-none absolute left-1/2 top-8 z-0 -translate-x-1/2 opacity-40 md:hidden"
+      className="pointer-events-none absolute left-1/2 top-8 z-0 -translate-x-1/2 md:hidden"
       aria-hidden
     >
       <svg
@@ -74,7 +88,8 @@ export function PixelWalletArtMobile() {
       >
         {WALLET_PATTERN.map((row, y) =>
           row.map((kind, x) => {
-            if (kind === 0 || kind === 1) return null;
+            const c = MOBILE_COLORS[kind];
+            if (!c) return null;
             return (
               <rect
                 key={`m-${x}-${y}`}
@@ -82,8 +97,8 @@ export function PixelWalletArtMobile() {
                 y={y * cell}
                 width={cell - 0.4}
                 height={cell - 0.4}
-                fill={kind === 3 ? "#c23a3a" : "#a1a1aa"}
-                opacity={kind === 3 ? 0.85 : 0.35}
+                fill={c.fill}
+                opacity={c.opacity}
               />
             );
           }),

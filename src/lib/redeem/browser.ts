@@ -1,6 +1,6 @@
 import { switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
-import { usdgRewardVaultAbi, type OnChainClaimVoucher } from "@/lib/redeem/reward-vault";
+import { usdgRewardVaultAbi, type OnChainClaimVoucher } from "@/lib/redeem/reward-vault-core";
 import { wagmiConfig } from "@/lib/wallet/wagmi";
 
 export async function submitUsdgRewardClaim(voucher: OnChainClaimVoucher) {

@@ -41,9 +41,7 @@ export function PayoutsDesk({ initialPayouts }: { initialPayouts: Payout[] }) {
         sent
           ? `Broadcast ${sent} payout(s).`
           : queued
-          {queued
             ? "Vault or treasury is locked. USDG claims stay queued until payClaim can land on-chain."
-            : "Outbox is empty."}
             : "Outbox is empty.",
       );
     } catch (error) {

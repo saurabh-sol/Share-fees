@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { getAddress, keccak256, recoverTypedDataAddress, stringToHex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
@@ -9,7 +10,7 @@ import {
   usdgClaimTypedDataTypes,
   usdgRewardVaultAbi,
   usdgUnitsToCents,
-} from "./reward-vault";
+} from "./reward-vault-core";
 
 describe("redemptionClaimId", () => {
   it("matches keccak256 of the UTF-8 redemption id", () => {

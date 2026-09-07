@@ -1,11 +1,16 @@
+import { USDG_REWARD_VAULT, robinhoodAddressUrl } from "@/lib/chains/robinhood";
+
 const ROWS = [
   { k: "Floor", v: "$250 USD" },
   { k: "Ratio", v: "50 bps" },
-  { k: "USDG", v: "Same wallet" },
+  { k: "USDG", v: "Vault claim" },
   { k: "LLM", v: "t2c_ key" },
 ];
 
 export function FooterTape() {
+  const vaultHref = robinhoodAddressUrl(USDG_REWARD_VAULT);
+  const vaultShort = `${USDG_REWARD_VAULT.slice(0, 6)}…${USDG_REWARD_VAULT.slice(-4)}`;
+
   return (
     <aside className="relative border border-white/8 bg-raised/85 px-5 py-6 md:px-6 md:py-7">
       <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-accent" />
@@ -34,6 +39,19 @@ export function FooterTape() {
             <dd className="font-mono text-sm tabular-nums text-zinc-200">{row.v}</dd>
           </div>
         ))}
+        <div className="flex items-center justify-between gap-4 py-3">
+          <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Contract</dt>
+          <dd>
+            <a
+              href={vaultHref}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-sm tabular-nums text-zinc-200 underline-offset-4 hover:text-zinc-50 hover:underline"
+            >
+              {vaultShort}
+            </a>
+          </dd>
+        </div>
       </dl>
     </aside>
   );

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { SignOutButton } from "@/components/app/SignOutButton";
 import { DeskNavLinks } from "@/components/app/DeskNavLinks";
+import { VaultContractLink } from "@/components/onchain/VaultContractLink";
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -44,6 +45,11 @@ export default async function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <div className="mx-auto max-w-[1400px] px-4 py-10 md:px-8">{children}</div>
+        <footer className="border-t border-white/8">
+          <div className="mx-auto flex max-w-[1400px] px-4 py-4 md:px-8">
+            <VaultContractLink compact />
+          </div>
+        </footer>
       </div>
     </WalletProvider>
   );

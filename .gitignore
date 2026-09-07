@@ -38,6 +38,10 @@ yarn-error.log*
 # local pglite
 .data/
 
+# foundry
+contracts/out/
+contracts/cache/
+
 # vercel
 .vercel
 

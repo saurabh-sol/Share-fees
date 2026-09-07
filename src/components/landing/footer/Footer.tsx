@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VaultContractLink } from "@/components/onchain/VaultContractLink";
 import { NotchedCta } from "../NotchedCta";
 import { FooterField } from "./FooterField";
 import { FooterNav } from "./FooterNav";
@@ -34,6 +35,10 @@ function FooterBrand() {
       <div className="mt-8">
         <NotchedCta href="/login">Get started</NotchedCta>
       </div>
+      <div className="mt-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">UsdgRewardVault</p>
+        <VaultContractLink className="mt-2 text-[11px]" />
+      </div>
       <div className="mt-10">
         <SocialButtons />
       </div>
@@ -44,13 +49,16 @@ function FooterBrand() {
 function FooterBottom() {
   return (
     <div className="border-t border-white/8">
-      <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-3 px-4 py-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 md:flex-row md:items-center md:px-8">
-        <p>© 2026 Trade2Credits. All rights reserved.</p>
-        <p className="text-zinc-300">
-          <span className="text-accent">+</span> Built for qualifying fills{" "}
-          <span className="text-accent">+</span>
-        </p>
-        <p>Swap / Credit / Own</p>
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-5 md:px-8">
+        <VaultContractLink compact className="self-start" />
+        <div className="flex flex-col items-start justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 md:flex-row md:items-center">
+          <p>© 2026 Trade2Credits. All rights reserved.</p>
+          <p className="text-zinc-300">
+            <span className="text-accent">+</span> Built for qualifying fills{" "}
+            <span className="text-accent">+</span>
+          </p>
+          <p>Swap / Credit / Own</p>
+        </div>
       </div>
     </div>
   );
