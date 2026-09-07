@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 
 const SITE = "https://trade2credits.onrender.com";
 const OG_IMAGE = `${SITE}/og-preview.png`;
+const OG_TITLE = "You swap. We credit.";
+const OG_DESCRIPTION =
+  "Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for Claude, OpenAI, DeepSeek, and Google.";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -28,15 +31,20 @@ export const metadata: Metadata = {
   title: "Trade2Credits — Swap, then take USDG or LLM credits",
   description:
     "Connect MetaMask, Phantom, or Coinbase. Qualifying $250+ swaps convert at a published ratio into USDG or LLM credits.",
+  alternates: {
+    canonical: SITE,
+  },
   openGraph: {
-    title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
     url: SITE,
     siteName: "Trade2Credits",
     type: "website",
+    locale: "en_US",
     images: [
       {
         url: OG_IMAGE,
+        secureUrl: OG_IMAGE,
         width: 1200,
         height: 630,
         type: "image/png",
@@ -46,8 +54,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
     images: [OG_IMAGE],
   },
 };
