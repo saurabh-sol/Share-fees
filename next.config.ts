@@ -11,7 +11,7 @@ const GATEWAY_CORS_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   serverExternalPackages: ["postgres"],
   turbopack: {
     root: process.cwd(),
