@@ -69,12 +69,8 @@ export const convertCreditsSchema = z.object({
   idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
 });
 
-export const redeemRequestSchema = z.object({
-  rail: railSchema,
-  amountCents: z.number().int().min(100).max(10_000_000),
-  idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
-  provider: z.enum(["anthropic", "openai", "deepseek", "google"]).optional(),
-  model: z.string().min(3).max(120).optional(),
+export const confirmOnChainClaimSchema = z.object({
+  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
 });
 
 export const chatCompletionSchema = z

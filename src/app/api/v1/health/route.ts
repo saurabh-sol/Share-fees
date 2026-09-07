@@ -28,6 +28,7 @@ export async function GET() {
       database,
       redis,
       treasuryCanBroadcast: treasuryCanBroadcast(),
+      rewardVaultConfigured: Boolean(env.rewardVaultAddress),
       cronConfigured: Boolean(env.cronSecret),
       adminConfigured: Boolean(env.adminSecret),
     },

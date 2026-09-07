@@ -1,12 +1,19 @@
-import { createWalletClient, http, parseAbi } from "viem";
+import { createWalletClient, getAddress, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ROBINHOOD_USDG, robinhoodChain } from "@/lib/chains/robinhood";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_USDG, robinhoodChain } from "@/lib/chains/robinhood";
 import { env } from "@/lib/env";
+import {
+  USDG_CLAIM_DEADLINE_SECONDS,
+  buildPayClaimRequest,
+  centsToUsdgUnits,
+  getRewardVaultAddress,
+  usdgClaimEip712Domain,
+  usdgClaimTypedDataTypes,
+  type OnChainClaimVoucher,
+} from "@/lib/redeem/reward-vault";
 
 export const TREASURY_USDG = ROBINHOOD_USDG;
-export const TREASURY_USDG_DECIMALS = 6;
-
-const usdgAbi = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
+export { TREASURY_USDG_DECIMALS } from "@/lib/redeem/reward-vault";
 
 export function normalizeTreasuryPrivateKey(raw?: string): `0x${string}` | null {
   if (!raw) return null;
@@ -23,15 +30,64 @@ export function treasuryCanBroadcast() {
   return !env.treasuryDisabled;
 }
 
+export function treasuryCanPayOnChain() {
+  return treasuryCanBroadcast() && Boolean(getRewardVaultAddress());
+}
+
 export type BroadcastUsdt = (input: {
   destination: string;
   amountCents: number;
+  redemptionId: string;
 }) => Promise<string>;
 
-export const broadcastRobinhoodUsdg: BroadcastUsdt = async ({ destination, amountCents }) => {
+export async function signUsdgClaimVoucher(input: {
+  redemptionId: string;
+  destination: string;
+  amountCents: number;
+}): Promise<OnChainClaimVoucher | null> {
+  const vault = getRewardVaultAddress();
   const key = normalizeTreasuryPrivateKey(env.treasuryPrivateKey);
+  if (!vault || !key || !treasuryCanBroadcast()) return null;
+
+  const account = privateKeyToAccount(key);
+  const recipient = getAddress(input.destination);
+  const amount = centsToUsdgUnits(input.amountCents);
+  const deadline = Math.floor(Date.now() / 1000) + USDG_CLAIM_DEADLINE_SECONDS;
+  const signature = await account.signTypedData({
+    domain: usdgClaimEip712Domain(vault),
+    types: usdgClaimTypedDataTypes,
+    primaryType: "Claim",
+    message: {
+      redemptionId: input.redemptionId,
+      recipient,
+      amount,
+      deadline: BigInt(deadline),
+    },
+  });
+
+  return {
+    vault,
+    chainId: ROBINHOOD_CHAIN_ID,
+    redemptionId: input.redemptionId,
+    recipient,
+    amount: amount.toString(),
+    deadline,
+    signature,
+  };
+}
+
+export const broadcastRobinhoodUsdg: BroadcastUsdt = async ({
+  destination,
+  amountCents,
+  redemptionId,
+}) => {
+  const key = normalizeTreasuryPrivateKey(env.treasuryPrivateKey);
+  const vault = getRewardVaultAddress();
   if (!treasuryCanBroadcast() || !key) {
     throw new Error("treasury_disabled");
+  }
+  if (!vault) {
+    throw new Error("reward_vault_unconfigured");
   }
   const account = privateKeyToAccount(key);
   const client = createWalletClient({
@@ -39,11 +95,11 @@ export const broadcastRobinhoodUsdg: BroadcastUsdt = async ({ destination, amoun
     chain: robinhoodChain,
     transport: http(),
   });
-  const units = BigInt(amountCents) * 10n ** BigInt(TREASURY_USDG_DECIMALS - 2);
-  return client.writeContract({
-    address: TREASURY_USDG,
-    abi: usdgAbi,
-    functionName: "transfer",
-    args: [destination as `0x${string}`, units],
+  const request = buildPayClaimRequest({
+    vault,
+    destination,
+    amountCents,
+    redemptionId,
   });
+  return client.writeContract(request);
 };

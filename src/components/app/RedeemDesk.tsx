@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, type LlmProvider } from "@/lib/gateway/catalog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotchedButton } from "@/components/ui/NotchedButton";
+import { robinhoodAddressUrl, robinhoodTxUrl } from "@/lib/chains/robinhood";
+import { submitUsdgRewardClaim } from "@/lib/redeem/browser";
+import {
+  redemptionClaimId,
+  type OnChainClaimVoucher,
+  type OnChainRewardClaim,
+} from "@/lib/redeem/reward-vault";
 import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 
@@ -17,6 +25,7 @@ type Redemption = {
   status: string;
   destination: string;
   createdAt: string | Date;
+  txHash?: string | null;
 };
 
 type VirtualKey = {
@@ -58,6 +67,8 @@ export function RedeemDesk({
   gatewayBaseUrl,
   initialRedemptions,
   initialKeys,
+  rewardVaultAddress,
+  initialOnChainClaims,
 }: {
   creditCents: number;
   usdtCents: number;
@@ -66,6 +77,8 @@ export function RedeemDesk({
   gatewayBaseUrl: string;
   initialRedemptions: Redemption[];
   initialKeys: VirtualKey[];
+  rewardVaultAddress: string | null;
+  initialOnChainClaims: OnChainRewardClaim[];
 }) {
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
@@ -82,7 +95,9 @@ export function RedeemDesk({
   const [issuedProvider, setIssuedProvider] = useState<LlmProvider>(DEFAULT_LLM_PROVIDER);
   const [redemptions, setRedemptions] = useState(initialRedemptions);
   const [keys, setKeys] = useState(initialKeys);
+  const [onChainClaims, setOnChainClaims] = useState(initialOnChainClaims);
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const available =
     balances.creditCents + (rail === "usdt" ? balances.usdtCents : balances.llmCents);
@@ -113,6 +128,8 @@ export function RedeemDesk({
         creditCents: number;
         usdtCents: number;
         llmCents: number;
+        redemptionId: string;
+        onChainClaim: OnChainClaimVoucher | null;
       }>("/api/v1/redeem", {
         method: "POST",
         body: JSON.stringify({
@@ -134,17 +151,87 @@ export function RedeemDesk({
       }
       await refreshLists();
       router.refresh();
+      let onChainNote = "";
+      if (rail === "usdt" && result.onChainClaim) {
+        try {
+          setClaimingId(result.redemptionId);
+          const txHash = await submitUsdgRewardClaim(result.onChainClaim);
+          await readJson(`/api/v1/redeem/${result.redemptionId}/confirm`, {
+            method: "POST",
+            body: JSON.stringify({ txHash }),
+          });
+          setOnChainClaims((prev) => [
+            {
+              claimId: redemptionClaimId(result.redemptionId),
+              redemptionId: result.redemptionId,
+              recipient: result.onChainClaim!.recipient,
+              amountCents,
+              claimedAt: Math.floor(Date.now() / 1000),
+            },
+            ...prev.filter((row) => row.redemptionId !== result.redemptionId),
+          ]);
+          await refreshLists();
+          router.refresh();
+          onChainNote = ` On-chain claim ${txHash.slice(0, 10)}… is on Robinhood.`;
+        } catch (error) {
+          onChainNote =
+            error instanceof Error
+              ? ` Wallet claim did not land (${error.message}). The redeem is queued; treasury payClaim or retry from the list still writes the same on-chain claim.`
+              : " Wallet claim did not land. The redeem is queued on-chain.";
+        } finally {
+          setClaimingId(null);
+        }
+      }
       setStatus("idle");
       setMessage(
         result.alreadyExists
           ? "That idempotency key already posted. The plaintext key is not shown again."
           : rail === "usdt"
-            ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood. It stays queued until treasury is unlocked.`
+            ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood.${onChainNote || " It stays queued until the vault claim is submitted."}`
             : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Redeem failed.");
+    }
+  }
+
+  async function onSubmitQueuedClaim(redemptionId: string) {
+    setStatus("working");
+    setClaimingId(redemptionId);
+    setMessage(null);
+    try {
+      const detail = await readJson<{ onChainClaim: OnChainClaimVoucher | null }>(
+        `/api/v1/redeem/${redemptionId}`,
+      );
+      if (!detail.onChainClaim) {
+        throw new Error("No on-chain voucher yet. Unlock treasury and the vault first.");
+      }
+      const txHash = await submitUsdgRewardClaim(detail.onChainClaim);
+      await readJson(`/api/v1/redeem/${redemptionId}/confirm`, {
+        method: "POST",
+        body: JSON.stringify({ txHash }),
+      });
+      setOnChainClaims((prev) => [
+        {
+          claimId: redemptionClaimId(redemptionId),
+          redemptionId,
+          recipient: detail.onChainClaim.recipient,
+          amountCents:
+            redemptions.find((row) => row.id === redemptionId)?.amountCents ?? 0,
+          claimedAt: Math.floor(Date.now() / 1000),
+        },
+        ...prev.filter((row) => row.redemptionId !== redemptionId),
+      ]);
+      await refreshLists();
+      router.refresh();
+      setStatus("idle");
+      setMessage(`On-chain claim landed. ${txHash.slice(0, 10)}…`);
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "On-chain claim failed.");
+    } finally {
+      setClaimingId(null);
     }
   }
 
@@ -324,19 +411,83 @@ export function RedeemDesk({
           <EmptyState
             eyebrow="Redemptions"
             title="Nothing withdrawn yet."
-            body="USDG redemptions queue here and pay to the signed-in wallet on Robinhood. LLM redemptions land as keys above."
+            body="USDG redemptions become an on-chain claim on Robinhood. LLM redemptions land as keys above."
           />
         ) : (
           <ul className="divide-y divide-white/8 border-y border-white/8">
             {redemptions.map((row) => (
-              <li key={row.id} className="flex items-center justify-between py-4">
+              <li
+                key={row.id}
+                className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
+              >
                 <div>
                   <p className="font-mono text-sm text-zinc-100">
                     {row.rail === "usdt" ? "USDG" : "LLM"} · {money(row.amountCents)}
                   </p>
                   <p className="font-mono text-xs text-zinc-500">{row.id.slice(0, 18)}…</p>
+                  {row.txHash ? (
+                    <a
+                      href={robinhoodTxUrl(row.txHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 font-mono text-xs text-zinc-300 hover:text-zinc-50"
+                    >
+                      On-chain {row.txHash.slice(0, 10)}…
+                      <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+                    </a>
+                  ) : null}
                 </div>
-                <p className="font-mono text-sm text-zinc-400">{row.status}</p>
+                <div className="flex items-center gap-4">
+                  <p className="font-mono text-sm text-zinc-400">{row.status}</p>
+                  {row.rail === "usdt" && row.status === "queued" && evmOnly && rewardVaultAddress ? (
+                    <NotchedButton
+                      variant="ghost"
+                      disabled={status === "working"}
+                      onClick={() => void onSubmitQueuedClaim(row.id)}
+                    >
+                      {claimingId === row.id ? "Claiming…" : "Claim on-chain"}
+                    </NotchedButton>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl tracking-tight text-zinc-100">On-chain USDG claims</h2>
+          {rewardVaultAddress ? (
+            <a
+              href={robinhoodAddressUrl(rewardVaultAddress)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.14em] text-zinc-400 hover:text-zinc-200"
+            >
+              Vault on Blockscout
+              <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+            </a>
+          ) : null}
+        </div>
+        {onChainClaims.length === 0 ? (
+          <EmptyState
+            eyebrow="Robinhood Chain"
+            title="No USDG claims on-chain yet."
+            body="Redeem USDG and submit the wallet claim. Each payout is stored on the vault so the same redemption cannot pay twice."
+          />
+        ) : (
+          <ul className="divide-y divide-white/8 border-y border-white/8">
+            {onChainClaims.map((claim) => (
+              <li key={claim.claimId} className="flex items-center justify-between py-4">
+                <div>
+                  <p className="font-mono text-sm text-zinc-100">{money(claim.amountCents)} USDG</p>
+                  <p className="font-mono text-xs text-zinc-500">
+                    {claim.redemptionId.slice(0, 18)}… ·{" "}
+                    {new Date(claim.claimedAt * 1000).toLocaleString()}
+                  </p>
+                </div>
+                <p className="font-mono text-xs text-zinc-500">{claim.claimId.slice(0, 10)}…</p>
               </li>
             ))}
           </ul>

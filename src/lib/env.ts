@@ -22,6 +22,10 @@ const envSchema = z.object({
   TREASURY_ENABLED: z.enum(["true", "false"]).optional(),
   TREASURY_LIVE: z.enum(["true", "false"]).optional(),
   TREASURY_PRIVATE_KEY: z.string().optional(),
+  REWARD_VAULT_ADDRESS: z
+    .string()
+    .regex(/^$|^0x[0-9a-fA-F]{40}$/)
+    .optional(),
   REDIS_URL: z.string().optional(),
   REDIS_HOST: z.string().optional(),
   REDIS_PORT: z.string().optional(),
@@ -55,6 +59,7 @@ const parsed = envSchema.parse({
   TREASURY_ENABLED: process.env.TREASURY_ENABLED,
   TREASURY_LIVE: process.env.TREASURY_LIVE,
   TREASURY_PRIVATE_KEY: process.env.TREASURY_PRIVATE_KEY,
+  REWARD_VAULT_ADDRESS: process.env.REWARD_VAULT_ADDRESS,
   REDIS_URL: process.env.REDIS_URL,
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: process.env.REDIS_PORT,
@@ -110,6 +115,7 @@ export const env = {
   treasuryDisabled: parsed.TREASURY_ENABLED === "false",
   treasuryLive: parsed.TREASURY_LIVE === "true",
   treasuryPrivateKey: parsed.TREASURY_PRIVATE_KEY,
+  rewardVaultAddress: parsed.REWARD_VAULT_ADDRESS || undefined,
   redisUrl: parsed.REDIS_URL,
   redisHost: parsed.REDIS_HOST,
   redisPort: parsed.REDIS_PORT ? Number(parsed.REDIS_PORT) : 6379,

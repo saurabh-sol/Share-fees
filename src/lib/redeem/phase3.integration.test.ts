@@ -193,9 +193,10 @@ describe("phase 3 redeem + gateway", () => {
     const hash = "0x" + "ee".repeat(32);
     const processed = await processPayoutOutbox({
       db,
-      broadcast: async ({ destination, amountCents }) => {
+      broadcast: async ({ destination, amountCents, redemptionId }) => {
         expect(destination).toBe(ADDRESS);
         expect(amountCents).toBe(100);
+        expect(redemptionId.startsWith("rdm_")).toBe(true);
         return hash;
       },
     });

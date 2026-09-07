@@ -12,6 +12,12 @@ import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/ba
 import type { Rail } from "@/lib/ledger/post-swap-reward";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { issueVirtualKeyMaterial } from "./keys";
+import {
+  isRedemptionClaimedOnChain,
+  robinhoodPublicClient,
+  type OnChainClaimVoucher,
+} from "./reward-vault";
+import { signUsdgClaimVoucher } from "./treasury";
 
 export class RedeemError extends Error {
   constructor(
@@ -72,6 +78,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       status: existing.status,
       plaintextKey: null as string | null,
       keyPrefix: null as string | null,
+      onChainClaim: await maybeSignQueuedUsdgClaim(existing),
       ...balances,
     };
   }
@@ -208,8 +215,28 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       status: initialStatus,
       plaintextKey,
       keyPrefix,
+      onChainClaim: null as OnChainClaimVoucher | null,
       ...balances,
     };
+  }).then(async (result) => {
+    if (input.rail !== "usdt") return result;
+    return {
+      ...result,
+      onChainClaim: await signUsdgClaimVoucher({
+        redemptionId: result.redemptionId,
+        destination,
+        amountCents: input.amountCents,
+      }),
+    };
+  });
+}
+
+async function maybeSignQueuedUsdgClaim(row: typeof redemptions.$inferSelect) {
+  if (row.rail !== "usdt" || row.status !== "queued") return null;
+  return signUsdgClaimVoucher({
+    redemptionId: row.id,
+    destination: row.destination,
+    amountCents: row.amountCents,
   });
 }
 
@@ -219,8 +246,20 @@ export async function listRedemptions(
 ) {
   const client = db ?? (await getDb());
   return client
-    .select()
+    .select({
+      id: redemptions.id,
+      userId: redemptions.userId,
+      rail: redemptions.rail,
+      amountCents: redemptions.amountCents,
+      status: redemptions.status,
+      destination: redemptions.destination,
+      idempotencyKey: redemptions.idempotencyKey,
+      createdAt: redemptions.createdAt,
+      fulfilledAt: redemptions.fulfilledAt,
+      txHash: payoutOutbox.txHash,
+    })
     .from(redemptions)
+    .leftJoin(payoutOutbox, eq(payoutOutbox.redemptionId, redemptions.id))
     .where(eq(redemptions.userId, userId))
     .orderBy(desc(redemptions.createdAt))
     .limit(40);
@@ -254,6 +293,69 @@ export async function getRedemptionForUser(
     redemption: row,
     outbox: outbox ?? null,
     key: key ? publicVirtualKey(key) : null,
+    onChainClaim: await maybeSignQueuedUsdgClaim(row),
+  };
+}
+
+export async function confirmOnChainClaim(input: {
+  userId: string;
+  redemptionId: string;
+  txHash: string;
+  db?: Awaited<ReturnType<typeof getDb>>;
+}) {
+  const client = input.db ?? (await getDb());
+  const detail = await getRedemptionForUser(input.userId, input.redemptionId, client);
+  if (!detail) {
+    throw new RedeemError("not_found", 404);
+  }
+  if (detail.redemption.rail !== "usdt") {
+    throw new RedeemError("not_usdg_redemption", 400);
+  }
+  if (!detail.outbox) {
+    throw new RedeemError("payout_missing", 400);
+  }
+  const hash = input.txHash.toLowerCase() as `0x${string}`;
+  if (!/^0x[0-9a-f]{64}$/.test(hash)) {
+    throw new RedeemError("invalid_tx_hash", 400);
+  }
+
+  if (detail.outbox.status === "sent" || detail.redemption.status === "fulfilled") {
+    return {
+      status: "fulfilled" as const,
+      txHash: detail.outbox.txHash ?? hash,
+      alreadyExists: true,
+    };
+  }
+
+  const chain = robinhoodPublicClient();
+  const receipt = await chain.waitForTransactionReceipt({ hash, timeout: 90_000 });
+  if (receipt.status !== "success") {
+    throw new RedeemError("tx_reverted", 409);
+  }
+
+  const onChain = await isRedemptionClaimedOnChain(detail.redemption.id);
+  if (!onChain) {
+    throw new RedeemError("claim_not_on_chain", 409);
+  }
+
+  await client
+    .update(payoutOutbox)
+    .set({
+      status: "sent",
+      txHash: hash,
+      lastError: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(payoutOutbox.id, detail.outbox.id));
+  await client
+    .update(redemptions)
+    .set({ status: "fulfilled", fulfilledAt: new Date() })
+    .where(eq(redemptions.id, detail.redemption.id));
+
+  return {
+    status: "fulfilled" as const,
+    txHash: hash,
+    alreadyExists: false,
   };
 }
 

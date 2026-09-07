@@ -6,13 +6,14 @@ const envState = vi.hoisted(() => ({
   treasuryDisabled: false,
   treasuryLive: false,
   treasuryPrivateKey: undefined as string | undefined,
+  rewardVaultAddress: undefined as string | undefined,
 }));
 
 vi.mock("@/lib/env", () => ({
   env: envState,
 }));
 
-import { normalizeTreasuryPrivateKey, treasuryCanBroadcast } from "./treasury";
+import { normalizeTreasuryPrivateKey, treasuryCanBroadcast, treasuryCanPayOnChain } from "./treasury";
 
 afterEach(() => {
   envState.nodeEnv = "test";
@@ -20,6 +21,7 @@ afterEach(() => {
   envState.treasuryDisabled = false;
   envState.treasuryLive = false;
   envState.treasuryPrivateKey = undefined;
+  envState.rewardVaultAddress = undefined;
 });
 
 describe("normalizeTreasuryPrivateKey", () => {
@@ -60,5 +62,18 @@ describe("treasuryCanBroadcast", () => {
     envState.treasuryEnabled = true;
     envState.treasuryLive = true;
     expect(treasuryCanBroadcast()).toBe(true);
+  });
+});
+
+describe("treasuryCanPayOnChain", () => {
+  const key = `0x${"cd".repeat(32)}`;
+  const vault = "0x1111111111111111111111111111111111111111";
+
+  it("requires the vault address in addition to a live treasury", () => {
+    envState.nodeEnv = "development";
+    envState.treasuryPrivateKey = key;
+    expect(treasuryCanPayOnChain()).toBe(false);
+    envState.rewardVaultAddress = vault;
+    expect(treasuryCanPayOnChain()).toBe(true);
   });
 });

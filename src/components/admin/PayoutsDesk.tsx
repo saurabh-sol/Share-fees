@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowSquareOut } from "@phosphor-icons/react";
+import { robinhoodTxUrl } from "@/lib/chains/robinhood";
 
 type Payout = {
   id: string;
@@ -39,7 +41,9 @@ export function PayoutsDesk({ initialPayouts }: { initialPayouts: Payout[] }) {
         sent
           ? `Broadcast ${sent} payout(s).`
           : queued
-            ? "Treasury is locked. Rows stay queued."
+          {queued
+            ? "Vault or treasury is locked. USDG claims stay queued until payClaim can land on-chain."
+            : "Outbox is empty."}
             : "Outbox is empty.",
       );
     } catch (error) {
@@ -69,6 +73,17 @@ export function PayoutsDesk({ initialPayouts }: { initialPayouts: Payout[] }) {
                   {money(row.amountCents)} · {row.chain}
                 </p>
                 <p className="font-mono text-xs text-zinc-500">{row.destination.slice(0, 12)}…</p>
+                {row.txHash ? (
+                  <a
+                    href={robinhoodTxUrl(row.txHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 font-mono text-xs text-zinc-300 hover:text-zinc-50"
+                  >
+                    {row.txHash.slice(0, 10)}…
+                    <ArrowSquareOut className="h-3.5 w-3.5" weight="regular" />
+                  </a>
+                ) : null}
               </div>
               <p className="font-mono text-sm text-zinc-400">{row.status}</p>
             </li>

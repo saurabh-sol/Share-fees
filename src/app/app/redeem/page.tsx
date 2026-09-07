@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db/client";
 import { wallets } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
+import { getRewardVaultAddress, listOnChainClaims } from "@/lib/redeem/reward-vault";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
 
 export default async function RedeemPage() {
@@ -14,10 +15,14 @@ export default async function RedeemPage() {
 
   const db = await getDb();
   await settleScannedVolumeReward(session.user.id, db);
-  const [wallet, redemptions, keys] = await Promise.all([
+  const vault = getRewardVaultAddress();
+  const [wallet, redemptions, keys, onChainClaims] = await Promise.all([
     db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),
     listRedemptions(session.user.id, db),
     listVirtualKeys(session.user.id, db),
+    session.user.chainNamespace === "solana" || !vault
+      ? Promise.resolve([])
+      : listOnChainClaims(session.user.address).catch(() => []),
   ]);
   const creditCents = wallet?.creditCacheCents ?? 0;
 
@@ -27,8 +32,8 @@ export default async function RedeemPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">After a claim</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Claimed swap credit lands here. Talk to a model on Chat without a key, take USDG to this
-          wallet, or mint a t2c_ key for Cursor. Usage spends your points.
+          Claimed swap credit lands here. Talk to a model on Chat without a key, take USDG as an
+          on-chain claim to this wallet, or mint a t2c_ key for Cursor. Usage spends your points.
         </p>
       </div>
       <RedeemDesk
@@ -39,6 +44,8 @@ export default async function RedeemPage() {
         gatewayBaseUrl={`${env.publicAppUrl.replace(/\/$/, "")}/v1`}
         initialRedemptions={redemptions}
         initialKeys={keys}
+        rewardVaultAddress={vault}
+        initialOnChainClaims={onChainClaims}
       />
     </div>
   );

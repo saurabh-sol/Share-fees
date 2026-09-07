@@ -5,7 +5,8 @@ import { getDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions } from "@/lib/db/schema";
 import { syncWalletCache } from "@/lib/ledger/balances";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
-import { broadcastRobinhoodUsdg, treasuryCanBroadcast, type BroadcastUsdt } from "@/lib/redeem/treasury";
+import { isRedemptionClaimedOnChain } from "@/lib/redeem/reward-vault";
+import { broadcastRobinhoodUsdg, treasuryCanPayOnChain, type BroadcastUsdt } from "@/lib/redeem/treasury";
 
 const MAX_ATTEMPTS = 8;
 const STALE_MS = 5 * 60 * 1000;
@@ -75,7 +76,7 @@ export async function processPayoutOutbox(input?: {
   const results: Array<{ id: string; status: string; txHash?: string }> = [];
 
   for (;;) {
-    if (!treasuryCanBroadcast() && !input?.broadcast) {
+    if (!treasuryCanPayOnChain() && !input?.broadcast) {
       const idle = await client.select().from(payoutOutbox).where(due);
       for (const row of idle) results.push({ id: row.id, status: "queued" });
       break;
@@ -109,9 +110,28 @@ export async function processPayoutOutbox(input?: {
     const row = claimed;
 
     try {
+      if (!input?.broadcast && (await isRedemptionClaimedOnChain(row.redemptionId))) {
+        await client
+          .update(payoutOutbox)
+          .set({
+            status: "sent",
+            txHash: row.txHash,
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(payoutOutbox.id, row.id));
+        await client
+          .update(redemptions)
+          .set({ status: "fulfilled", fulfilledAt: new Date() })
+          .where(eq(redemptions.id, row.redemptionId));
+        results.push({ id: row.id, status: "sent", txHash: row.txHash ?? undefined });
+        continue;
+      }
+
       const txHash = await send({
         destination: row.destination,
         amountCents: row.amountCents,
+        redemptionId: row.redemptionId,
       });
       await waitReceipt(txHash);
       await client

@@ -21,3 +21,15 @@ export const robinhoodChain = defineChain({
 export function isRobinhoodChainId(value: number) {
   return value === ROBINHOOD_CHAIN_ID;
 }
+
+export function robinhoodExplorerBase(): string {
+  return robinhoodChain.blockExplorers.default.url;
+}
+
+export function robinhoodTxUrl(txHash: string) {
+  return `${robinhoodExplorerBase()}/tx/${txHash}`;
+}
+
+export function robinhoodAddressUrl(address: string) {
+  return `${robinhoodExplorerBase()}/address/${address}`;
+}
