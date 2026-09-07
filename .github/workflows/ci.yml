@@ -20,6 +20,7 @@ jobs:
           node-version: 22
           cache: npm
 
+      - run: npm install -g npm@11.12.1
       - run: npm ci
 
       - name: Typecheck

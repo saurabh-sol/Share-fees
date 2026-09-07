@@ -1,5 +1,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
+# Lockfile is written by npm 11. Alpine's npm 10 rejects `npm ci` without this.
+RUN npm install -g npm@11.12.1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
@@ -8,10 +10,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Build-time placeholders only. Runtime secrets come from Compose / the host.
-ENV SESSION_SECRET=docker-build-session-secret-min-32-chars
-ENV APP_ORIGIN=http://localhost:3000
-RUN npm run build
+# Placeholders for `next build` only. Runtime secrets come from Compose / the host.
+RUN SESSION_SECRET=docker-build-session-secret-min-32-chars \
+    APP_ORIGIN=http://localhost:3000 \
+    npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
