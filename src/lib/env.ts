@@ -67,20 +67,20 @@ const parsed = envSchema.parse({
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
 
-if (parsed.NODE_ENV === "production") {
+if (parsed.NODE_ENV === "production" && !isBuild) {
   if (!parsed.SESSION_SECRET) {
     throw new Error("SESSION_SECRET is required in production (min 32 chars).");
   }
   if (!parsed.APP_ORIGIN) {
     throw new Error("APP_ORIGIN is required in production.");
   }
-  if (!isBuild && !parsed.DATABASE_URL) {
+  if (!parsed.DATABASE_URL) {
     throw new Error("DATABASE_URL is required in production.");
   }
-  if (!isBuild && !parsed.REDIS_URL && !(parsed.REDIS_HOST && parsed.REDIS_PASSWORD)) {
+  if (!parsed.REDIS_URL && !(parsed.REDIS_HOST && parsed.REDIS_PASSWORD)) {
     throw new Error("Redis is required in production (REDIS_URL or REDIS_HOST+REDIS_PASSWORD).");
   }
-  if (!isBuild && !parsed.CRON_SECRET) {
+  if (!parsed.CRON_SECRET) {
     throw new Error("CRON_SECRET is required in production (min 16 chars).");
   }
 }
