@@ -13,7 +13,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+function siteUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL || process.env.APP_ORIGIN || "http://localhost:3000";
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -22,33 +24,36 @@ export const viewport: Viewport = {
   themeColor: "#141416",
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Trade2Credits — Swap, then take USDG or LLM credits",
-  description:
-    "Connect MetaMask, Phantom, or Coinbase. Qualifying $250+ swaps convert at a published ratio into USDG or LLM credits.",
-  openGraph: {
-    title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
-    url: siteUrl,
-    siteName: "Trade2Credits",
-    type: "website",
-    images: [
-      {
-        url: "/og-preview.png",
-        width: 1200,
-        height: 630,
-        alt: "Trade2Credits — You swap. We credit.",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Trade2Credits",
-    description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
-    images: ["/og-preview.png"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const origin = siteUrl();
+  return {
+    metadataBase: new URL(origin),
+    title: "Trade2Credits — Swap, then take USDG or LLM credits",
+    description:
+      "Connect MetaMask, Phantom, or Coinbase. Qualifying $250+ swaps convert at a published ratio into USDG or LLM credits.",
+    openGraph: {
+      title: "Trade2Credits",
+      description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
+      url: origin,
+      siteName: "Trade2Credits",
+      type: "website",
+      images: [
+        {
+          url: "/og-preview.png",
+          width: 1200,
+          height: 630,
+          alt: "Trade2Credits — You swap. We credit.",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Trade2Credits",
+      description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
+      images: ["/og-preview.png"],
+    },
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
