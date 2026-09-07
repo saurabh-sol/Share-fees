@@ -22,6 +22,10 @@ export async function convertCredits(
     throw new LedgerError("invalid_amount");
   }
 
+  if (input.rail === "llm_credits") {
+    throw new LedgerError("llm_redeem_required", 400);
+  }
+
   const [existing] = await client
     .select()
     .from(creditConversions)

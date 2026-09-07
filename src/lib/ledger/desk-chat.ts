@@ -1,6 +1,6 @@
-import { getDb } from "@/lib/db/client";
-import { creditConversions, ledgerEntries } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
+import { getDb } from "@/lib/db/client";
+import { ledgerEntries, virtualKeys } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
 import { LedgerError, newLedgerId } from "./post-swap-reward";
 
@@ -9,71 +9,24 @@ export async function spendableLlmCents(
   db?: Awaited<ReturnType<typeof getDb>>,
 ) {
   const client = db ?? (await getDb());
-  const [creditCents, llmCents, usdtCents] = await Promise.all([
+  const [creditCents, usdtCents, keys] = await Promise.all([
     sumAccountCents(client, userId, "user_credits"),
-    sumAccountCents(client, userId, "user_llm"),
     sumAccountCents(client, userId, "user_usdt"),
+    client
+      .select()
+      .from(virtualKeys)
+      .where(and(eq(virtualKeys.userId, userId), eq(virtualKeys.status, "active"))),
   ]);
+  const redeemedCents = keys.reduce(
+    (sum, row) => sum + Math.max(0, row.spendCapCents - row.spendUsedCents),
+    0,
+  );
   return {
     creditCents,
-    llmCents,
+    llmCents: redeemedCents,
     usdtCents,
-    spendableCents: creditCents + llmCents,
+    spendableCents: redeemedCents,
   };
-}
-
-export async function ensureLlmRail(
-  userId: string,
-  needCents: number,
-  db?: Awaited<ReturnType<typeof getDb>>,
-) {
-  if (!Number.isInteger(needCents) || needCents < 1) {
-    throw new LedgerError("invalid_amount");
-  }
-  const client = db ?? (await getDb());
-  return client.transaction(async (tx) => {
-    await lockWalletRow(tx as never, userId);
-    let llmCents = await sumAccountCents(tx as never, userId, "user_llm");
-    const creditCents = await sumAccountCents(tx as never, userId, "user_credits");
-    if (llmCents + creditCents < needCents) {
-      throw new LedgerError("insufficient_credits", 402);
-    }
-    let convertedCents = 0;
-    if (llmCents < needCents) {
-      convertedCents = needCents - llmCents;
-      const conversionId = newLedgerId("cnv");
-      await tx.insert(creditConversions).values({
-        id: conversionId,
-        userId,
-        rail: "llm_credits",
-        amountCents: convertedCents,
-        idempotencyKey: `deskchat_${conversionId}`,
-      });
-      await tx.insert(ledgerEntries).values([
-        {
-          id: newLedgerId("led"),
-          userId,
-          account: "user_credits",
-          type: "debit",
-          amountCents: convertedCents,
-          referenceType: "conversion",
-          referenceId: conversionId,
-        },
-        {
-          id: newLedgerId("led"),
-          userId,
-          account: "user_llm",
-          type: "credit",
-          amountCents: convertedCents,
-          referenceType: "conversion",
-          referenceId: conversionId,
-        },
-      ]);
-      llmCents += convertedCents;
-    }
-    const balances = await syncWalletCache(tx as never, userId);
-    return { convertedCents, ...balances };
-  });
 }
 
 const HOLD_ACCOUNT = "desk_chat_hold";
@@ -108,7 +61,6 @@ export async function holdLlmRail(
     throw new LedgerError("invalid_amount");
   }
   const client = db ?? (await getDb());
-  await ensureLlmRail(userId, amountCents, client);
   return client.transaction(async (tx) => {
     await lockWalletRow(tx as never, userId);
     const llmCents = await sumAccountCents(tx as never, userId, "user_llm");

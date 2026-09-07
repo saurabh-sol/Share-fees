@@ -65,24 +65,21 @@ describe("trade ingestion → website credit → convert", () => {
     expect(await db.select().from(creditEvents)).toHaveLength(1);
   });
 
-  it("converts website credit 1:1 to LLM, including a partial then remainder", async () => {
+  it("rejects LLM convert and keeps website credit on the desk", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await postSwapReward({ ...fill, userId }, db);
 
-    const first = await convertCredits(
-      { userId, rail: "llm_credits", amountCents: 100, idempotencyKey: "cnv_partial" },
-      db,
-    );
-    expect(first.creditCents).toBe(282);
-    expect(first.llmCents).toBe(100);
+    await expect(
+      convertCredits(
+        { userId, rail: "llm_credits", amountCents: 100, idempotencyKey: "cnv_partial" },
+        db,
+      ),
+    ).rejects.toMatchObject({ message: "llm_redeem_required" });
 
-    const rest = await convertCredits(
-      { userId, rail: "llm_credits", amountCents: 282, idempotencyKey: "cnv_rest" },
-      db,
-    );
-    expect(rest.creditCents).toBe(0);
-    expect(rest.llmCents).toBe(382);
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+    expect(wallet?.creditCacheCents).toBe(382);
+    expect(wallet?.llmCacheCents).toBe(0);
   });
 
   it("stores a sub-$250 fill without writing a credit", async () => {

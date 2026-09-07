@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
 
 export const railSchema = z.enum(["usdt", "llm_credits"]);
 export const namespaceSchema = z.enum(["eip155", "solana"]);
@@ -73,13 +74,23 @@ export const confirmOnChainClaimSchema = z.object({
   txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
 });
 
-export const redeemRequestSchema = z.object({
-  rail: railSchema,
-  amountCents: z.number().int().min(100).max(10_000_000),
-  idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
-  provider: z.enum(["anthropic", "openai", "deepseek", "google"]).optional(),
-  model: z.string().min(3).max(120).optional(),
-});
+export const redeemRequestSchema = z
+  .object({
+    rail: railSchema,
+    amountCents: z.number().int().min(100).max(10_000_000),
+    idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
+    provider: z.enum(["anthropic", "openai", "deepseek", "google"]).optional(),
+    model: z.string().min(3).max(120).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.rail === "usdt" && data.amountCents > MAX_USDG_REDEEM_CENTS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "usdg_max_exceeded",
+        path: ["amountCents"],
+      });
+    }
+  });
 
 export const chatCompletionSchema = z
   .object({

@@ -33,6 +33,9 @@ export function SiteHeader({
           <a href="#api" className="hover:text-zinc-100">
             API
           </a>
+          <Link href="/docs" className="hover:text-zinc-100">
+            Docs
+          </Link>
           <a href="#faq" className="hover:text-zinc-100">
             FAQ
           </a>
@@ -54,6 +57,9 @@ export function SiteHeader({
         <a href="#api" className="shrink-0 hover:text-zinc-100">
           API
         </a>
+        <Link href="/docs" className="shrink-0 hover:text-zinc-100">
+          Docs
+        </Link>
         <a href="#faq" className="shrink-0 hover:text-zinc-100">
           FAQ
         </a>

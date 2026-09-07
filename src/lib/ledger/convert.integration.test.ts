@@ -33,7 +33,7 @@ const baseFill = {
 };
 
 describe("claim then convert", () => {
-  it("posts $500 at 50 bps onto website credit, then converts 1:1 to LLM", async () => {
+  it("posts $500 at 50 bps onto website credit, then rejects LLM convert", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     const posted = await postSwapReward(
@@ -47,17 +47,10 @@ describe("claim then convert", () => {
     );
     expect(posted.status).toBe("rewarded");
     expect(posted.creditedCents).toBe(250);
-    expect(posted.creditCents).toBe(250);
-    expect(posted.usdtCents).toBe(0);
-    expect(posted.llmCents).toBe(0);
 
-    const converted = await convertCredits(
-      { userId, rail: "llm_credits", amountCents: 250, idempotencyKey: "cnv_full" },
-      db,
-    );
-    expect(converted.creditCents).toBe(0);
-    expect(converted.llmCents).toBe(250);
-    expect(converted.usdtCents).toBe(0);
+    await expect(
+      convertCredits({ userId, rail: "llm_credits", amountCents: 250, idempotencyKey: "cnv_full" }, db),
+    ).rejects.toMatchObject({ message: "llm_redeem_required" });
   });
 
   it("converts $1 of $2.50 then the remainder", async () => {
@@ -167,10 +160,11 @@ describe("claim then convert", () => {
     const rejected = results.filter((row) => row.status === "rejected");
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({ message: "insufficient_credits" });
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({ message: "llm_redeem_required" });
 
     const [wallet] = await db.select().from(wallets);
     expect(wallet?.creditCacheCents).toBe(0);
-    expect((wallet?.usdtCacheCents ?? 0) + (wallet?.llmCacheCents ?? 0)).toBe(250);
+    expect(wallet?.usdtCacheCents).toBe(250);
+    expect(wallet?.llmCacheCents).toBe(0);
   });
 });

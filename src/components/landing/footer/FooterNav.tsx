@@ -8,9 +8,9 @@ const COLUMNS: Array<{
   {
     title: "Product",
     links: [
-      { href: "#mechanics", label: "How it pays" },
-      { href: "#rails", label: "Rails" },
-      { href: "#api", label: "LLM API" },
+      { href: "/docs", label: "Docs" },
+      { href: "/docs/how-it-pays", label: "How it pays" },
+      { href: "/docs/api", label: "LLM API" },
       { href: "/app/swap", label: "Swap" },
     ],
   },
@@ -28,7 +28,7 @@ const COLUMNS: Array<{
     links: [
       { href: "#limits", label: "Limits" },
       { href: "#rules", label: "Will not do" },
-      { href: "#faq", label: "FAQ" },
+      { href: "/docs/faq", label: "FAQ" },
       { href: "/api/v1/health", label: "Health" },
       { href: robinhoodAddressUrl(USDG_REWARD_VAULT), label: "Contract", external: true },
     ],

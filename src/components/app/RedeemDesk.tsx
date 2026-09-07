@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, type LlmProvider } from "@/lib/gateway/catalog";
+import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 import { robinhoodAddressUrl, robinhoodTxUrl } from "@/lib/chains/robinhood";
@@ -100,8 +101,10 @@ export function RedeemDesk({
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
+  const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const available =
     balances.creditCents + (rail === "usdt" ? balances.usdtCents : balances.llmCents);
+  const usdgClaimCap = Math.min(available, usdgMaxCents);
 
   async function refreshLists() {
     const [redeemData, keyData] = await Promise.all([
@@ -122,6 +125,9 @@ export function RedeemDesk({
       const amountCents = Math.round(Number(amount) * 100);
       if (!Number.isFinite(amountCents) || amountCents < 100) {
         throw new Error("Minimum redeem is $1.00.");
+      }
+      if (rail === "usdt" && amountCents > usdgMaxCents) {
+        throw new Error("USDG claims are capped at $5.00 per request.");
       }
       const result = await readJson<{
         alreadyExists: boolean;
@@ -291,7 +297,14 @@ export function RedeemDesk({
                 name="redeem-rail"
                 checked={rail === "usdt"}
                 disabled={!evmOnly}
-                onChange={() => setRail("usdt")}
+                onChange={() => {
+                  setRail("usdt");
+                  const cap = Math.min(
+                    balances.creditCents + balances.usdtCents,
+                    usdgMaxCents,
+                  );
+                  setAmount((Math.max(100, cap) / 100).toFixed(2));
+                }}
               />
               USDG on Robinhood
             </label>
@@ -337,12 +350,17 @@ export function RedeemDesk({
             className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           />
           <span className="block text-xs text-zinc-500">
-            Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00. Pays only to the
-            signed-in wallet.
+            Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00.
+            {rail === "usdt"
+              ? ` USDG claims cap at ${money(usdgMaxCents)} per request with a 30-minute cooldown per wallet and network.`
+              : null}
           </span>
         </label>
 
-        <NotchedButton type="submit" disabled={status === "working" || available < 100}>
+        <NotchedButton
+          type="submit"
+          disabled={status === "working" || available < 100 || (rail === "usdt" && usdgClaimCap < 100)}
+        >
           {status === "working" ? "Working…" : "Redeem"}
         </NotchedButton>
       </form>

@@ -52,9 +52,17 @@ export class OriginError extends Error {
   }
 }
 
-export function jsonError(status: number, code: string, message: string) {
+export function jsonError(
+  status: number,
+  code: string,
+  message: string,
+  headers?: Record<string, string>,
+) {
   return Response.json(
     { error: code, message },
-    { status, headers: { "Cache-Control": "private, no-store" } },
+    {
+      status,
+      headers: { "Cache-Control": "private, no-store", ...headers },
+    },
   );
 }

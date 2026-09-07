@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
-import { ledgerEntries, users, wallets } from "@/lib/db/schema";
+import { users, virtualKeys, wallets } from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { spendableLlmCents } from "@/lib/ledger/desk-chat";
+import { redeem } from "@/lib/redeem/service";
 import { handleDeskChat } from "./desk-chat";
 import { GatewayError } from "./errors";
 
@@ -25,7 +26,7 @@ async function seedUser(db: Awaited<ReturnType<typeof createTestDb>>) {
 }
 
 describe("desk chat", () => {
-  it("converts website credit, calls the model, and charges at least one cent", async () => {
+  it("requires a redeemed LLM key before chat can spend", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await postSwapReward(
@@ -47,7 +48,57 @@ describe("desk chat", () => {
 
     const before = await spendableLlmCents(userId, db);
     expect(before.creditCents).toBeGreaterThan(0);
-    expect(before.llmCents).toBe(0);
+    expect(before.spendableCents).toBe(0);
+
+    await expect(
+      handleDeskChat({
+        userId,
+        provider: "openai",
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: "Hello" }],
+        db,
+        forward: async () => {
+          throw new Error("should_not_call");
+        },
+      }),
+    ).rejects.toMatchObject({ name: "GatewayError", message: "redeem_required" });
+  });
+
+  it("calls the model and charges a redeemed key", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await postSwapReward(
+      {
+        userId,
+        source: "mock",
+        txHash: `0x${"ab".repeat(32)}`,
+        fromChain: "ethereum",
+        toChain: "base",
+        fromToken: "ETH",
+        toToken: "USDC",
+        fromAmount: "0.4",
+        toAmount: "800",
+        notionalUsdCents: 80_000,
+        executedAt: new Date("2026-09-06T12:00:00.000Z"),
+      },
+      db,
+    );
+
+    const redeemed = await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "llm_credits",
+        amountCents: 100,
+        idempotencyKey: "idem_desk_chat",
+      },
+      db,
+    );
+    expect(redeemed.plaintextKey?.startsWith("t2c_")).toBe(true);
+
+    const before = await spendableLlmCents(userId, db);
+    expect(before.spendableCents).toBe(100);
 
     const result = await handleDeskChat({
       userId,
@@ -69,95 +120,13 @@ describe("desk chat", () => {
 
     expect(result.text).toBe("Hi from the desk.");
     expect(result.spentCents).toBeGreaterThanOrEqual(1);
-    expect(result.creditCents + result.llmCents).toBe(before.spendableCents - result.spentCents);
+    expect(result.llmCents).toBe(before.spendableCents - result.spentCents);
 
-    const spendLegs = (await db.select().from(ledgerEntries)).filter(
-      (row) => row.referenceType === "desk_chat",
-    );
-    expect(spendLegs.some((row) => row.account === "rewards_expense" && row.type === "credit")).toBe(
-      true,
-    );
+    const [key] = await db.select().from(virtualKeys);
+    expect(key?.spendUsedCents).toBeGreaterThan(0);
   });
 
-  it("holds remaining credit so a second turn cannot spend past the wallet", async () => {
-    const db = await createTestDb();
-    const userId = "user_desk_chat_hold";
-    await db.insert(users).values({
-      id: userId,
-      chainNamespace: "eip155",
-      address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    });
-    await db.insert(wallets).values({
-      userId,
-      creditCacheCents: 0,
-      usdtCacheCents: 0,
-      llmCacheCents: 0,
-    });
-    await db.insert(ledgerEntries).values([
-      {
-        id: "led_seed_credit",
-        userId,
-        account: "user_credits",
-        type: "credit",
-        amountCents: 1,
-        referenceType: "swap",
-        referenceId: "swp_seed",
-      },
-      {
-        id: "led_seed_exp",
-        userId,
-        account: "rewards_expense",
-        type: "debit",
-        amountCents: 1,
-        referenceType: "swap",
-        referenceId: "swp_seed",
-      },
-    ]);
-
-    const first = handleDeskChat({
-      userId,
-      provider: "openai",
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: "Hello" }],
-      db,
-      forward: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 40));
-        return {
-          response: Response.json({
-            id: "chat_hold",
-            choices: [{ message: { role: "assistant", content: "Held." } }],
-            usage: { prompt_tokens: 4, completion_tokens: 2 },
-          }),
-          promptTokens: 4,
-          completionTokens: 2,
-          model: "gpt-4o-mini",
-        };
-      },
-    });
-    const second = handleDeskChat({
-      userId,
-      provider: "openai",
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: "Again" }],
-      db,
-      forward: async () => {
-        throw new Error("should_not_call");
-      },
-    });
-
-    const settled = await Promise.allSettled([first, second]);
-    const ok = settled.filter((item) => item.status === "fulfilled");
-    const blocked = settled.filter((item) => item.status === "rejected");
-    expect(ok).toHaveLength(1);
-    expect(blocked).toHaveLength(1);
-    if (blocked[0]?.status === "rejected") {
-      expect(blocked[0].reason).toMatchObject({ message: "insufficient_credits" });
-    }
-    const after = await spendableLlmCents(userId, db);
-    expect(after.spendableCents).toBe(0);
-  });
-
-  it("rejects a turn when the wallet has no credit", async () => {
+  it("rejects a turn when no redeemed key exists", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await expect(
@@ -171,7 +140,7 @@ describe("desk chat", () => {
           throw new Error("should_not_call");
         },
       }),
-    ).rejects.toMatchObject({ name: "GatewayError", message: "insufficient_credits" } satisfies Partial<GatewayError>);
+    ).rejects.toMatchObject({ name: "GatewayError", message: "redeem_required" } satisfies Partial<GatewayError>);
   });
 
   it("rejects a model that is not on the catalog", async () => {

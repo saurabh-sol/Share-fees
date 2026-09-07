@@ -78,6 +78,28 @@ export async function authenticateVirtualKey(raw: string, db?: Db): Promise<
   return { ...row, remainingCents, provider };
 }
 
+export async function findActiveVirtualKey(
+  userId: string,
+  provider: LlmProvider,
+  model: string,
+  db?: Db,
+) {
+  const client = db ?? (await getDb());
+  const rows = await client
+    .select()
+    .from(virtualKeys)
+    .where(and(eq(virtualKeys.userId, userId), eq(virtualKeys.status, "active"), eq(virtualKeys.provider, provider)));
+  const usable = rows
+    .map((row) => ({
+      ...row,
+      remainingCents: row.spendCapCents - row.spendUsedCents,
+      provider: providerOf(row),
+    }))
+    .filter((row) => row.remainingCents > 0);
+  if (usable.length === 0) return null;
+  return usable.find((row) => row.model === model) ?? usable[0] ?? null;
+}
+
 export async function consumeVirtualKey(keyId: string, cents: number, db?: Db) {
   const client = db ?? (await getDb());
   const [row] = await client.select().from(virtualKeys).where(eq(virtualKeys.id, keyId)).limit(1);
@@ -92,7 +114,7 @@ export async function consumeVirtualKey(keyId: string, cents: number, db?: Db) {
   return row.spendCapCents - nextUsed;
 }
 
-async function reserveVirtualKey(keyId: string, db: Db) {
+export async function reserveVirtualKey(keyId: string, db: Db) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM virtual_keys WHERE id = ${keyId} FOR UPDATE`);
     const [row] = await tx.select().from(virtualKeys).where(eq(virtualKeys.id, keyId)).limit(1);
@@ -111,7 +133,7 @@ async function reserveVirtualKey(keyId: string, db: Db) {
   });
 }
 
-async function settleReservation(
+export async function settleVirtualKeyReservation(
   keyId: string,
   usedBefore: number,
   cap: number,
@@ -123,7 +145,7 @@ async function settleReservation(
   return cap - nextUsed;
 }
 
-async function releaseReservation(keyId: string, usedBefore: number, db: Db) {
+export async function releaseVirtualKeyReservation(keyId: string, usedBefore: number, db: Db) {
   await db.update(virtualKeys).set({ spendUsedCents: usedBefore }).where(eq(virtualKeys.id, keyId));
 }
 
@@ -190,7 +212,7 @@ export async function handleChatCompletion(input: {
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
     });
-    const remainingCents = await settleReservation(
+    const remainingCents = await settleVirtualKeyReservation(
       key.id,
       reservation.usedBefore,
       reservation.cap,
@@ -209,7 +231,7 @@ export async function handleChatCompletion(input: {
       headers,
     });
   } catch (error) {
-    await releaseReservation(key.id, reservation.usedBefore, client);
+    await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);
     throw error;
   }
 }
@@ -246,7 +268,7 @@ export async function handleMessages(input: {
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
     });
-    const remainingCents = await settleReservation(
+    const remainingCents = await settleVirtualKeyReservation(
       key.id,
       reservation.usedBefore,
       reservation.cap,
@@ -260,7 +282,7 @@ export async function handleMessages(input: {
     headers.set("X-T2C-Spend-Cap-Cents", String(reservation.cap));
     return Response.json(payload, { status: 200, headers });
   } catch (error) {
-    await releaseReservation(key.id, reservation.usedBefore, client);
+    await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);
     throw error;
   }
 }

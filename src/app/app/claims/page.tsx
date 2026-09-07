@@ -3,7 +3,6 @@ import { getSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { listWalletActivity } from "@/lib/indexer/claim";
 import { summarizeWalletVolume } from "@/lib/indexer/summary";
-import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { MIN_NOTIONAL_USD_CENTS, MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { ClaimsInbox } from "@/components/app/ClaimsInbox";
 
@@ -18,7 +17,6 @@ export default async function ClaimsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  await settleScannedVolumeReward(session.user.id);
   const [rows, rule] = await Promise.all([listWalletActivity(session.user.id), getActiveRuleOrNull()]);
   const floor = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
   const summary = summarizeWalletVolume(rows, {

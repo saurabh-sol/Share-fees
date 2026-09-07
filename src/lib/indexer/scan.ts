@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps, swaps, walletScans } from "@/lib/db/schema";
-import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
+import { previewScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
 import { zerionSource } from "./zerion";
@@ -131,7 +131,7 @@ export type WalletScanResult = {
   retryAfterSec?: number;
   minNotionalUsdCents: number;
   windowDays: number;
-  volumeReward: Awaited<ReturnType<typeof settleScannedVolumeReward>>;
+  volumeReward: Awaited<ReturnType<typeof previewScannedVolumeReward>>;
 };
 
 export async function scanWallet(input: {
@@ -160,7 +160,7 @@ export async function scanWallet(input: {
     retryAfterSec,
     minNotionalUsdCents: (await getActiveRuleOrNull(client))?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
     windowDays: 90,
-    volumeReward: await settleScannedVolumeReward(input.userId, client),
+    volumeReward: await previewScannedVolumeReward(input.userId, client),
   });
 
   if (
@@ -224,6 +224,6 @@ export async function scanWallet(input: {
     providers,
     minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
     windowDays: 90,
-    volumeReward: await settleScannedVolumeReward(input.userId, client),
+    volumeReward: await previewScannedVolumeReward(input.userId, client),
   };
 }

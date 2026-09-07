@@ -24,6 +24,27 @@ export function volumeScanTxHash(userId: string) {
   return `volume:${userId}`;
 }
 
+export async function previewScannedVolumeReward(
+  userId: string,
+  db?: Awaited<ReturnType<typeof getDb>>,
+) {
+  const client = db ?? (await getDb());
+  const [rows, rule] = await Promise.all([listWalletActivity(userId, client), getActiveRuleOrNull(client)]);
+  const summary = summarizeWalletVolume(rows, {
+    conversionBps: rule?.conversionBps,
+    minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
+  });
+  return {
+    creditedCents: 0,
+    alreadyExists: false,
+    swapId: null as string | null,
+    status: "claim_required",
+    totalVolumeCents: summary.totalVolumeCents,
+    estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
+    ...(await readWallet(client, userId)),
+  };
+}
+
 export async function settleScannedVolumeReward(
   userId: string,
   db?: Awaited<ReturnType<typeof getDb>>,

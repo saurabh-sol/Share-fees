@@ -148,6 +148,9 @@ const STATEMENTS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS redemptions_user_idem ON redemptions (user_id, idempotency_key)`,
   `CREATE INDEX IF NOT EXISTS redemptions_user ON redemptions (user_id)`,
+  `ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS client_ip TEXT`,
+  `CREATE INDEX IF NOT EXISTS redemptions_usdt_user_created ON redemptions (user_id, rail, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS redemptions_usdt_ip_created ON redemptions (client_ip, rail, created_at DESC)`,
   `CREATE TABLE IF NOT EXISTS virtual_keys (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),

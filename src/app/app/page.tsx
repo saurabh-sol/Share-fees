@@ -5,7 +5,6 @@ import { ConvertDesk } from "@/components/app/ConvertDesk";
 import { HeldBanner } from "@/components/app/HeldBanner";
 import { getDb } from "@/lib/db/client";
 import { wallets } from "@/lib/db/schema";
-import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import {
   DEFAULT_CONVERSION_BPS,
   DEFAULT_DAILY_CAP_USD_CENTS,
@@ -24,7 +23,6 @@ export default async function DeskPage() {
   if (!session) redirect("/login");
 
   const db = await getDb();
-  await settleScannedVolumeReward(session.user.id, db);
   const [wallet, rule] = await Promise.all([
     db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),
     getActiveRuleOrNull(db),
@@ -72,8 +70,8 @@ export default async function DeskPage() {
         dailyCapUsdCents={dailyCapUsdCents}
       />
       <p className="max-w-[65ch] text-zinc-400">
-        Claim a qualifying fill first. Credit sits on this wallet. Convert 1:1 to LLM or USDG, then redeem a key or
-        queue Robinhood USDG.
+        Scan finds fills. Claim each qualifying swap to post website credit. Convert to USDG or redeem
+        LLM credits before spending — chat and API keys only work after LLM redeem.
       </p>
       <div className="flex flex-wrap gap-6">
         <Link href="/app/swap" className="text-sm text-accent">

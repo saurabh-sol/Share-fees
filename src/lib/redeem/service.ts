@@ -12,22 +12,16 @@ import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/ba
 import type { Rail } from "@/lib/ledger/post-swap-reward";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { issueVirtualKeyMaterial } from "./keys";
+import { RedeemError } from "./errors";
 import {
   isRedemptionClaimedOnChain,
   robinhoodPublicClient,
   type OnChainClaimVoucher,
 } from "./reward-vault";
+import { assertUsdgRedeemLimits } from "./limits";
 import { signUsdgClaimVoucher } from "./treasury";
 
-export class RedeemError extends Error {
-  constructor(
-    message: string,
-    readonly status = 400,
-  ) {
-    super(message);
-    this.name = "RedeemError";
-  }
-}
+export { RedeemError } from "./errors";
 
 function newId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
@@ -42,6 +36,7 @@ export type RedeemInput = {
   idempotencyKey: string;
   provider?: LlmProvider;
   model?: string;
+  clientIp?: string | null;
 };
 
 export function publicVirtualKey(row: typeof virtualKeys.$inferSelect) {
@@ -85,6 +80,14 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
 
   if (input.rail === "usdt" && input.chainNamespace !== "eip155") {
     throw new RedeemError("usdt_evm_only", 400);
+  }
+
+  if (input.rail === "usdt") {
+    await assertUsdgRedeemLimits(client, {
+      userId: input.userId,
+      amountCents: input.amountCents,
+      clientIp: input.clientIp,
+    });
   }
 
   let llm: ReturnType<typeof assertProviderModel> | null = null;
@@ -153,6 +156,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       status: initialStatus,
       destination,
       idempotencyKey: input.idempotencyKey,
+      clientIp: input.rail === "usdt" ? input.clientIp?.trim() || null : null,
       fulfilledAt: input.rail === "llm_credits" ? new Date() : null,
     });
 

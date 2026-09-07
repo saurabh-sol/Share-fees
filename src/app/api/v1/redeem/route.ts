@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { RedeemError, listRedemptions, redeem } from "@/lib/redeem/service";
+import { usdgRedeemErrorMessage } from "@/lib/redeem/limits";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { redeemRequestSchema } from "@/lib/validation/swap";
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       idempotencyKey: body.idempotencyKey,
       provider: body.provider,
       model: body.model,
+      clientIp: clientIp(request),
     });
 
     return Response.json({
@@ -50,7 +52,14 @@ export async function POST(request: Request) {
       return jsonError(429, "rate_limited", "Too many redeem requests.");
     }
     if (error instanceof RedeemError) {
-      return jsonError(error.status, error.message, "Redeem was rejected.");
+      const headers =
+        error.retryAfterSec != null ? { "Retry-After": String(error.retryAfterSec) } : undefined;
+      return jsonError(
+        error.status,
+        error.message,
+        usdgRedeemErrorMessage(error.message),
+        headers,
+      );
     }
     if (error instanceof z.ZodError) {
       return jsonError(400, "invalid_body", "Redeem payload failed validation.");

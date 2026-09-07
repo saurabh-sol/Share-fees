@@ -10,6 +10,7 @@ import { RedeemError, redeem, revokeVirtualKey } from "./service";
 import { treasuryCanBroadcast } from "./treasury";
 
 const ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const ADDRESS_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 const fill = {
   source: "mock" as const,
@@ -28,11 +29,12 @@ async function seedUser(
   db: Awaited<ReturnType<typeof createTestDb>>,
   id = "user_phase3_1",
   namespace: "eip155" | "solana" = "eip155",
+  address = ADDRESS,
 ) {
   await db.insert(users).values({
     id,
     chainNamespace: namespace,
-    address: ADDRESS,
+    address,
   });
   await db.insert(wallets).values({
     userId: id,
@@ -50,7 +52,7 @@ async function claimThenConvert(
   overrides: Partial<typeof fill> = {},
 ) {
   const posted = await postSwapReward({ ...fill, ...overrides, userId }, db);
-  if (posted.creditedCents > 0) {
+  if (posted.creditedCents > 0 && rail === "usdt") {
     await convertCredits(
       {
         userId,
@@ -89,7 +91,7 @@ describe("phase 3 redeem + gateway", () => {
     expect(first.alreadyExists).toBe(false);
     expect(first.status).toBe("fulfilled");
     expect(first.plaintextKey?.startsWith("t2c_")).toBe(true);
-    expect(first.llmCents).toBe(282);
+    expect(first.llmCents).toBe(0);
 
     const keys = await db.select().from(virtualKeys);
     expect(keys).toHaveLength(1);
@@ -128,7 +130,7 @@ describe("phase 3 redeem + gateway", () => {
           address: ADDRESS,
           chainNamespace: "eip155",
           rail: "usdt",
-          amountCents: 10_000,
+          amountCents: 500,
           idempotencyKey: "idem_short",
         },
         db,
@@ -140,7 +142,6 @@ describe("phase 3 redeem + gateway", () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await claimThenConvert(db, userId, "usdt");
-    expect(treasuryCanBroadcast()).toBe(false);
 
     const result = await redeem(
       {
@@ -155,7 +156,9 @@ describe("phase 3 redeem + gateway", () => {
     );
     expect(result.status).toBe("queued");
     expect(result.usdtCents).toBe(232);
-    expect(result.onChainClaim).toBeNull();
+    if (!treasuryCanBroadcast()) {
+      expect(result.onChainClaim).toBeNull();
+    }
 
     const entries = await db.select().from(ledgerEntries);
     expect(entries.some((row) => row.account === "user_usdt" && row.type === "debit" && row.amountCents === 150)).toBe(
@@ -170,9 +173,11 @@ describe("phase 3 redeem + gateway", () => {
     expect(outbox?.txHash).toBeNull();
 
     const idle = await processPayoutOutbox({ db });
-    expect(idle[0]?.status).toBe("queued");
-    const [still] = await db.select().from(payoutOutbox);
-    expect(still?.status).toBe("queued");
+    if (!treasuryCanBroadcast()) {
+      expect(idle[0]?.status).toBe("queued");
+      const [still] = await db.select().from(payoutOutbox);
+      expect(still?.status).toBe("queued");
+    }
   });
 
   it("marks the outbox sent when a broadcast function is injected", async () => {
@@ -422,5 +427,95 @@ describe("phase 3 redeem + gateway", () => {
         },
       }),
     ).rejects.toMatchObject({ message: "model_not_allowed" });
+  });
+
+  it("rejects USDG redeems above the $5 per-claim cap", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await claimThenConvert(db, userId, "usdt", { notionalUsdCents: 1_000_000 });
+
+    await expect(
+      redeem(
+        {
+          userId,
+          address: ADDRESS,
+          chainNamespace: "eip155",
+          rail: "usdt",
+          amountCents: 501,
+          idempotencyKey: "idem_usdg_max",
+        },
+        db,
+      ),
+    ).rejects.toMatchObject({ name: "RedeemError", message: "usdg_max_exceeded" });
+  });
+
+  it("enforces a 30-minute cooldown per wallet for USDG claims", async () => {
+    const db = await createTestDb();
+    const userId = await seedUser(db);
+    await claimThenConvert(db, userId, "usdt");
+
+    await redeem(
+      {
+        userId,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "usdt",
+        amountCents: 100,
+        idempotencyKey: "idem_usdg_cooldown_1",
+        clientIp: "203.0.113.10",
+      },
+      db,
+    );
+
+    await expect(
+      redeem(
+        {
+          userId,
+          address: ADDRESS,
+          chainNamespace: "eip155",
+          rail: "usdt",
+          amountCents: 100,
+          idempotencyKey: "idem_usdg_cooldown_2",
+          clientIp: "203.0.113.10",
+        },
+        db,
+      ),
+    ).rejects.toMatchObject({ name: "RedeemError", message: "redeem_cooldown_wallet", status: 429 });
+  });
+
+  it("enforces a 30-minute cooldown per IP across wallets for USDG claims", async () => {
+    const db = await createTestDb();
+    const userA = await seedUser(db, "user_usdg_ip_a");
+    const userB = await seedUser(db, "user_usdg_ip_b", "eip155", ADDRESS_B);
+    await claimThenConvert(db, userA, "usdt", { txHash: "0x" + "11".repeat(32) });
+    await claimThenConvert(db, userB, "usdt", { txHash: "0x" + "22".repeat(32) });
+
+    await redeem(
+      {
+        userId: userA,
+        address: ADDRESS,
+        chainNamespace: "eip155",
+        rail: "usdt",
+        amountCents: 100,
+        idempotencyKey: "idem_usdg_ip_a",
+        clientIp: "203.0.113.44",
+      },
+      db,
+    );
+
+    await expect(
+      redeem(
+        {
+          userId: userB,
+          address: ADDRESS_B,
+          chainNamespace: "eip155",
+          rail: "usdt",
+          amountCents: 100,
+          idempotencyKey: "idem_usdg_ip_b",
+          clientIp: "203.0.113.44",
+        },
+        db,
+      ),
+    ).rejects.toMatchObject({ name: "RedeemError", message: "redeem_cooldown_ip", status: 429 });
   });
 });

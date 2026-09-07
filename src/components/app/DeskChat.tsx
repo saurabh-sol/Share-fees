@@ -70,7 +70,7 @@ export function DeskChat({
   const [ready, setReady] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  const spendable = balances.creditCents + balances.llmCents;
+  const spendable = balances.llmCents;
   const modelLabel = findModel(provider, model)?.label ?? model;
 
   useEffect(() => {
@@ -236,8 +236,8 @@ export function DeskChat({
                 <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Room</p>
                 <p className="text-3xl tracking-tight text-zinc-100">Pick a model. Send a turn.</p>
                 <p className="text-sm leading-relaxed text-zinc-500">
-                  Sessions stay in this browser. Token cost comes off this wallet. Website credit
-                  converts 1:1 if the LLM rail is empty.
+                  Sessions stay in this browser. Chat spends redeemed LLM credits only — claim swap
+                  volume, then redeem a key on the desk before sending a turn.
                 </p>
               </div>
               <PixelChatWell talking={status === "working"} />
@@ -270,7 +270,7 @@ export function DeskChat({
             value={draft}
             onChange={setDraft}
             onSubmit={() => void onSend()}
-            placeholder={spendable < 1 ? "Need credit first" : "Message the desk"}
+            placeholder={spendable < 1 ? "Redeem LLM credits first" : "Message the desk"}
             disabled={status === "working" || !ready || spendable < 1}
             disabledReason={status === "error" ? message : null}
             working={status === "working"}

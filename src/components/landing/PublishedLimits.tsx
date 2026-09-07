@@ -23,6 +23,12 @@ const LIMITS = [
     value: "$1.00",
     body: "USDT and LLM redeem both start at one dollar. The t2c_ cap equals that amount.",
   },
+  {
+    id: "usdg-claim",
+    label: "USDG per claim",
+    value: "$5.00",
+    body: "Each USDG vault claim is capped at five dollars. A 30-minute cooldown applies per wallet and per network.",
+  },
 ];
 
 export function PublishedLimits() {

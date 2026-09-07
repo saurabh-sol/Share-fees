@@ -249,12 +249,15 @@ export const redemptions = pgTable(
     status: text("status").notNull(),
     destination: text("destination").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
+    clientIp: text("client_ip"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     fulfilledAt: timestamp("fulfilled_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("redemptions_user_idem").on(table.userId, table.idempotencyKey),
     index("redemptions_user").on(table.userId),
+    index("redemptions_usdt_user_created").on(table.userId, table.rail, table.createdAt),
+    index("redemptions_usdt_ip_created").on(table.clientIp, table.rail, table.createdAt),
   ],
 );
 

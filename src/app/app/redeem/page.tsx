@@ -5,7 +5,6 @@ import { getSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { wallets } from "@/lib/db/schema";
 import { env } from "@/lib/env";
-import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { getRewardVaultAddress, listOnChainClaims } from "@/lib/redeem/reward-vault";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
 
@@ -14,7 +13,6 @@ export default async function RedeemPage() {
   if (!session) redirect("/login");
 
   const db = await getDb();
-  await settleScannedVolumeReward(session.user.id, db);
   const vault = getRewardVaultAddress();
   const [wallet, redemptions, keys, onChainClaims] = await Promise.all([
     db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),

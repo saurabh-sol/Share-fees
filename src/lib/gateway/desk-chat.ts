@@ -10,15 +10,14 @@ import { GatewayError } from "./errors";
 import { reshapeAnthropicMessage } from "./anthropic";
 import { reshapeProviderCompletion } from "./openai";
 import { type ChatForwarder, forwardAnthropicMessages, forwarderFor, providerReady } from "./providers";
-import {
-  DESK_CHAT_MAX_TOKENS,
-  holdLlmRail,
-  releaseLlmHold,
-  settleLlmHold,
-  spendableLlmCents,
-} from "@/lib/ledger/desk-chat";
-import { LedgerError } from "@/lib/ledger/post-swap-reward";
+import { spendableLlmCents } from "@/lib/ledger/desk-chat";
 import { getDb } from "@/lib/db/client";
+import {
+  findActiveVirtualKey,
+  releaseVirtualKeyReservation,
+  reserveVirtualKey,
+  settleVirtualKeyReservation,
+} from "./service";
 
 export type DeskChatMessage = {
   role: "user" | "assistant" | "system";
@@ -85,33 +84,16 @@ export async function handleDeskChat(input: {
   }
 
   const client = input.db ?? (await getDb());
-  const promptTokens = Math.max(
-    1,
-    Math.ceil(input.messages.reduce((sum, item) => sum + item.content.length, 0) / 4),
-  );
-  const reserveCents = estimateUsageCents({
-    provider,
-    model,
-    promptTokens,
-    completionTokens: DESK_CHAT_MAX_TOKENS,
-  });
-
-  let holdId: string;
-  try {
-    const held = await holdLlmRail(input.userId, reserveCents, client);
-    holdId = held.holdId;
-  } catch (error) {
-    if (error instanceof LedgerError) {
-      throw new GatewayError(error.message, error.status);
-    }
-    throw error;
+  const key = await findActiveVirtualKey(input.userId, provider, model, client);
+  if (!key) {
+    throw new GatewayError("redeem_required", 402);
   }
 
   const routed =
     provider === "anthropic"
       ? {
           model,
-          max_tokens: DESK_CHAT_MAX_TOKENS,
+          max_tokens: 1024,
           stream: false,
           messages: input.messages.map((item) => ({
             role: item.role === "assistant" ? "assistant" : "user",
@@ -120,11 +102,12 @@ export async function handleDeskChat(input: {
         }
       : {
           model,
-          max_tokens: DESK_CHAT_MAX_TOKENS,
+          max_tokens: 1024,
           stream: false,
           messages: input.messages,
         };
 
+  const reservation = await reserveVirtualKey(key.id, client);
   try {
     const forward =
       input.forward ?? (provider === "anthropic" ? forwardAnthropicMessages : forwarderFor(provider));
@@ -138,20 +121,27 @@ export async function handleDeskChat(input: {
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
     });
-    const charged = await settleLlmHold(input.userId, holdId, spentCents, client);
+    await settleVirtualKeyReservation(
+      key.id,
+      reservation.usedBefore,
+      reservation.cap,
+      spentCents,
+      client,
+    );
+    const balances = await spendableLlmCents(input.userId, client);
     return {
       text: text || "(empty reply)",
       provider,
       model: usedModel,
-      spentCents: charged.chargedCents,
-      creditCents: charged.creditCents,
-      llmCents: charged.llmCents,
-      usdtCents: charged.usdtCents,
+      spentCents,
+      creditCents: balances.creditCents,
+      llmCents: balances.llmCents,
+      usdtCents: balances.usdtCents,
     };
   } catch (error) {
-    await releaseLlmHold(input.userId, holdId, client);
-    if (error instanceof LedgerError) {
-      throw new GatewayError(error.message, error.status);
+    await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);
+    if (error instanceof GatewayError) {
+      throw error;
     }
     throw error;
   }

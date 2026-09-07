@@ -1,0 +1,95 @@
+import type { Metadata } from "next";
+import { DocsCode } from "@/components/docs/DocsCode";
+import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
+import { DocsPager } from "@/components/docs/DocsPager";
+import { env } from "@/lib/env";
+
+export const metadata: Metadata = {
+  title: "API — Docs",
+  description: "Use a t2c_ key with the official OpenAI, Anthropic, DeepSeek, or Google SDK.",
+};
+
+export default function ApiDocsPage() {
+  const origin = env.publicAppUrl.replace(/\/$/, "");
+
+  return (
+    <>
+      <DocsH1>API</DocsH1>
+      <DocsLead>
+        Redeem locks a provider. The t2c_ key is that vendor’s real contract. Usage hits the live model and
+        burns remaining cents. Upstream credentials stay on the server.
+      </DocsLead>
+
+      <DocsTable
+        headers={["Vendor", "Path", "Auth"]}
+        rows={[
+          ["OpenAI", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
+          ["DeepSeek", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
+          ["Anthropic", "POST /v1/messages", "x-api-key: t2c_…"],
+          ["Google", "POST /v1beta/models/{model}:generateContent", "x-goog-api-key: t2c_…"],
+        ]}
+      />
+      <DocsP>
+        Base URL is this origin. /gateway/v1 is the same API. Official SDKs work if you override baseURL.
+      </DocsP>
+
+      <DocsH2 id="openai-and-deepseek">OpenAI and DeepSeek</DocsH2>
+      <DocsCode
+        language="js"
+        code={`import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "t2c_…",
+  baseURL: "${origin}/v1",
+});
+
+await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Hello" }],
+});`}
+      />
+
+      <DocsH2 id="anthropic">Anthropic</DocsH2>
+      <DocsCode
+        language="js"
+        code={`import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  apiKey: "t2c_…",
+  baseURL: "${origin}",
+});
+
+await client.messages.create({
+  model: "claude-sonnet-4-20250514",
+  max_tokens: 256,
+  messages: [{ role: "user", content: "Hello" }],
+});`}
+      />
+
+      <DocsH2 id="google">Google</DocsH2>
+      <DocsP>
+        Use the official generateContent path against this origin. Header is x-goog-api-key with the t2c_ key.
+        The model id is the one you locked at redeem.
+      </DocsP>
+      <DocsCode
+        language="bash"
+        code={`curl ${origin}/v1beta/models/gemini-2.0-flash:generateContent \\
+  -H "x-goog-api-key: t2c_…" \\
+  -H "content-type: application/json" \\
+  -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'`}
+      />
+
+      <DocsH2 id="errors">Errors</DocsH2>
+      <DocsP>
+        401 means the key is missing, revoked, or unknown. 400 means the body failed validation. 402 means the
+        cap is spent. 503 means the upstream gateway is unset for that vendor. Desk credit still caps the key
+        even when Gateway is healthy.
+      </DocsP>
+      <DocsCallout title="Do not put vendor keys in the client">
+        t2c_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, and Google
+        keys never leave the server.
+      </DocsCallout>
+      <DocsPager href="/docs/api" />
+    </>
+  );
+}

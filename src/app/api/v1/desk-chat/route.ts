@@ -40,8 +40,10 @@ export async function POST(request: Request) {
     }
     if (error instanceof GatewayError) {
       const copy =
-        error.message === "insufficient_credits"
-          ? "No LLM or website credit left. Claim a fill, then come back."
+        error.message === "redeem_required"
+          ? "Redeem LLM credits first. Scan and claim only posts website credit until you redeem a t2c_ key."
+          : error.message === "insufficient_credits"
+          ? "Your redeemed LLM key has no balance left. Redeem again from /app/redeem."
           : error.message === "provider_pool_empty"
             ? "The model upstream is not configured on this desk."
             : error.message === "invalid_llm_model" || error.message === "invalid_llm_provider"

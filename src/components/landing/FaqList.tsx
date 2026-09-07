@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
@@ -87,6 +88,14 @@ export function FaqList() {
             </div>
           );
         })}
+      </div>
+      <div className="mx-auto max-w-[1400px] px-4 py-10 md:px-8">
+        <Link
+          href="/docs"
+          className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-100"
+        >
+          Full docs
+        </Link>
       </div>
     </section>
   );

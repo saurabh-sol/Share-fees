@@ -97,10 +97,10 @@ export function ConvertDesk({
     <section className="space-y-6 border-t border-white/8 pt-10">
       <div>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Convert</p>
-        <h2 className="mt-3 text-2xl tracking-tight text-zinc-100">Website credit to a rail</h2>
+        <h2 className="mt-3 text-2xl tracking-tight text-zinc-100">Website credit to USDG</h2>
         <p className="mt-3 max-w-[65ch] text-sm text-zinc-400">
-          1:1 move. BPS already ran at claim ({conversionBps} bps · {money(minNotionalUsdCents)} floor · $1.00 min
-          credit · {money(dailyCapUsdCents)} daily cap).
+          Move website credit to the USDG rail before redeeming on Robinhood. LLM credits require a
+          redeem on the desk — they cannot be converted here.
         </p>
       </div>
 
@@ -122,12 +122,12 @@ export function ConvertDesk({
             </p>
           ) : null}
           <div className="flex flex-wrap gap-3">
-            <NotchedButton disabled={creditCents <= 0} onClick={() => review("llm_credits")}>
-              To LLM credits
+            <NotchedButton disabled={creditCents <= 0} onClick={() => review("usdt")}>
+              To USDG rail
             </NotchedButton>
-            <NotchedButton variant="ghost" disabled={creditCents <= 0} onClick={() => review("usdt")}>
-              To USDG
-            </NotchedButton>
+            <Link href="/app/redeem" className="self-center text-sm text-zinc-400 hover:text-zinc-200">
+              LLM credits redeem on the desk →
+            </Link>
           </div>
         </>
       ) : null}
