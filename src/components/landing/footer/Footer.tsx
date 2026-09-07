@@ -30,7 +30,7 @@ function FooterBrand() {
       </h2>
       <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-zinc-400">
         Qualifying $250+ fills convert at 50 bps. Take USDG to the same wallet, or LLM credits for Claude, OpenAI,
-        DeepSeek, and Google-compatible clients.
+        DeepSeek, Google, and Grok-compatible clients.
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <NotchedCta href="/login">Get started</NotchedCta>

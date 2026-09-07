@@ -34,6 +34,13 @@ const APIS = [
     auth: "x-goog-api-key: t2c_…",
     mark: "google" as const,
   },
+  {
+    vendor: "Grok",
+    host: "api.x.ai/v1",
+    path: "POST /v1/chat/completions",
+    auth: "Authorization: Bearer t2c_…",
+    mark: "/grok.svg" as const,
+  },
 ];
 
 export function ApiSurface() {

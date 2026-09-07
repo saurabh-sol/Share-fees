@@ -141,7 +141,7 @@ export function HowItPays() {
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">LLM rail</p>
               <p className="mt-3 text-xl tracking-tight text-zinc-100">A metered t2c_ key.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Paste into Claude, OpenAI, DeepSeek, or Google-compatible clients. Usage burns the balance.
+                Paste into Claude, OpenAI, DeepSeek, Google, or Grok-compatible clients. Usage burns the balance.
               </p>
             </div>
           </div>

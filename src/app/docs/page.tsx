@@ -18,7 +18,7 @@ export default function DocsHomePage() {
       <DocsLead>
         Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into
         website credit. That credit can be taken as USDG to the same wallet, or as LLM credits for Claude, OpenAI,
-        DeepSeek, and Google-compatible clients.
+        DeepSeek, Google, and Grok-compatible clients.
       </DocsLead>
 
       <DocsH2 id="what-it-is">What it is</DocsH2>

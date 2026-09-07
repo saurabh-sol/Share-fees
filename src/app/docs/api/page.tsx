@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "API — Docs",
-  description: "Use a t2c_ key with the official OpenAI, Anthropic, DeepSeek, or Google SDK.",
+  description: "Use a t2c_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
 };
 
 export default function ApiDocsPage() {
@@ -27,13 +27,14 @@ export default function ApiDocsPage() {
           ["DeepSeek", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
           ["Anthropic", "POST /v1/messages", "x-api-key: t2c_…"],
           ["Google", "POST /v1beta/models/{model}:generateContent", "x-goog-api-key: t2c_…"],
+          ["Grok", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
         ]}
       />
       <DocsP>
         Base URL is this origin. /gateway/v1 is the same API. Official SDKs work if you override baseURL.
       </DocsP>
 
-      <DocsH2 id="openai-and-deepseek">OpenAI and DeepSeek</DocsH2>
+      <DocsH2 id="openai-deepseek-grok">OpenAI, DeepSeek, and Grok</DocsH2>
       <DocsCode
         language="js"
         code={`import OpenAI from "openai";
@@ -86,7 +87,7 @@ await client.messages.create({
         even when Gateway is healthy.
       </DocsP>
       <DocsCallout title="Do not put vendor keys in the client">
-        t2c_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, and Google
+        t2c_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, Google, and Grok
         keys never leave the server.
       </DocsCallout>
       <DocsPager href="/docs/api" />

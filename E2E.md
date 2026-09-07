@@ -148,7 +148,7 @@ await client.messages.create({
 });
 ```
 
-Default redeem pick is **OpenAI / `gpt-4o-mini`**. Catalog covers Anthropic, OpenAI, DeepSeek, and Google.
+Default redeem pick is **OpenAI / `gpt-4o-mini`**. Catalog covers Anthropic, OpenAI, DeepSeek, Google, and Grok.
 
 Upstream calls go through **Vercel AI Gateway** (`AI_GATEWAY_API_KEY`, or OIDC on Vercel). Optional leftover provider keys are fallbacks only. Desk catalog rates meter the key (minimum **1 cent** per call). Empty pool → `503`. Wrong model for that key → `400`. Bad bearer → `401`. Spent to zero → `402`.
 

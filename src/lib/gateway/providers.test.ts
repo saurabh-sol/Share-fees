@@ -9,6 +9,7 @@ const snapshot = {
   anthropicApiKey: env.anthropicApiKey,
   deepseekApiKey: env.deepseekApiKey,
   googleApiKey: env.googleApiKey,
+  xaiApiKey: env.xaiApiKey,
 };
 
 afterEach(() => {
@@ -18,6 +19,7 @@ afterEach(() => {
   env.anthropicApiKey = snapshot.anthropicApiKey;
   env.deepseekApiKey = snapshot.deepseekApiKey;
   env.googleApiKey = snapshot.googleApiKey;
+  env.xaiApiKey = snapshot.xaiApiKey;
 });
 
 describe("upstream auth", () => {
@@ -28,11 +30,13 @@ describe("upstream auth", () => {
     env.anthropicApiKey = undefined;
     env.deepseekApiKey = undefined;
     env.googleApiKey = undefined;
+    env.xaiApiKey = undefined;
     expect(aiGatewayAuth()).toBe("gw_test");
     expect(providerReady("openai")).toBe(true);
     expect(providerReady("anthropic")).toBe(true);
     expect(providerReady("deepseek")).toBe(true);
     expect(providerReady("google")).toBe(true);
+    expect(providerReady("grok")).toBe(true);
     expect(poolKeyFor("openai")).toBeUndefined();
   });
 

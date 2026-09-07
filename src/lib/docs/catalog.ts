@@ -129,9 +129,9 @@ export const DOCS_PAGES: DocsPage[] = [
   {
     href: "/docs/llm",
     title: "LLM credits",
-    description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, or Google.",
+    description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
     section: "Take credit",
-    keywords: ["t2c", "key", "openai", "anthropic", "deepseek", "google"],
+    keywords: ["t2c", "key", "openai", "anthropic", "deepseek", "google", "grok", "xai"],
     headings: [
       { id: "mint-a-key", title: "Mint a key" },
       { id: "shown-once", title: "Shown once" },
@@ -145,7 +145,7 @@ export const DOCS_PAGES: DocsPage[] = [
     section: "Take credit",
     keywords: ["api", "sdk", "baseurl", "completions", "messages"],
     headings: [
-      { id: "openai-and-deepseek", title: "OpenAI and DeepSeek" },
+      { id: "openai-deepseek-grok", title: "OpenAI, DeepSeek, and Grok" },
       { id: "anthropic", title: "Anthropic" },
       { id: "google", title: "Google" },
       { id: "errors", title: "Errors" },

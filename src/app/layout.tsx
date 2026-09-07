@@ -17,7 +17,7 @@ const SITE = "https://trade2credits.onrender.com";
 const OG_IMAGE = `${SITE}/og-preview.png`;
 const OG_TITLE = "You swap. We credit.";
 const OG_DESCRIPTION =
-  "Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for Claude, OpenAI, DeepSeek, and Google.";
+  "Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for Claude, OpenAI, DeepSeek, Google, and Grok.";
 
 export const viewport: Viewport = {
   width: "device-width",

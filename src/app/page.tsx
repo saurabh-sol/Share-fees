@@ -28,7 +28,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400">
               Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits for
-              Claude, OpenAI, DeepSeek, and Google-compatible clients.
+              Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
             </p>
             <div className="mt-10">
               <NotchedCta href="/login">Connect wallet</NotchedCta>
@@ -73,7 +73,7 @@ export default function HomePage() {
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">A metered key, not a coupon.</h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-400">
                 LLM rail mints a t2c_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
-                balance. Claude, OpenAI, DeepSeek, and Google marks on the desk control are the same rail.
+                balance. Claude, OpenAI, DeepSeek, Google, and Grok marks on the desk control are the same rail.
               </p>
             </article>
           </div>

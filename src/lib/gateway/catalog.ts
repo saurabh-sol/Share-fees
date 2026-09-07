@@ -1,4 +1,4 @@
-export const LLM_PROVIDERS = ["anthropic", "openai", "deepseek", "google"] as const;
+export const LLM_PROVIDERS = ["anthropic", "openai", "deepseek", "google", "grok"] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 
 export type LlmModel = {
@@ -136,6 +136,24 @@ export const LLM_CATALOG: readonly LlmProviderCatalog[] = [
       { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash", inputPerMillion: 0.75, outputPerMillion: 3.75, gatewaySlug: "google/gemini-3.8-flash" },
       { id: "gemma-4-26b-a4b-it", label: "Google Gemma 4 26B A4B", inputPerMillion: 0.15, outputPerMillion: 0.6, gatewaySlug: "google/gemma-4-26b-a4b-it" },
       { id: "gemma-4-31b-it", label: "Gemma 4 31B IT", inputPerMillion: 0.14, outputPerMillion: 0.4, gatewaySlug: "google/gemma-4-31b-it" }
+    ],
+  },
+  {
+    id: "grok",
+    label: "Grok",
+    models: [
+      { id: "grok-4.6", label: "Grok 4.6", inputPerMillion: 2.0, outputPerMillion: 6.0, gatewaySlug: "xai/grok-4.6" },
+      { id: "grok-4.5", label: "Grok 4.5", inputPerMillion: 2.0, outputPerMillion: 6.0, gatewaySlug: "xai/grok-4.5" },
+      { id: "grok-4.3", label: "Grok 4.3", inputPerMillion: 1.25, outputPerMillion: 2.5, gatewaySlug: "xai/grok-4.3" },
+      { id: "grok-4.20-reasoning", label: "Grok 4.20 Reasoning", inputPerMillion: 1.25, outputPerMillion: 2.5, gatewaySlug: "xai/grok-4.20-reasoning" },
+      { id: "grok-4.20-non-reasoning", label: "Grok 4.20", inputPerMillion: 1.25, outputPerMillion: 2.5, gatewaySlug: "xai/grok-4.20-non-reasoning" },
+      { id: "grok-4.20-multi-agent", label: "Grok 4.20 Multi-Agent", inputPerMillion: 1.25, outputPerMillion: 2.5, gatewaySlug: "xai/grok-4.20-multi-agent" },
+      { id: "grok-4.1-fast-reasoning", label: "Grok 4.1 Fast (Reasoning)", inputPerMillion: 0.2, outputPerMillion: 0.5, gatewaySlug: "xai/grok-4.1-fast-reasoning" },
+      { id: "grok-4.1-fast-non-reasoning", label: "Grok 4.1 Fast", inputPerMillion: 0.2, outputPerMillion: 0.5, gatewaySlug: "xai/grok-4.1-fast-non-reasoning" },
+      { id: "grok-4-fast-reasoning", label: "Grok 4 Fast (Reasoning)", inputPerMillion: 0.2, outputPerMillion: 0.5, gatewaySlug: "xai/grok-4-fast-reasoning" },
+      { id: "grok-4-fast-non-reasoning", label: "Grok 4 Fast", inputPerMillion: 0.2, outputPerMillion: 0.5, gatewaySlug: "xai/grok-4-fast-non-reasoning" },
+      { id: "grok-3-mini-fast", label: "Grok 3 Mini Fast", inputPerMillion: 0.6, outputPerMillion: 4.0, gatewaySlug: "xai/grok-3-mini-fast" },
+      { id: "grok-build-0.1", label: "Grok Build 0.1", inputPerMillion: 1.0, outputPerMillion: 2.0, gatewaySlug: "xai/grok-build-0.1" },
     ],
   },
 ] as const;

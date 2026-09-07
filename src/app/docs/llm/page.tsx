@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "LLM credits — Docs",
-  description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, or Google.",
+  description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
 };
 
 export default function LlmDocsPage() {
@@ -25,7 +25,7 @@ export default function LlmDocsPage() {
       </DocsUl>
       <DocsP>
         Redeem locks the vendor. Extra tokens past the cap are rejected. Upstream OpenAI, Anthropic, DeepSeek,
-        and Google keys stay on the server. You never paste them.
+        Google, and Grok keys stay on the server. You never paste them.
       </DocsP>
 
       <DocsH2 id="shown-once">Shown once</DocsH2>

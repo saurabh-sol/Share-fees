@@ -72,6 +72,7 @@ export function poolKeyFor(provider: LlmProvider) {
   if (provider === "anthropic") return env.anthropicApiKey;
   if (provider === "deepseek") return env.deepseekApiKey;
   if (provider === "google") return env.googleApiKey;
+  if (provider === "grok") return env.xaiApiKey;
   return env.openaiApiKey;
 }
 
@@ -155,6 +156,21 @@ export const forwardToDeepSeek: ChatForwarder = async ({ body, signal }) => {
   if (!key) throw new GatewayError("provider_pool_empty", 503);
   return forwardOpenAICompatible(
     "https://api.deepseek.com/v1/chat/completions",
+    { authorization: `Bearer ${key}` },
+    body,
+    signal,
+  );
+};
+
+export const forwardToGrok: ChatForwarder = async ({ body, signal }) => {
+  throwUnlessReady("grok");
+  const publicModel = asChatBody(body).model;
+  const viaGateway = await forwardViaAiGatewayChat("grok", publicModel, body, signal);
+  if (viaGateway) return viaGateway;
+  const key = env.xaiApiKey;
+  if (!key) throw new GatewayError("provider_pool_empty", 503);
+  return forwardOpenAICompatible(
+    "https://api.x.ai/v1/chat/completions",
     { authorization: `Bearer ${key}` },
     body,
     signal,
@@ -319,5 +335,6 @@ export function forwarderFor(provider: LlmProvider): ChatForwarder {
   if (provider === "anthropic") return forwardToAnthropic;
   if (provider === "deepseek") return forwardToDeepSeek;
   if (provider === "google") return forwardToGoogle;
+  if (provider === "grok") return forwardToGrok;
   return forwardToOpenAI;
 }

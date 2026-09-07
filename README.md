@@ -2,7 +2,7 @@
 
 **You swap. We credit.**
 
-Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, and Google-compatible clients.
+Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
 
 User-facing walkthrough: [/docs](/docs). Operator walk of the live site: [E2E.md](E2E.md).
 

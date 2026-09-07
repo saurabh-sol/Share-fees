@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
-import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, type LlmProvider } from "@/lib/gateway/catalog";
+import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, isLlmProvider, type LlmProvider } from "@/lib/gateway/catalog";
 import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotchedButton } from "@/components/ui/NotchedButton";
@@ -411,11 +411,9 @@ export function RedeemDesk({
                 <div className="flex items-center gap-3">
                   <ProviderMark
                     provider={
-                      key.provider === "anthropic" ||
-                      key.provider === "deepseek" ||
-                      key.provider === "google"
+                      key.provider && isLlmProvider(key.provider)
                         ? key.provider
-                        : "openai"
+                        : DEFAULT_LLM_PROVIDER
                     }
                     size={28}
                   />

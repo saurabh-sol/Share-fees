@@ -92,6 +92,32 @@ console.log(completion.choices[0].message.content);`,
     };
   }
 
+  if (provider === "grok") {
+    return {
+      host: "api.x.ai/v1",
+      base: `${origin}/v1`,
+      label: "Official xAI Grok API",
+      sdkLabel: "Official Grok (OpenAI SDK)",
+      curl: `curl ${origin}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${apiKey}" \\
+  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello"}]}'`,
+      sdk: `import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "${apiKey}",
+  baseURL: "${origin}/v1",
+});
+
+const completion = await client.chat.completions.create({
+  model: "${model}",
+  messages: [{ role: "user", content: "Hello" }],
+});
+
+console.log(completion.choices[0].message.content);`,
+    };
+  }
+
   return {
     host: "api.openai.com/v1",
     base: `${origin}/v1`,

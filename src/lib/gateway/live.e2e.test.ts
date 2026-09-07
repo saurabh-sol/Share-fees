@@ -26,6 +26,7 @@ const PROBES: Array<{
   { provider: "anthropic", model: "claude-haiku-4-5", wrongModel: "gpt-4o-mini" },
   { provider: "deepseek", model: "deepseek-chat", wrongModel: "gpt-4o-mini" },
   { provider: "google", model: "gemini-2.5-flash-lite", wrongModel: "gpt-4o-mini" },
+  { provider: "grok", model: "grok-4.1-fast-non-reasoning", wrongModel: "gpt-4o-mini" },
 ];
 
 const fill = {

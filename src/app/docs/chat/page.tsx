@@ -26,7 +26,7 @@ export default function ChatDocsPage() {
         spend against your remaining cents.
       </DocsP>
       <DocsP>
-        Claude, OpenAI, DeepSeek, and Google marks on the control are the same rail. They are not four separate
+        Claude, OpenAI, DeepSeek, Google, and Grok marks on the control are the same rail. They are not separate
         balances.
       </DocsP>
 

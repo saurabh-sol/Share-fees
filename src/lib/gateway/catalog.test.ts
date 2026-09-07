@@ -23,6 +23,9 @@ describe("LLM catalog", () => {
     expect(gatewayModelSlug("google", "gemini-2.5-flash-lite")).toBe(
       "google/gemini-2.5-flash-lite",
     );
+    expect(isLlmProvider("grok")).toBe(true);
+    expect(findModel("grok", "grok-4.1-fast-non-reasoning")?.id).toBe("grok-4.1-fast-non-reasoning");
+    expect(gatewayModelSlug("grok", "grok-4.6")).toBe("xai/grok-4.6");
   });
 
   it("meters at least 1 cent and never under-charges a $1 key past the ceil", () => {
