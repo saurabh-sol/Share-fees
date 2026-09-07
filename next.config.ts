@@ -118,6 +118,13 @@ const nextConfig: NextConfig = {
       { source: "/v1beta/:path*", headers: GATEWAY_CORS_HEADERS },
       { source: "/api/v1beta/:path*", headers: GATEWAY_CORS_HEADERS },
       {
+        source: "/og-preview.png",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, immutable" },
+          { key: "Content-Type", value: "image/png" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },

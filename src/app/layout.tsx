@@ -33,6 +33,7 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const origin = await siteUrl();
+  const image = `${origin}/og-preview.png`;
   return {
     metadataBase: new URL(origin),
     title: "Trade2Credits — Swap, then take USDG or LLM credits",
@@ -46,9 +47,11 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: "/og-preview.png",
+          url: image,
+          secureUrl: image,
           width: 1200,
           height: 630,
+          type: "image/png",
           alt: "Trade2Credits — You swap. We credit.",
         },
       ],
@@ -57,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Trade2Credits",
       description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
-      images: ["/og-preview.png"],
+      images: [image],
     },
   };
 }
