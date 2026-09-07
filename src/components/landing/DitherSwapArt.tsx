@@ -78,23 +78,23 @@ function solToneAt(x: number, y: number): number {
 const SWAP_TONES = PIXEL_TONES;
 const COIN_TONES = ["#c23a3a", "rgba(194, 58, 58, 0.55)", "rgba(194, 58, 58, 0.28)"] as const;
 
-// Two half-ring arcs with pixel arrowheads (clockwise cycle).
+// Two opposing pixel arrows — right over left — the classic swap mark.
 const SWAP_ROWS = [
   "................",
-  ".......aa.......",
-  "....aaaaaaaa....",
-  "...aaaa..aaaa...",
-  "..aaa......aaa..",
-  "..aa........aa..",
-  "..aa.......aaaaa",
-  "..a.........aaa.",
-  ".aaa.........a..",
-  "aaaaa.......aa..",
-  "..aa........aa..",
-  "..aaa......aaa..",
-  "...aaaa..aaaa...",
-  "....aaaaaaaa....",
-  ".......aa.......",
+  "................",
+  "..........a.....",
+  "..........aa....",
+  ".aaaaaaaaaaaa...",
+  ".aaaaaaaaaaaa...",
+  "..........aa....",
+  "..........a.....",
+  ".....a..........",
+  "....aa..........",
+  "...aaaaaaaaaaaa.",
+  "...aaaaaaaaaaaa.",
+  "....aa..........",
+  ".....a..........",
+  "................",
   "................",
 ];
 
