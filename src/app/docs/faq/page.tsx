@@ -36,7 +36,7 @@ export default function FaqDocsPage() {
 
       <DocsH2 id="old-hash">Old hashes</DocsH2>
       <DocsP>
-        Open Activity, scan the wallet or paste a hash LI.FI or Zerion can verify. Claim writes website credit.
+        Open Activity, scan the wallet or paste a hash the desk can verify. Claim writes website credit.
         Convert, then redeem. A single imported fill still has to be $250+ to claim on its own.
       </DocsP>
 

@@ -30,7 +30,7 @@ const STEPS: {
   {
     id: "02",
     title: "Swap live, or scan history",
-    body: "Run a fill in Swap Studio (LI.FI or Robinhood ETH) or scan the same wallet. Both paths hit one rule engine.",
+    body: "Run a fill in Swap Studio (swap router or Robinhood ETH) or scan the same wallet. Both paths hit one rule engine.",
     Icon: ArrowsLeftRight,
     span: "md:col-span-5",
   },

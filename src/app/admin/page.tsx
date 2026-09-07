@@ -61,7 +61,7 @@ export default async function AdminHomePage() {
           <dd className="mt-1 font-mono text-2xl text-zinc-100">{overview.userCount}</dd>
         </div>
         <div>
-          <dt className="text-zinc-500">ChangeNOW open</dt>
+          <dt className="text-zinc-500">Pay-ins open</dt>
           <dd className="mt-1 font-mono text-2xl text-zinc-100">{overview.pendingChangeNow}</dd>
         </div>
       </dl>

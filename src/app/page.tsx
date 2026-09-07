@@ -11,7 +11,7 @@ import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
-const HOUSES = ["MetaMask", "Phantom", "Coinbase", "LI.FI", "Robinhood"];
+const HOUSES = ["MetaMask", "Phantom", "Coinbase", "Robinhood"];
 
 export default function HomePage() {
   return (

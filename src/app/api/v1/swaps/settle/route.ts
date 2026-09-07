@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       return jsonError(error.status, error.message, "Pay-in status was rejected.");
     }
     if (error instanceof SettleError) {
-      return jsonError(error.status, error.message, "LI.FI status was rejected.");
+      return jsonError(error.status, error.message, "Swap router status was rejected.");
     }
     if (error instanceof LedgerError) {
       return jsonError(error.status, error.message, "Ledger rejected the fill.");

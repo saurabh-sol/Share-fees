@@ -14,7 +14,7 @@ export default async function SwapPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Execution</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Swap studio</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          LI.FI covers the usual EVM pairs. Robinhood Chain ETH and any pair LI.FI will not quote use a
+          The swap router covers the usual EVM pairs. Robinhood Chain ETH and any pair the router cannot quote use a
           desk pay-in: you send a deposit, the payout lands on the same wallet, then we settle the credit.
           Below $250 the fill still happens; the credit is held.
         </p>

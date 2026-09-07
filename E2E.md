@@ -54,7 +54,7 @@ Wallet-native marketing. Canvas `#141416`, accent `#c23a3a`, Geist + Geist Mono.
 | Block | What it says |
 | --- | --- |
 | Hero | “You swap. We credit.” One CTA: **Connect wallet**. ETH→SOL dither field. |
-| Houses | MetaMask, Phantom, Coinbase, LI.FI, Robinhood |
+| Houses | MetaMask, Phantom, Coinbase, Robinhood |
 | How it pays | Six steps: connect → swap or scan → $250 floor → 50 bps → claim/convert → one hash |
 | Worked example | $1,842.60 → **$9.21** |
 | Rails | USDG to the same wallet on Robinhood. LLM = metered `t2c_` key |
@@ -91,7 +91,7 @@ All `/app` routes require a session. The bar is: Balances · Swap · Activity ·
 | Page | What you do |
 | --- | --- |
 | `/app` | See website credit, USDG, and LLM balances. Convert 1:1. Open swap, claims, or redeem. |
-| `/app/swap` | Quote and execute a live fill (LI.FI, or a desk pay-in for Robinhood ETH / pairs LI.FI will not quote). Below $250 the fill still runs; credit is held. |
+| `/app/swap` | Quote and execute a live fill (swap router, or a desk pay-in for Robinhood ETH / pairs the router will not quote). Below $250 the fill still runs; credit is held. |
 | `/app/claims` | Scan the last 90 days (when a Zerion key is set) or import a verified hash. Claim posts website credit. |
 | `/app/chat` | Talk through the desk. Spends LLM rail / credit the same way a `t2c_` key would. |
 | `/app/redeem` | Redeem USDG (queue to this EVM address) or mint a provider-locked `t2c_` key. Key + official SDK snippet shown **once**. |
@@ -214,7 +214,7 @@ Then point `.env.local` at `postgresql://t2c:t2c@localhost:5432/trade2credits` a
 | `DATABASE_URL` | Neon / Postgres. Empty locally uses on-disk PGlite |
 | `REDIS_URL` | Rate limits. Required in production |
 | `AI_GATEWAY_API_KEY` | One key for OpenAI, Anthropic, DeepSeek, Google |
-| `LIFI_API_KEY` | Optional. Public quotes still work |
+| `LIFI_API_KEY` | Optional swap-router key. Public quotes still work |
 | `ZERION_API_KEY` | Shared 90-day scan. Without it, import a hash |
 | `TREASURY_*` / `REWARD_VAULT_ADDRESS` | Robinhood USDG on-chain claims. Private key stays server-only |
 | `ADMIN_SECRET` | Operator console |

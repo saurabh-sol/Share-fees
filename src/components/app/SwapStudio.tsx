@@ -176,7 +176,7 @@ export function SwapStudio({
     setProgress(
       provider === "changenow"
         ? "Waiting for the payout to finish…"
-        : "Waiting for LI.FI to confirm the fill…",
+        : "Waiting for the swap router to confirm the fill…",
     );
     for (let attempt = 0; attempt < 24; attempt += 1) {
       const response = await fetch("/api/v1/swaps/settle", {
@@ -360,11 +360,11 @@ export function SwapStudio({
         <p className="font-mono text-xs text-zinc-500">
           {quote
             ? quote.provider === "changenow"
-              ? "Desk route"
-              : "LI.FI"
+              ? "Desk pay-in"
+              : "Swap router"
             : robinhoodLeg
-              ? "Robinhood ETH desk route"
-              : "LI.FI first; desk route if the pair is missing"}
+              ? "Desk pay-in"
+              : "Swap router picks the best path for this pair."}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">

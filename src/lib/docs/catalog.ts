@@ -58,13 +58,13 @@ export const DOCS_PAGES: DocsPage[] = [
   {
     href: "/docs/swap",
     title: "Swap Studio",
-    description: "Quote and execute a live fill through LI.FI or Robinhood ETH.",
+    description: "Quote and execute a live fill through the swap router or Robinhood ETH.",
     section: "The desk",
-    keywords: ["swap", "lifi", "robinhood", "quote", "held"],
+    keywords: ["swap", "router", "robinhood", "quote", "held"],
     headings: [
       { id: "run-a-fill", title: "Run a fill" },
       { id: "below-the-floor", title: "Below the floor" },
-      { id: "pairs-lifi-cannot-quote", title: "Pairs LI.FI cannot quote" },
+      { id: "pairs-desk-pay-in", title: "Pairs the swap router cannot quote" },
     ],
   },
   {

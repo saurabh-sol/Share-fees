@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CaretDown, Check, GoogleLogo, OpenAiLogo } from "@phosphor-icons/react";
+import { CaretDown, Check } from "@phosphor-icons/react";
+import { ProviderMark } from "@/components/llm/ProviderMark";
 import {
   LLM_CATALOG,
   modelsForProvider,
@@ -11,40 +12,7 @@ import {
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
 
-const PROVIDER_MARK: Record<Exclude<LlmProvider, "openai" | "google">, { src: string }> = {
-  anthropic: { src: "/claude.png" },
-  deepseek: { src: "/deepseek.png" },
-  grok: { src: "/grok.svg" },
-};
-
-export function ProviderMark({
-  provider,
-  size = 28,
-}: {
-  provider: LlmProvider;
-  size?: number;
-}) {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-background ring-1 ring-white/8"
-      style={{ width: size, height: size }}
-    >
-      {provider === "openai" ? (
-        <OpenAiLogo size={Math.round(size * 0.62)} weight="regular" className="text-zinc-100" />
-      ) : provider === "google" ? (
-        <GoogleLogo size={Math.round(size * 0.62)} weight="regular" className="text-zinc-100" />
-      ) : (
-        <img
-          src={PROVIDER_MARK[provider].src}
-          alt=""
-          width={size}
-          height={size}
-          className="h-[72%] w-[72%] object-contain"
-        />
-      )}
-    </span>
-  );
-}
+export { ProviderMark };
 
 export function LlmModelPicker({
   provider,
@@ -137,11 +105,17 @@ export function LlmModelPicker({
                         const first = item.models[0];
                         onChange({ provider: item.id, model: first?.id ?? model });
                       }}
-                      className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                      className={`group/provider flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
                         active ? "bg-white/[0.04] text-zinc-100" : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                       }`}
                     >
-                      <ProviderMark provider={item.id} size={22} />
+                      <motion.span
+                        whileHover={{ y: -3, scale: 1.08 }}
+                        transition={spring}
+                        className="inline-flex"
+                      >
+                        <ProviderMark provider={item.id} size={22} />
+                      </motion.span>
                       <span className="truncate text-xs">{item.label}</span>
                     </button>
                   );

@@ -24,13 +24,13 @@ Notional is the **USD value of the fill**, not the token amount. A $40 swap in a
 ## How it pays
 
 1. **Connect the wallet** at `/login`. MetaMask, Phantom, Coinbase, and other injected wallets are detected from the extension.
-2. **Swap live, or bring history.** Swap Studio quotes and executes through LI.FI or Robinhood ETH. Activity can scan the same wallet (last 90 days, when a scan key is configured) or accept a verified transaction hash.
+2. **Swap live, or bring history.** Swap Studio quotes and executes through the swap router or Robinhood ETH. Activity can scan the same wallet (last 90 days, when configured) or accept a verified transaction hash.
 3. **Clear the $250 floor.** Confirmed swap volume on the connected wallet must reach $250 before BPS is listed. Smaller swaps still count toward that total. Sends do not. A live fill below $250 still executes; it does not pay on its own.
 4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
 5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. USDG redeem is an on-chain vault claim on Robinhood. LLM redeem stays a `t2c_` key.
 6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
 
-Partners named on the site: MetaMask, Phantom, Coinbase, LI.FI, and Robinhood.
+Partners named on the site: MetaMask, Phantom, Coinbase, and Robinhood.
 
 ## The desk
 
@@ -158,15 +158,15 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 | `ADMIN_SECRET` | Gates `/admin` and operator actions. |
 | `DATABASE_URL` | Production and Docker Postgres. Empty locally uses an on-disk store. |
 | `REDIS_URL` | Rate limits. Required in production. |
-| `LIFI_API_KEY` | Optional partner key. Public quotes still work without it. |
-| `CHANGENOW_API_KEY` | Required to open a ChangeNOW pay-in. |
+| `LIFI_API_KEY` | Optional swap-router partner key. Public quotes still work without it. |
+| `CHANGENOW_API_KEY` | Required to open a desk pay-in route. |
 | `ZERION_API_KEY` | Shared 90-day wallet scan key. Calls are queued (2/sec) and a scan is reused for 15 minutes. Without it, users can still import a verified hash. |
 | `AI_GATEWAY_API_KEY` | One Vercel AI Gateway key for OpenAI, Anthropic, and DeepSeek. On Vercel, `VERCEL_OIDC_TOKEN` is enough. |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY` | Optional fallbacks if Gateway is unset. Virtual `t2c_` keys never see these. |
 | `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | Signs Robinhood USDG claim vouchers and `payClaim`. Locally a valid key is enough unless `TREASURY_ENABLED=false`. Production also needs enabled + live. The private key stays server-only. |
 | `REWARD_VAULT_ADDRESS` | Deployed `UsdgRewardVault` on Robinhood Chain. Required for live USDG claims. |
 | `CRON_SECRET` | Authorizes the payout and settle jobs. Local `next dev` ticks them every minute. Vercel Cron uses the same secret. |
-| `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for provider settle webhooks. |
+| `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for swap-route settle webhooks. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional. WalletConnect stays hidden if empty. |
 
 Do not put treasury or vendor keys in an image or a committed file.

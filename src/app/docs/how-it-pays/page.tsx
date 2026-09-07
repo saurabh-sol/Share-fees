@@ -24,7 +24,7 @@ export default function HowItPaysDocsPage() {
           account. The address that signs is the desk.
         </li>
         <li>
-          <span className="text-zinc-100">Swap live, or scan history.</span> Run a fill in Swap Studio (LI.FI or
+          <span className="text-zinc-100">Swap live, or scan history.</span> Run a fill in Swap Studio (swap router or
           Robinhood ETH) or scan the same wallet on Activity. Both paths hit one rule engine.
         </li>
         <li>

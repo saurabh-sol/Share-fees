@@ -1,45 +1,52 @@
 "use client";
 
-import { GoogleLogo, OpenAiLogo } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
+import { ProviderMark } from "@/components/llm/ProviderMark";
+import type { LlmProvider } from "@/lib/gateway/catalog";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
 
-const APIS = [
+const APIS: Array<{
+  vendor: string;
+  host: string;
+  path: string;
+  auth: string;
+  provider: LlmProvider;
+}> = [
   {
     vendor: "OpenAI",
     host: "api.openai.com/v1",
     path: "POST /v1/chat/completions",
     auth: "Authorization: Bearer t2c_…",
-    mark: "openai" as const,
+    provider: "openai",
   },
   {
     vendor: "Anthropic",
     host: "api.anthropic.com",
     path: "POST /v1/messages",
     auth: "x-api-key: t2c_…",
-    mark: "/claude.png" as const,
+    provider: "anthropic",
   },
   {
     vendor: "DeepSeek",
     host: "api.deepseek.com/v1",
     path: "POST /v1/chat/completions",
     auth: "Authorization: Bearer t2c_…",
-    mark: "/deepseek.png" as const,
+    provider: "deepseek",
   },
   {
     vendor: "Google",
     host: "generativelanguage.googleapis.com",
     path: "POST /v1beta/models/{model}:generateContent",
     auth: "x-goog-api-key: t2c_…",
-    mark: "google" as const,
+    provider: "google",
   },
   {
     vendor: "Grok",
     host: "api.x.ai/v1",
     path: "POST /v1/chat/completions",
     auth: "Authorization: Bearer t2c_…",
-    mark: "/grok.svg" as const,
+    provider: "grok",
   },
 ];
 
@@ -70,21 +77,13 @@ export function ApiSurface() {
             className="grid grid-cols-1 border-b border-white/8 md:grid-cols-[0.7fr_1.3fr]"
           >
             <div className="flex items-center gap-4 border-b border-white/8 px-4 py-10 md:border-b-0 md:border-r md:px-8">
-              <span className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-raised ring-1 ring-white/8">
-                {item.mark === "openai" ? (
-                  <OpenAiLogo size={22} weight="regular" className="text-zinc-100" />
-                ) : item.mark === "google" ? (
-                  <GoogleLogo size={22} weight="regular" className="text-zinc-100" />
-                ) : (
-                  <img
-                    src={item.mark}
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-7 w-7 object-contain"
-                  />
-                )}
-              </span>
+              <motion.span
+                whileHover={{ y: -4, scale: 1.06 }}
+                transition={spring}
+                className="inline-flex"
+              >
+                <ProviderMark provider={item.provider} size={44} />
+              </motion.span>
               <div>
                 <p className="text-xl tracking-tight text-zinc-100">{item.vendor}</p>
                 <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">{item.host}</p>

@@ -21,7 +21,7 @@ export function ExchangesDesk({
   }>;
 }) {
   if (exchanges.length === 0) {
-    return <p className="text-zinc-400">No ChangeNOW pay-ins yet.</p>;
+    return <p className="text-zinc-400">No pay-in routes yet.</p>;
   }
 
   return (

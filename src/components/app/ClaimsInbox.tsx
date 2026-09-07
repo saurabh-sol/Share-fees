@@ -137,7 +137,7 @@ export function ClaimsInbox({
       } else {
         setMessage(
           result.providers.length === 0
-            ? "No history provider is configured. Import a hash LI.FI can verify, or set ZERION_API_KEY."
+            ? "Wallet history is not configured. Import a transaction hash the desk can verify."
             : `Listed ${result.scanned} transfers. ${result.inserted} new · ${result.updated ?? 0} refreshed.`,
         );
       }
@@ -191,7 +191,7 @@ export function ClaimsInbox({
         <p className="max-w-[65ch] text-sm text-zinc-400">
           {autoScan
             ? `Scan lists 90 days of transfers and sums swap volume. The history key is shared, so a busy minute reuses your last scan. Import a hash if you need one fill now. Reward shows after volume clears ${money(minNotionalUsdCents)}.`
-            : "Wallet scan needs ZERION_API_KEY. You can still import a hash that LI.FI can prove is yours."}
+            : "Wallet scan is temporarily unavailable. You can still import a verified transaction hash."}
         </p>
         <NotchedButton disabled={status === "working"} onClick={() => void onScan()}>
           {status === "working" ? "Working…" : "Scan wallet"}

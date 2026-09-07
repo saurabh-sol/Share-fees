@@ -12,9 +12,9 @@ export default async function AdminExchangesPage() {
     <div className="space-y-8">
       <div>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Manual settlement</p>
-        <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">ChangeNOW</h1>
+        <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Pay-in routes</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Robinhood Chain ETH and other missing pairs settle here. Credits post only after ChangeNOW marks the
+          Robinhood Chain ETH and other missing pairs settle here. Credits post only after the pay-in route marks the
           exchange finished.
         </p>
       </div>

@@ -31,7 +31,7 @@ export default function ActivityDocsPage() {
         until volume clears $250.
       </DocsP>
       <DocsCallout title="No scan key">
-        If Scan wallet reports that no history provider is configured, import a hash LI.FI can verify. The
+        If Scan wallet reports that history is unavailable, import a hash the desk can verify. The
         desk still works.
       </DocsCallout>
 

@@ -18,7 +18,7 @@ const FAQS = [
   },
   {
     q: "How do I claim an old hash?",
-    a: "Open Activity, scan the wallet or paste a hash LI.FI or Zerion can verify. Claim writes website credit. Convert, then redeem.",
+    a: "Open Activity, scan the wallet or paste a hash the desk can verify. Claim writes website credit. Convert, then redeem.",
   },
   {
     q: "What do I get after redeem?",

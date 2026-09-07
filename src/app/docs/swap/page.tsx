@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Swap Studio — Docs",
-  description: "Quote and execute a live Trade2Credits fill through LI.FI or Robinhood ETH.",
+  description: "Quote and execute a live Trade2Credits fill through the swap router or Robinhood ETH.",
 };
 
 export default function SwapDocsPage() {
@@ -22,7 +22,7 @@ export default function SwapDocsPage() {
 
       <DocsH2 id="run-a-fill">Run a fill</DocsH2>
       <DocsP>
-        Pick from and to tokens, enter an amount, then Get route. LI.FI covers the usual EVM pairs. Confirm the
+        Pick from and to tokens, enter an amount, then Get route. The swap router covers the usual EVM pairs. Confirm the
         quote, reconnect the signed-in address if asked, then Swap. The wallet signs. The desk waits for
         confirmation, then prices the fill.
       </DocsP>
@@ -41,7 +41,7 @@ export default function SwapDocsPage() {
         for review. Release posts it. Reject does not.
       </DocsCallout>
 
-      <DocsH2 id="pairs-lifi-cannot-quote">Pairs LI.FI cannot quote</DocsH2>
+      <DocsH2 id="pairs-desk-pay-in">Pairs the swap router cannot quote</DocsH2>
       <DocsP>
         Robinhood Chain ETH and some missing pairs use a desk pay-in: you send a deposit, the payout lands on
         the same wallet, then the desk settles the credit after the exchange finishes. That path is not a
