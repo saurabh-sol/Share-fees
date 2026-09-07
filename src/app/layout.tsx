@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NetworkGuard } from "@/components/error/NetworkGuard";
 import "./globals.css";
@@ -13,8 +14,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.APP_ORIGIN || "http://localhost:3000";
+async function siteUrl() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host");
+  if (host) {
+    const proto = h.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+  return process.env.APP_ORIGIN || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
 
 export const viewport: Viewport = {
@@ -25,7 +32,7 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const origin = siteUrl();
+  const origin = await siteUrl();
   return {
     metadataBase: new URL(origin),
     title: "Trade2Credits — Swap, then take USDG or LLM credits",
