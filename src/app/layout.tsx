@@ -33,11 +33,20 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "Trade2Credits",
     type: "website",
+    images: [
+      {
+        url: "/og-preview.png",
+        width: 1200,
+        height: 630,
+        alt: "Trade2Credits — You swap. We credit.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Trade2Credits",
     description: "Cross-chain swaps that pay USDG or LLM credits above a $250 floor.",
+    images: ["/og-preview.png"],
   },
 };
 
