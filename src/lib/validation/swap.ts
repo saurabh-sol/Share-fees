@@ -38,12 +38,15 @@ export const quoteRequestSchema = z.object({
 });
 
 export const settleSwapSchema = z.object({
-  provider: z.enum(["lifi", "changenow"]).optional(),
+  provider: z.enum(["uniswap", "lifi", "changenow"]).optional(),
   txHash: z.string().min(64).max(90),
   fromChain: z.string().min(1).max(32),
   toChain: z.string().min(1).max(32),
   rail: railSchema.optional(),
   exchangeId: z.string().min(6).max(80).optional(),
+  fromToken: z.string().optional(),
+  toToken: z.string().optional(),
+  notionalUsdCents: z.number().int().optional(),
 });
 
 export const changeNowCreateSchema = z.object({

@@ -4,37 +4,22 @@ import { parseUnits } from "viem";
 import { useAccount, useConnect, useConnectors, useDisconnect } from "wagmi";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ChangeNowQuoteView } from "@/lib/changenow/types";
 import type { LifiChain, LifiQuote, LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
-import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
+import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
-type Provider = "lifi" | "changenow";
+type Provider = "uniswap" | "lifi";
 
 type QuotePayload = {
   provider: Provider;
-  quote: LifiQuote | ChangeNowQuoteView;
+  quote: LifiQuote | UniswapQuoteView;
   fromAmountUsdCents: number;
   estimatedRewardCents: number;
   qualifies: boolean;
   rule: { conversionBps: number; minNotionalUsdCents: number } | null;
-};
-
-type OpenedPayin = {
-  exchangeId: string;
-  payinAddress: `0x${string}`;
-  fromAmount: string;
-  toAmount: string;
-  fromCurrency: string;
-  toCurrency: string;
-  fromNetwork: string;
-  toNetwork: string;
-  tokenAddress: string;
-  isNative: boolean;
-  validUntil: string | null;
 };
 
 const NATIVE = "0x0000000000000000000000000000000000000000";
@@ -46,8 +31,8 @@ function money(cents: number) {
   })}`;
 }
 
-function isChangeNowQuote(quote: LifiQuote | ChangeNowQuoteView): quote is ChangeNowQuoteView {
-  return "provider" in quote && quote.provider === "changenow";
+function isUniswapQuote(quote: LifiQuote | UniswapQuoteView): quote is UniswapQuoteView {
+  return "provider" in quote && quote.provider === "uniswap";
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -83,19 +68,18 @@ export function SwapStudio({
   const [fromTokens, setFromTokens] = useState<LifiToken[]>([]);
   const [toTokens, setToTokens] = useState<LifiToken[]>([]);
   const [fromChainId, setFromChainId] = useState(8453);
-  const [toChainId, setToChainId] = useState(ROBINHOOD_CHAIN_ID);
+  const [toChainId, setToChainId] = useState(8453);
   const [fromToken, setFromToken] = useState(NATIVE);
   const [toToken, setToToken] = useState(NATIVE);
-  const [amount, setAmount] = useState("0.25");
+  const [amount, setAmount] = useState("0.01");
   const [quote, setQuote] = useState<QuotePayload | null>(null);
-  const [payin, setPayin] = useState<OpenedPayin | null>(null);
   const [phase, setPhase] = useState<"idle" | "quoting" | "executing" | "settling" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
 
   const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
   const fromMeta = fromTokens.find((token) => token.address.toLowerCase() === fromToken.toLowerCase());
-  const robinhoodLeg = fromChainId === ROBINHOOD_CHAIN_ID || toChainId === ROBINHOOD_CHAIN_ID;
+  const sameChain = fromChainId === toChainId;
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
@@ -134,7 +118,9 @@ export function SwapStudio({
           if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
             return current;
           }
-          return data.tokens.find((token) => token.symbol === "ETH")?.address ?? data.tokens[0]?.address ?? NATIVE;
+          return data.tokens.find((token) => token.symbol === "USDC")?.address
+            ?? data.tokens.find((token) => token.symbol === "ETH")?.address
+            ?? data.tokens[0]?.address ?? NATIVE;
         });
       })
       .catch((error: unknown) => {
@@ -149,7 +135,6 @@ export function SwapStudio({
     setPhase("quoting");
     setMessage(null);
     setQuote(null);
-    setPayin(null);
     try {
       const decimals = fromMeta?.decimals ?? 18;
       const fromAmount = parseUnits(amount, decimals).toString();
@@ -171,13 +156,9 @@ export function SwapStudio({
     }
   }
 
-  async function settle(txHash: string, provider: Provider, exchangeId?: string) {
+  async function settle(txHash: string, provider: Provider, extras?: Record<string, unknown>) {
     setPhase("settling");
-    setProgress(
-      provider === "changenow"
-        ? "Waiting for the payout to finish…"
-        : "Waiting for the swap router to confirm the fill…",
-    );
+    setProgress("Waiting for on-chain confirmation…");
     for (let attempt = 0; attempt < 24; attempt += 1) {
       const response = await fetch("/api/v1/swaps/settle", {
         method: "POST",
@@ -188,7 +169,7 @@ export function SwapStudio({
           txHash,
           fromChain: String(fromChainId),
           toChain: String(toChainId),
-          exchangeId,
+          ...extras,
         }),
       });
       const data = (await response.json()) as {
@@ -196,7 +177,6 @@ export function SwapStudio({
         creditedCents?: number;
         alreadyExists?: boolean;
         message?: string;
-        nowStatus?: string;
       };
       if (response.status === 202) {
         await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -223,34 +203,38 @@ export function SwapStudio({
     setPhase("executing");
     setMessage(null);
     try {
-      if (quote.provider === "changenow" || isChangeNowQuote(quote.quote)) {
-        setProgress("Opening a pay-in…");
-        const decimals = fromMeta?.decimals ?? 18;
-        const fromAmount = parseUnits(amount, decimals).toString();
-        const opened = await readJson<OpenedPayin>("/api/v1/swaps/changenow/create", {
-          method: "POST",
-          body: JSON.stringify({
-            fromChainId,
-            toChainId,
-            fromToken,
-            toToken,
-            fromAmount,
-          }),
+      if (quote.provider === "uniswap" && isUniswapQuote(quote.quote)) {
+        setProgress("Check your wallet for approval and swap…");
+        const { executeUniswapSwap } = await import("@/lib/uniswap/browser");
+        const uniQuote = quote.quote;
+
+        const slippageBps = 50n; // 0.50%
+        const amountOutMin = (BigInt(uniQuote.amountOut) * (10000n - slippageBps)) / 10000n;
+
+        const txHash = await executeUniswapSwap(
+          {
+            chainId: fromChainId as Parameters<typeof executeUniswapSwap>[0]["chainId"],
+            tokenIn: uniQuote.tokenIn as `0x${string}`,
+            tokenOut: uniQuote.tokenOut as `0x${string}`,
+            amountIn: uniQuote.action.fromAmount,
+            amountOutMinimum: amountOutMin.toString(),
+            fee: uniQuote.fee as Parameters<typeof executeUniswapSwap>[0]["fee"],
+            recipient: address as `0x${string}`,
+            isNativeIn: uniQuote.isNativeIn,
+            isNativeOut: uniQuote.isNativeOut,
+          },
+          (step) => setProgress(step),
+        );
+
+        await settle(txHash, "uniswap", {
+          fromToken: quote.quote.action.fromToken.address,
+          toToken: quote.quote.action.toToken.address,
+          notionalUsdCents: quote.fromAmountUsdCents,
         });
-        setPayin(opened);
-        setProgress("Check your wallet — send the deposit to the pay-in address.");
-        const { sendChangeNowDeposit } = await import("@/lib/changenow/browser");
-        const txHash = await sendChangeNowDeposit({
-          fromChainId,
-          tokenAddress: opened.tokenAddress,
-          payinAddress: opened.payinAddress,
-          humanAmount: opened.fromAmount,
-          decimals,
-        });
-        await settle(txHash, "changenow", opened.exchangeId);
         return;
       }
 
+      // LI.FI path (cross-chain)
       setProgress("Check your wallet for allowance and swap signatures.");
       const { executeQuotedSwap, firstExecutionHash } = await import("@/lib/lifi/browser");
       const executed = await executeQuotedSwap(quote.quote as unknown as import("@lifi/sdk").LiFiStep, (route) => {
@@ -281,8 +265,7 @@ export function SwapStudio({
   if (chainNamespace !== "eip155") {
     return (
       <p className="max-w-[65ch] text-zinc-400">
-        Swap Studio is EVM-only. Sign out and connect MetaMask or Coinbase to run a live route, including
-        Robinhood Chain ETH.
+        Swap Studio is EVM-only. Sign out and connect MetaMask or Coinbase to run a live route.
       </p>
     );
   }
@@ -290,7 +273,9 @@ export function SwapStudio({
   const receiveUsd = quote?.quote.estimate.toAmountUSD
     ? `$${Number(quote.quote.estimate.toAmountUSD).toFixed(2)}`
     : quote
-      ? `${quote.quote.estimate.toAmount} ${quote.quote.action.toToken.symbol}`
+      ? isUniswapQuote(quote.quote)
+        ? `${(Number(quote.quote.estimate.toAmount) / 10 ** (toMeta?.decimals ?? 18)).toFixed(6)} ${toMeta?.symbol ?? "TOKEN"}`
+        : `${quote.quote.estimate.toAmount} ${quote.quote.action.toToken.symbol}`
       : "—";
 
   return (
@@ -346,25 +331,36 @@ export function SwapStudio({
             required
           />
         </label>
-        <button
-          type="submit"
-          disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
-          className="border border-white/12 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98] disabled:opacity-40"
-        >
-          {phase === "quoting" ? "Quoting…" : "Get route"}
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="submit"
+            disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
+            className="border border-white/12 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98] disabled:opacity-40"
+          >
+            {phase === "quoting" ? "Quoting…" : "Get route"}
+          </button>
+          {sameChain ? (
+            <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+              ⚡ Uniswap V3
+            </span>
+          ) : (
+            <span className="font-mono text-[10px] uppercase tracking-wider text-blue-400">
+              🌐 Cross-chain via LI.FI
+            </span>
+          )}
+        </div>
       </form>
 
       <aside className="space-y-6 border-t border-white/8 pt-6 md:border-l md:border-t-0 md:pl-10 md:pt-0">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Route</p>
         <p className="font-mono text-xs text-zinc-500">
           {quote
-            ? quote.provider === "changenow"
-              ? "Desk pay-in"
-              : "Swap router"
-            : robinhoodLeg
-              ? "Desk pay-in"
-              : "Swap router picks the best path for this pair."}
+            ? quote.provider === "uniswap"
+              ? "Uniswap V3 — direct on-chain swap"
+              : "LI.FI cross-chain router"
+            : sameChain
+              ? "Uniswap V3 finds the best pool for this pair."
+              : "LI.FI picks the best cross-chain path."}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">
@@ -397,6 +393,12 @@ export function SwapStudio({
                 {receiveUsd}
               </dd>
             </div>
+            {quote.provider === "uniswap" && isUniswapQuote(quote.quote) ? (
+              <div className="flex justify-between py-3">
+                <dt className="text-zinc-500">Pool fee</dt>
+                <dd className="font-mono tabular-nums">{(quote.quote.fee / 10000).toFixed(2)}%</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between py-3">
               <dt className="text-zinc-500">Reward at {quote.rule?.conversionBps ?? 0} bps</dt>
               <dd className="font-mono tabular-nums text-accent">{money(quote.estimatedRewardCents)}</dd>
@@ -409,27 +411,6 @@ export function SwapStudio({
         ) : (
           <p className="text-zinc-500">Quote a route to see USD notional and the credit that would post.</p>
         )}
-
-        {payin ? (
-          <dl className="divide-y divide-white/8 border-y border-white/8 text-sm">
-            <div className="flex justify-between gap-4 py-3">
-              <dt className="shrink-0 text-zinc-500">Pay-in</dt>
-              <dd className="break-all font-mono text-xs">{payin.payinAddress}</dd>
-            </div>
-            <div className="flex justify-between py-3">
-              <dt className="text-zinc-500">Send</dt>
-              <dd className="font-mono tabular-nums">
-                {payin.fromAmount} {payin.fromCurrency.toUpperCase()}
-              </dd>
-            </div>
-            <div className="flex justify-between py-3">
-              <dt className="text-zinc-500">Payout</dt>
-              <dd className="font-mono">
-                {payin.toAmount} {payin.toCurrency.toUpperCase()} on {payin.toNetwork}
-              </dd>
-            </div>
-          </dl>
-        ) : null}
 
         <button
           type="button"

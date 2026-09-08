@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
-import { ChangeNowError } from "@/lib/changenow/types";
-import { isSwapChainId } from "@/lib/changenow/assets";
+import { isAllowedChainId } from "@/lib/lifi/constants";
+import { isUniswapChainId } from "@/lib/uniswap/constants";
+import { UniswapQuoteError } from "@/lib/uniswap/quote";
 import { MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
@@ -9,6 +10,10 @@ import { routeSwapQuote } from "@/lib/swap/router";
 import { quoteRequestSchema } from "@/lib/validation/swap";
 
 export const dynamic = "force-dynamic";
+
+function isSwapChainId(chainId: number): boolean {
+  return isUniswapChainId(chainId) || isAllowedChainId(chainId);
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,9 +33,38 @@ export async function POST(request: Request) {
       return jsonError(400, "unsupported_chain", "That chain pair is not enabled.");
     }
 
+    const tokenListResp = await fetch(
+      `${request.headers.get("origin") ?? ""}/api/v1/swaps/tokens?chainId=${body.fromChainId}`,
+      { headers: { cookie: request.headers.get("cookie") ?? "" } },
+    ).catch(() => null);
+
+    let fromTokenMeta: { symbol: string; decimals: number; priceUSD?: string; logoURI?: string } | undefined;
+    let toTokenMeta: { symbol: string; decimals: number; priceUSD?: string; logoURI?: string } | undefined;
+
+    if (tokenListResp?.ok) {
+      const tokenData = (await tokenListResp.json()) as { tokens: Array<{ address: string; symbol: string; decimals: number; priceUSD?: string; logoURI?: string }> };
+      fromTokenMeta = tokenData.tokens.find(
+        (t) => t.address.toLowerCase() === body.fromToken.toLowerCase(),
+      );
+    }
+
+    const toTokenListResp = await fetch(
+      `${request.headers.get("origin") ?? ""}/api/v1/swaps/tokens?chainId=${body.toChainId}`,
+      { headers: { cookie: request.headers.get("cookie") ?? "" } },
+    ).catch(() => null);
+
+    if (toTokenListResp?.ok) {
+      const toTokenData = (await toTokenListResp.json()) as { tokens: Array<{ address: string; symbol: string; decimals: number; priceUSD?: string; logoURI?: string }> };
+      toTokenMeta = toTokenData.tokens.find(
+        (t) => t.address.toLowerCase() === body.toToken.toLowerCase(),
+      );
+    }
+
     const routed = await routeSwapQuote({
       ...body,
       fromAddress: session.user.address,
+      fromTokenMeta,
+      toTokenMeta,
     });
     const rule = await getActiveRuleOrNull();
     const estimatedRewardCents = rule
@@ -67,8 +101,8 @@ export async function POST(request: Request) {
     if (error instanceof RateLimitError) {
       return jsonError(429, "rate_limited", "Too many quote requests.");
     }
-    if (error instanceof ChangeNowError) {
-      return jsonError(error.status, "changenow_quote_failed", error.message);
+    if (error instanceof UniswapQuoteError) {
+      return jsonError(error.status, "uniswap_quote_failed", error.message);
     }
     if (error instanceof z.ZodError) {
       return jsonError(400, "invalid_body", "Quote payload failed validation.");

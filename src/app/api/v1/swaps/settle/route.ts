@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { assertTxHash } from "@/lib/auth/addresses";
 import { getSession } from "@/lib/auth/session";
-import { settleChangeNowFill } from "@/lib/changenow/settle";
-import { ChangeNowError } from "@/lib/changenow/types";
 import { upsertPendingSettle } from "@/lib/jobs/pending";
 import { LedgerError, postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { SettleError, readVerifiedFill } from "@/lib/lifi/settle";
+import { isUniswapChainId, type UniswapChainId } from "@/lib/uniswap/constants";
+import { verifyUniswapFill, UniswapSettleError } from "@/lib/uniswap/settle";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { settleSwapSchema } from "@/lib/validation/swap";
@@ -23,37 +23,54 @@ export async function POST(request: Request) {
     const body = settleSwapSchema.parse(await request.json());
     const txHash = assertTxHash("eip155", body.txHash);
 
-    if (body.provider === "changenow") {
-      if (!body.exchangeId) {
-        return jsonError(400, "missing_exchange", "This settle needs an exchange id.");
+    if (body.provider === "uniswap") {
+      const chainId = Number(body.fromChain);
+      if (!isUniswapChainId(chainId)) {
+        return jsonError(400, "unsupported_chain", "Uniswap is not available on this chain.");
       }
-      const verified = await settleChangeNowFill({
-        userId: session.user.id,
-        sessionAddress: session.user.address,
-        exchangeId: body.exchangeId,
+
+      const verified = await verifyUniswapFill({
         txHash,
-        fromChain: body.fromChain,
-        toChain: body.toChain,
+        chainId: chainId as UniswapChainId,
+        sessionAddress: session.user.address,
+        expectedFromToken: body.fromToken ?? "",
+        expectedToToken: body.toToken ?? "",
+        expectedNotionalCents: body.notionalUsdCents ?? 0,
       });
+
       if (verified.kind === "pending") {
         await upsertPendingSettle({
           userId: session.user.id,
-          provider: "changenow",
+          provider: "uniswap",
           txHash,
-          exchangeId: body.exchangeId,
           fromChain: body.fromChain,
           toChain: body.toChain,
         });
-        return Response.json({ status: "pending", provider: "changenow", nowStatus: verified.status }, { status: 202 });
+        return Response.json({ status: "pending", provider: "uniswap" }, { status: 202 });
       }
-      return Response.json({
-        ...verified.result,
+
+      const result = await postSwapReward({
+        userId: session.user.id,
+        source: "in_app",
+        txHash,
+        fromChain: body.fromChain,
+        toChain: body.toChain,
+        fromToken: verified.fromToken,
+        toToken: verified.toToken,
+        fromAmount: verified.fromAmount,
+        toAmount: verified.toAmount,
         notionalUsdCents: verified.notionalUsdCents,
-        provider: "changenow",
-        nowStatus: "finished",
+        executedAt: new Date(),
+      });
+
+      return Response.json({
+        ...result,
+        notionalUsdCents: verified.notionalUsdCents,
+        provider: "uniswap",
       });
     }
 
+    // LI.FI path (cross-chain or fallback)
     const verified = await readVerifiedFill({
       txHash,
       fromChain: body.fromChain,
@@ -101,8 +118,8 @@ export async function POST(request: Request) {
     if (error instanceof RateLimitError) {
       return jsonError(429, "rate_limited", "Too many settle requests.");
     }
-    if (error instanceof ChangeNowError) {
-      return jsonError(error.status, error.message, "Pay-in status was rejected.");
+    if (error instanceof UniswapSettleError) {
+      return jsonError(error.status, "uniswap_settle_failed", error.message);
     }
     if (error instanceof SettleError) {
       return jsonError(error.status, error.message, "Swap router status was rejected.");

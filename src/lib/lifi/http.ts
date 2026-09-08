@@ -1,5 +1,4 @@
 import { env } from "@/lib/env";
-import { NATIVE_TOKEN, ROBINHOOD_CHAIN_ID, robinhoodChain } from "@/lib/chains/robinhood";
 import { LIFI_INTEGRATOR, isAllowedChainId, type AllowedChainId } from "./constants";
 
 const LIFI_BASE = "https://li.quest/v1";
@@ -126,16 +125,7 @@ export async function fetchLifiChains() {
     { chainTypes: "EVM" },
     10 * 60 * 1000,
   );
-  const listed = data.chains.filter((chain) => isAllowedChainId(chain.id));
-  return [
-    ...listed,
-    {
-      id: ROBINHOOD_CHAIN_ID,
-      name: robinhoodChain.name,
-      key: "hood",
-      nativeToken: { symbol: "ETH", decimals: 18, address: NATIVE_TOKEN },
-    },
-  ];
+  return data.chains.filter((chain) => isAllowedChainId(chain.id));
 }
 
 export async function fetchLifiTokens(chainId: AllowedChainId) {

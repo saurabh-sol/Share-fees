@@ -5,7 +5,7 @@ import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 
 export async function upsertPendingSettle(input: {
   userId: string;
-  provider: "lifi" | "changenow";
+  provider: "uniswap" | "lifi" | "changenow";
   txHash: string;
   exchangeId?: string;
   fromChain: string;
