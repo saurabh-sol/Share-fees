@@ -16,7 +16,7 @@ import {
   ROBINHOOD_WETH,
 } from "@/lib/chains/robinhood";
 import { resolveErc20 } from "@/lib/chains/resolve-token";
-import { UNIVERSAL_ROUTER } from "@/lib/uniswap/constants";
+import { UNIVERSAL_ROUTER, V3_SWAP_ROUTER_02 } from "@/lib/uniswap/constants";
 import type { ActivityKind, HistoricalCandidate, TradeSource } from "./types";
 
 const TRANSFER_EVENT = parseAbiItem(
@@ -28,10 +28,18 @@ const CHAIN_KEY = String(ROBINHOOD_CHAIN_ID);
 
 /** Cap how many rows a single scan can produce. Newest first. */
 const MAX_CANDIDATES = 500;
-/** Cap eth_getTransaction lookups for single-sided txs (ETH ↔ token swaps). */
-const MAX_TX_LOOKUPS = 80;
 /** Per-direction raw log cap so a hyperactive wallet can't blow up the scan. */
 const MAX_RAW_LOGS = 4000;
+
+/** Contracts that execute Uniswap swaps on Robinhood Chain. */
+const DEX_ROUTERS = new Set(
+  [
+    UNIVERSAL_ROUTER[ROBINHOOD_CHAIN_ID],
+    V3_SWAP_ROUTER_02[ROBINHOOD_CHAIN_ID],
+  ]
+    .filter(Boolean)
+    .map((addr) => addr!.toLowerCase()),
+);
 
 const client = createPublicClient({
   chain: robinhoodChain,
@@ -188,7 +196,6 @@ export async function fetchRobinhoodTrades(
   since: Date,
 ): Promise<HistoricalCandidate[]> {
   const user = address as Address;
-  const router = UNIVERSAL_ROUTER[ROBINHOOD_CHAIN_ID].toLowerCase();
 
   // Sequential to stay under the public RPC's rate limit.
   const outLogs = await fetchTransferLogs(user, "out");
@@ -253,21 +260,26 @@ export async function fetchRobinhoodTrades(
     );
   }
 
-  // For single-sided txs, look up the transaction to detect ETH ↔ token swaps
-  // through the Universal Router (native ETH doesn't emit Transfer logs).
-  const singleSided = groups
-    .filter((g) => g.out.length === 0 || g.in.length === 0)
-    .slice(0, MAX_TX_LOOKUPS);
+  // Look up every single-sided tx so ETH ↔ token swaps via Universal Router
+  // *or* SwapRouter02 are classified as trades (native ETH has no Transfer log).
+  const singleSided = groups.filter((g) => g.out.length === 0 || g.in.length === 0);
   const txInfo = new Map<string, { to: string | null; value: bigint }>();
-  const txResults = await Promise.allSettled(
-    singleSided.map((g) => client.getTransaction({ hash: g.txHash })),
-  );
-  for (const result of txResults) {
-    if (result.status === "fulfilled") {
-      txInfo.set(result.value.hash.toLowerCase(), {
-        to: result.value.to?.toLowerCase() ?? null,
-        value: result.value.value,
-      });
+  const TX_CHUNK = 20;
+  for (let i = 0; i < singleSided.length; i += TX_CHUNK) {
+    const chunk = singleSided.slice(i, i + TX_CHUNK);
+    const txResults = await Promise.allSettled(
+      chunk.map((g) => client.getTransaction({ hash: g.txHash })),
+    );
+    for (const result of txResults) {
+      if (result.status === "fulfilled") {
+        txInfo.set(result.value.hash.toLowerCase(), {
+          to: result.value.to?.toLowerCase() ?? null,
+          value: result.value.value,
+        });
+      }
+    }
+    if (i + TX_CHUNK < singleSided.length) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
   }
 
@@ -280,8 +292,8 @@ export async function fetchRobinhoodTrades(
     const outT = largest(group.out);
     const inT = largest(group.in);
     const tx = txInfo.get(group.txHash.toLowerCase());
-    const viaRouter = tx?.to === router;
-    const ethInValue = viaRouter && tx ? tx.value : 0n;
+    const viaRouter = Boolean(tx?.to && DEX_ROUTERS.has(tx.to));
+    const ethInValue = viaRouter && tx && tx.value > 0n ? tx.value : 0n;
 
     const outMeta = outT ? await tokenMeta(outT.token) : null;
     const inMeta = inT ? await tokenMeta(inT.token) : null;

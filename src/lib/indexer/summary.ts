@@ -15,15 +15,10 @@ export type ActivityVolumeRow = {
 /**
  * Aggregate a wallet's swap activity for display and aggregate-volume rewards.
  *
- * - `totalVolumeCents` — every claimable-kind trade (including in-app swaps that
- *   were already credited individually via `postSwapReward`). This is the
- *   display metric the UI shows as "Swap volume".
- *
- * - `estimatedTotalRewardCents` — only the *rewardable* portion, computed over
- *   trades that have NOT yet been individually credited (i.e. excludes rows
- *   whose status is `booked` or `claimed`). This prevents double-crediting: an
- *   in-app swap keeps its per-swap reward but does not also inflate the
- *   aggregate scan reward.
+ * Reward is computed from **total swap volume** (every trade/execute), including
+ * fills that were already booked in-app. The $250 floor applies to that total.
+ * Sends and receives never count. Ledger settle still posts only the unpaid
+ * delta so an already-credited fill is not paid twice.
  */
 export function summarizeWalletVolume(
   rows: ActivityVolumeRow[],
@@ -41,24 +36,23 @@ export function summarizeWalletVolume(
     0,
   );
 
-  const rewardableTrades = trades.filter(
-    (row) => row.status !== "booked" && row.status !== "claimed",
-  );
-  const rewardableVolumeCents = rewardableTrades.reduce(
-    (sum, row) => sum + Math.max(0, row.notionalUsdCents),
-    0,
-  );
-
-  const qualifiesVolume = rewardableVolumeCents >= minNotionalUsdCents;
+  const qualifiesVolume = totalVolumeCents >= minNotionalUsdCents;
   const rawReward = qualifiesVolume
-    ? computeRewardCents(rewardableVolumeCents, conversionBps)
+    ? computeRewardCents(totalVolumeCents, conversionBps)
     : 0;
   const estimatedTotalRewardCents = rawReward >= MIN_REWARD_CENTS ? rawReward : 0;
+
+  const unpaidVolumeCents = trades
+    .filter((row) => row.status !== "booked" && row.status !== "claimed" && row.status !== "volume_settled")
+    .reduce((sum, row) => sum + Math.max(0, row.notionalUsdCents), 0);
+  const unpaidRaw = qualifiesVolume ? computeRewardCents(unpaidVolumeCents, conversionBps) : 0;
+  const unpaidRewardCents = unpaidRaw >= MIN_REWARD_CENTS ? unpaidRaw : 0;
 
   return {
     transferCount: rows.length,
     totalVolumeCents,
     estimatedTotalRewardCents,
+    unpaidRewardCents,
     qualifiesVolume,
     conversionBps,
     minNotionalUsdCents,

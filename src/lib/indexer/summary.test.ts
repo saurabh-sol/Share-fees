@@ -31,6 +31,19 @@ describe("summarizeWalletVolume", () => {
     expect(summary.estimatedTotalRewardCents).toBe(150);
   });
 
+  it("shows reward from total swap volume even if some fills are already credited", () => {
+    const summary = summarizeWalletVolume(
+      [
+        { notionalUsdCents: 20_000, kind: "trade", status: "booked" },
+        { notionalUsdCents: 15_000, kind: "trade", status: "below_threshold" },
+      ],
+      { conversionBps: 50 },
+    );
+    expect(summary.totalVolumeCents).toBe(35_000);
+    expect(summary.qualifiesVolume).toBe(true);
+    expect(summary.estimatedTotalRewardCents).toBe(175);
+  });
+
   it("ignores sends and other non-swap kinds when summing volume", () => {
     const summary = summarizeWalletVolume(
       [

@@ -12,7 +12,7 @@ import { robinhoodRpcSource } from "./robinhood-rpc";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
-export const SCAN_COOLDOWN_MS = 15 * 60 * 1000;
+export const SCAN_COOLDOWN_MS = 2 * 60 * 1000;
 
 export function asDate(value: Date | string | number | null | undefined) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -84,7 +84,30 @@ export async function persistCandidates(
         existing.status === "booked" ||
         existing.status === "volume_settled"
       ) {
-        skipped += 1;
+        // Refresh notional / kind so volume isn't stuck at $0 from an
+        // earlier mis-priced or mis-classified scan. Never reopen status.
+        if (
+          candidate.notionalUsdCents !== existing.notionalUsdCents ||
+          candidate.kind !== existing.kind ||
+          candidate.fromToken !== existing.fromToken ||
+          candidate.toToken !== existing.toToken
+        ) {
+          await client
+            .update(discoveredSwaps)
+            .set({
+              fromToken: candidate.fromToken,
+              toToken: candidate.toToken,
+              fromAmount: candidate.fromAmount,
+              toAmount: candidate.toAmount,
+              notionalUsdCents: candidate.notionalUsdCents,
+              kind: candidate.kind,
+              executedAt: candidate.executedAt,
+            })
+            .where(eq(discoveredSwaps.id, existing.id));
+          updated += 1;
+        } else {
+          skipped += 1;
+        }
         continue;
       }
       await client

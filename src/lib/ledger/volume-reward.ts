@@ -69,6 +69,7 @@ export async function settleScannedVolumeReward(
     return empty;
   }
 
+  const settleCents = summary.unpaidRewardCents;
   const txHash = volumeScanTxHash(userId);
   const [existing] = await client
     .select()
@@ -77,6 +78,9 @@ export async function settleScannedVolumeReward(
     .limit(1);
 
   if (!existing) {
+    if (settleCents < MIN_REWARD_CENTS) {
+      return empty;
+    }
     const posted = await postSwapReward(
       {
         userId,
@@ -87,7 +91,7 @@ export async function settleScannedVolumeReward(
         fromToken: "VOLUME",
         toToken: "CREDIT",
         fromAmount: String(summary.totalVolumeCents),
-        toAmount: String(summary.estimatedTotalRewardCents),
+        toAmount: String(settleCents),
         notionalUsdCents: summary.totalVolumeCents,
         executedAt: new Date(),
       },
@@ -112,7 +116,7 @@ export async function settleScannedVolumeReward(
       .limit(1);
     const already = event?.amountCents ?? 0;
     const remainingCap = await remainingDailyCapCents(tx as never, userId, rule.dailyCapUsdCents);
-    const target = Math.min(summary.estimatedTotalRewardCents, already + remainingCap);
+    const target = Math.min(settleCents, already + remainingCap);
     const delta = target - already;
 
     if (delta < MIN_REWARD_CENTS) {
