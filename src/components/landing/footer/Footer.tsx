@@ -49,14 +49,22 @@ function FooterBottom() {
           <span className="text-accent">+</span> Built for qualifying fills{" "}
           <span className="text-accent">+</span>
         </p>
-        <a
-          href={robinhoodAddressUrl(USDG_REWARD_VAULT)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline"
-        >
-          Contract
-        </a>
+        <div className="flex gap-4">
+          <Link href="/privacy" className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline">
+            Privacy
+          </Link>
+          <Link href="/terms" className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline">
+            Terms
+          </Link>
+          <a
+            href={robinhoodAddressUrl(USDG_REWARD_VAULT)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline"
+          >
+            Contract
+          </a>
+        </div>
       </div>
     </div>
   );

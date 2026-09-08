@@ -31,6 +31,8 @@ const COLUMNS: Array<{
       { href: "/docs/faq", label: "FAQ" },
       { href: "/api/v1/health", label: "Health" },
       { href: robinhoodAddressUrl(USDG_REWARD_VAULT), label: "Contract", external: true },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/terms", label: "Terms" },
     ],
   },
 ];

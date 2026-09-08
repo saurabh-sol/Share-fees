@@ -31,8 +31,8 @@ export const privyConfigBase: PrivyClientConfig = {
   supportedChains: [mainnet, robinhoodChain],
   defaultChain: mainnet,
   legal: {
-    termsAndConditionsUrl: undefined,
-    privacyPolicyUrl: undefined,
+    termsAndConditionsUrl: "https://accrued.trade/terms",
+    privacyPolicyUrl: "https://accrued.trade/privacy",
   },
   mfa: {
     noPromptOnMfaRequired: true,
