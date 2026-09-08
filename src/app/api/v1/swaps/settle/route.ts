@@ -1,14 +1,70 @@
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { assertTxHash } from "@/lib/auth/addresses";
 import { getSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db/client";
+import { discoveredSwaps } from "@/lib/db/schema";
 import { upsertPendingSettle } from "@/lib/jobs/pending";
-import { LedgerError, postSwapReward } from "@/lib/ledger/post-swap-reward";
-import { SettleError, readVerifiedFill } from "@/lib/lifi/settle";
+import { LedgerError, postSwapReward, newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { isUniswapChainId, type UniswapChainId } from "@/lib/uniswap/constants";
 import { verifyUniswapFill, UniswapSettleError } from "@/lib/uniswap/settle";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { settleSwapSchema } from "@/lib/validation/swap";
+
+/**
+ * Mirror an in-app Uniswap swap into `discoveredSwaps` as a booked entry.
+ * This makes the swap show up in the wallet activity/volume total immediately
+ * without requiring a wallet scan pass.
+ */
+async function recordAsActivity(input: {
+  userId: string;
+  txHash: string;
+  fromChain: string;
+  toChain: string;
+  fromToken: string;
+  toToken: string;
+  fromAmount: string;
+  toAmount: string;
+  notionalUsdCents: number;
+  executedAt: Date;
+}) {
+  const db = await getDb();
+  const [existing] = await db
+    .select({ id: discoveredSwaps.id })
+    .from(discoveredSwaps)
+    .where(
+      and(
+        eq(discoveredSwaps.txHash, input.txHash),
+        eq(discoveredSwaps.fromChain, input.fromChain),
+      ),
+    )
+    .limit(1);
+
+  if (existing) return;
+
+  try {
+    await db.insert(discoveredSwaps).values({
+      id: newLedgerId("disc"),
+      userId: input.userId,
+      provider: "uniswap",
+      txHash: input.txHash,
+      fromChain: input.fromChain,
+      toChain: input.toChain,
+      fromToken: input.fromToken,
+      toToken: input.toToken,
+      fromAmount: input.fromAmount,
+      toAmount: input.toAmount,
+      notionalUsdCents: input.notionalUsdCents,
+      kind: "trade",
+      executedAt: input.executedAt,
+      status: "booked",
+      claimedAt: new Date(),
+    });
+  } catch {
+    // Race with a concurrent insert (unique index on tx+chain). Safe to ignore.
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -23,35 +79,58 @@ export async function POST(request: Request) {
     const body = settleSwapSchema.parse(await request.json());
     const txHash = assertTxHash("eip155", body.txHash);
 
-    if (body.provider === "uniswap") {
-      const chainId = Number(body.fromChain);
-      if (!isUniswapChainId(chainId)) {
-        return jsonError(400, "unsupported_chain", "Uniswap is not available on this chain.");
-      }
+    if (body.provider !== "uniswap") {
+      return jsonError(
+        400,
+        "unsupported_provider",
+        "Only Uniswap swaps are supported. LI.FI bridging is disabled.",
+      );
+    }
 
-      const verified = await verifyUniswapFill({
-        txHash,
-        chainId: chainId as UniswapChainId,
-        sessionAddress: session.user.address,
-        expectedFromToken: body.fromToken ?? "",
-        expectedToToken: body.toToken ?? "",
-        expectedNotionalCents: body.notionalUsdCents ?? 0,
-      });
+    const chainId = Number(body.fromChain);
+    if (!isUniswapChainId(chainId)) {
+      return jsonError(400, "unsupported_chain", "Uniswap is not available on this chain.");
+    }
 
-      if (verified.kind === "pending") {
-        await upsertPendingSettle({
-          userId: session.user.id,
-          provider: "uniswap",
-          txHash,
-          fromChain: body.fromChain,
-          toChain: body.toChain,
-        });
-        return Response.json({ status: "pending", provider: "uniswap" }, { status: 202 });
-      }
+    const verified = await verifyUniswapFill({
+      txHash,
+      chainId: chainId as UniswapChainId,
+      sessionAddress: session.user.address,
+      expectedFromToken: body.fromToken ?? "",
+      expectedToToken: body.toToken ?? "",
+      expectedNotionalCents: body.notionalUsdCents ?? 0,
+    });
 
-      const result = await postSwapReward({
+    if (verified.kind === "pending") {
+      await upsertPendingSettle({
         userId: session.user.id,
-        source: "in_app",
+        provider: "uniswap",
+        txHash,
+        fromChain: body.fromChain,
+        toChain: body.toChain,
+      });
+      return Response.json({ status: "pending", provider: "uniswap" }, { status: 202 });
+    }
+
+    const executedAt = new Date();
+    const result = await postSwapReward({
+      userId: session.user.id,
+      source: "in_app",
+      txHash,
+      fromChain: body.fromChain,
+      toChain: body.toChain,
+      fromToken: verified.fromToken,
+      toToken: verified.toToken,
+      fromAmount: verified.fromAmount,
+      toAmount: verified.toAmount,
+      notionalUsdCents: verified.notionalUsdCents,
+      executedAt,
+    });
+
+    // Ensure the swap is visible in the wallet activity list + volume total.
+    if (!result.alreadyExists) {
+      await recordAsActivity({
+        userId: session.user.id,
         txHash,
         fromChain: body.fromChain,
         toChain: body.toChain,
@@ -60,56 +139,14 @@ export async function POST(request: Request) {
         fromAmount: verified.fromAmount,
         toAmount: verified.toAmount,
         notionalUsdCents: verified.notionalUsdCents,
-        executedAt: new Date(),
-      });
-
-      return Response.json({
-        ...result,
-        notionalUsdCents: verified.notionalUsdCents,
-        provider: "uniswap",
+        executedAt,
       });
     }
-
-    // LI.FI path (cross-chain or fallback)
-    const verified = await readVerifiedFill({
-      txHash,
-      fromChain: body.fromChain,
-      toChain: body.toChain,
-      sessionAddress: session.user.address,
-    });
-
-    if (verified.kind === "pending") {
-      await upsertPendingSettle({
-        userId: session.user.id,
-        provider: "lifi",
-        txHash,
-        fromChain: body.fromChain,
-        toChain: body.toChain,
-      });
-      return Response.json({ status: "pending", lifiStatus: verified.status.status }, { status: 202 });
-    }
-
-    const result = await postSwapReward({
-      userId: session.user.id,
-      source: "in_app",
-      txHash: verified.executedHash.toLowerCase().startsWith("0x")
-        ? verified.executedHash.toLowerCase()
-        : txHash,
-      fromChain: body.fromChain,
-      toChain: body.toChain,
-      fromToken: verified.fromToken,
-      toToken: verified.toToken,
-      fromAmount: verified.fromAmount,
-      toAmount: verified.toAmount,
-      notionalUsdCents: verified.notionalUsdCents,
-      executedAt: new Date(),
-    });
 
     return Response.json({
       ...result,
       notionalUsdCents: verified.notionalUsdCents,
-      lifiStatus: "DONE",
-      provider: "lifi",
+      provider: "uniswap",
     });
   } catch (error) {
     if (error instanceof OriginError) {
@@ -120,9 +157,6 @@ export async function POST(request: Request) {
     }
     if (error instanceof UniswapSettleError) {
       return jsonError(error.status, "uniswap_settle_failed", error.message);
-    }
-    if (error instanceof SettleError) {
-      return jsonError(error.status, error.message, "Swap router status was rejected.");
     }
     if (error instanceof LedgerError) {
       return jsonError(error.status, error.message, "Ledger rejected the fill.");

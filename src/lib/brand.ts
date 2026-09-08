@@ -22,9 +22,9 @@ export const RESPONSE_HEADER_PROVIDER = "X-Accrued-Provider";
 export const RESPONSE_HEADER_SPEND_CAP = "X-Accrued-Spend-Cap-Cents";
 
 export function pageTitle(section: string) {
-  return `${section} — ${BRAND_NAME}`;
+  return section;
 }
 
 export function docsPageTitle(page: string) {
-  return `${page} — ${BRAND_NAME} Docs`;
+  return page;
 }

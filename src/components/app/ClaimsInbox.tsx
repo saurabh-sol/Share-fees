@@ -102,8 +102,8 @@ export function ClaimsInbox({
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [importHash, setImportHash] = useState("");
-  const [fromChain, setFromChain] = useState("8453");
-  const [toChain, setToChain] = useState("8453");
+  const [fromChain, setFromChain] = useState("4663");
+  const [toChain, setToChain] = useState("4663");
 
   async function load() {
     const data = await readJson<{ claims: Claim[]; summary: VolumeSummary }>("/api/v1/swaps/claims");

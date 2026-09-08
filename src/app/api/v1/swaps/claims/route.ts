@@ -40,6 +40,6 @@ export async function GET(request: Request) {
           minNotionalUsdCents: rule.minNotionalUsdCents,
         }
       : null,
-    autoScan: Boolean(env.zerionApiKey),
+    autoScan: Boolean(env.alchemyApiKey || env.zerionApiKey),
   });
 }

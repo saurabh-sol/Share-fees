@@ -4,18 +4,17 @@ import { parseUnits } from "viem";
 import { useAccount, useConnect, useConnectors, useDisconnect } from "wagmi";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LifiChain, LifiQuote, LifiToken } from "@/lib/lifi/http";
+import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
-type Provider = "uniswap" | "lifi";
-
 type QuotePayload = {
-  provider: Provider;
-  quote: LifiQuote | UniswapQuoteView;
+  provider: "uniswap";
+  quote: UniswapQuoteView;
   fromAmountUsdCents: number;
   estimatedRewardCents: number;
   qualifies: boolean;
@@ -24,15 +23,17 @@ type QuotePayload = {
 
 const NATIVE = "0x0000000000000000000000000000000000000000";
 
+// Default pair: NVDA → USDG (users land on stock trading by default).
+const DEFAULT_FROM = ROBINHOOD_STOCKS[0]?.address ?? NATIVE;
+const DEFAULT_TO = ROBINHOOD_USDG;
+
+const STOCK_SYMBOLS = new Set(ROBINHOOD_STOCKS.map((s) => s.symbol));
+
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-function isUniswapQuote(quote: LifiQuote | UniswapQuoteView): quote is UniswapQuoteView {
-  return "provider" in quote && (quote as UniswapQuoteView).provider === "uniswap";
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -64,72 +65,28 @@ export function SwapStudio({
   const { disconnectAsync } = useDisconnect();
   const connectors = useConnectors();
 
-  const [chains, setChains] = useState<LifiChain[]>([]);
-  const [fromTokens, setFromTokens] = useState<LifiToken[]>([]);
-  const [toTokens, setToTokens] = useState<LifiToken[]>([]);
-  const [fromChainId, setFromChainId] = useState(8453);
-  const [toChainId, setToChainId] = useState(8453);
-  const [fromToken, setFromToken] = useState(NATIVE);
-  const [toToken, setToToken] = useState(NATIVE);
-  const [amount, setAmount] = useState("0.01");
+  const [tokens, setTokens] = useState<LifiToken[]>([]);
+  const [fromToken, setFromToken] = useState(DEFAULT_FROM);
+  const [toToken, setToToken] = useState(DEFAULT_TO);
+  const [amount, setAmount] = useState("1");
   const [quote, setQuote] = useState<QuotePayload | null>(null);
   const [phase, setPhase] = useState<"idle" | "quoting" | "executing" | "settling" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
 
   const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
-  const fromMeta = fromTokens.find((token) => token.address.toLowerCase() === fromToken.toLowerCase());
-  const sameChain = fromChainId === toChainId;
+  const fromMeta = tokens.find((t) => t.address.toLowerCase() === fromToken.toLowerCase());
+  const toMeta = tokens.find((t) => t.address.toLowerCase() === toToken.toLowerCase());
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
-    void readJson<{ chains: LifiChain[] }>("/api/v1/swaps/chains")
-      .then((data) => setChains(data.chains))
+    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${ROBINHOOD_CHAIN_ID}`)
+      .then((data) => setTokens(data.tokens))
       .catch((error: unknown) => {
         setPhase("error");
-        setMessage(error instanceof Error ? error.message : "Could not load chains.");
+        setMessage(error instanceof Error ? error.message : "Could not load tokens.");
       });
   }, [chainNamespace]);
-
-  useEffect(() => {
-    if (chainNamespace !== "eip155") return;
-    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${fromChainId}`)
-      .then((data) => {
-        setFromTokens(data.tokens);
-        setFromToken((current) => {
-          if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
-            return current;
-          }
-          return data.tokens[0]?.address ?? NATIVE;
-        });
-      })
-      .catch((error: unknown) => {
-        setPhase("error");
-        setMessage(error instanceof Error ? error.message : "Could not load tokens.");
-      });
-  }, [fromChainId, chainNamespace]);
-
-  useEffect(() => {
-    if (chainNamespace !== "eip155") return;
-    void readJson<{ tokens: LifiToken[] }>(`/api/v1/swaps/tokens?chainId=${toChainId}`)
-      .then((data) => {
-        setToTokens(data.tokens);
-        setToToken((current) => {
-          if (data.tokens.some((token) => token.address.toLowerCase() === current.toLowerCase())) {
-            return current;
-          }
-          return data.tokens.find((token) => token.symbol === "USDC")?.address
-            ?? data.tokens.find((token) => token.symbol === "ETH")?.address
-            ?? data.tokens[0]?.address ?? NATIVE;
-        });
-      })
-      .catch((error: unknown) => {
-        setPhase("error");
-        setMessage(error instanceof Error ? error.message : "Could not load tokens.");
-      });
-  }, [toChainId, chainNamespace]);
-
-  const toMeta = toTokens.find((token) => token.address.toLowerCase() === toToken.toLowerCase());
 
   async function onQuote() {
     setPhase("quoting");
@@ -141,8 +98,8 @@ export function SwapStudio({
       const data = await readJson<QuotePayload>("/api/v1/swaps/quote", {
         method: "POST",
         body: JSON.stringify({
-          fromChainId,
-          toChainId,
+          fromChainId: ROBINHOOD_CHAIN_ID,
+          toChainId: ROBINHOOD_CHAIN_ID,
           fromToken,
           toToken,
           fromAmount,
@@ -156,7 +113,7 @@ export function SwapStudio({
     }
   }
 
-  async function settle(txHash: string, provider: Provider, extras?: Record<string, unknown>) {
+  async function settle(txHash: string, extras?: Record<string, unknown>) {
     setPhase("settling");
     setProgress("Waiting for on-chain confirmation…");
     for (let attempt = 0; attempt < 24; attempt += 1) {
@@ -165,10 +122,10 @@ export function SwapStudio({
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          provider,
+          provider: "uniswap",
           txHash,
-          fromChain: String(fromChainId),
-          toChain: String(toChainId),
+          fromChain: String(ROBINHOOD_CHAIN_ID),
+          toChain: String(ROBINHOOD_CHAIN_ID),
           ...extras,
         }),
       });
@@ -190,12 +147,12 @@ export function SwapStudio({
       setMessage(
         data.alreadyExists
           ? "This hash was already booked. No second credit."
-          : `Booked. Credited ${money(data.creditedCents ?? 0)} to website credit. Convert it on the desk.`,
+          : `Booked. Credited ${money(data.creditedCents ?? 0)} to website credit. Volume tracked on your activity.`,
       );
       router.refresh();
       return;
     }
-    throw new Error("The route is still pending. Retry settle from the hash in a minute.");
+    throw new Error("Confirmation is still pending. Retry in a minute.");
   }
 
   async function onSwap() {
@@ -203,50 +160,32 @@ export function SwapStudio({
     setPhase("executing");
     setMessage(null);
     try {
-      if (quote.provider === "uniswap" && isUniswapQuote(quote.quote)) {
-        setProgress("Check your wallet for approval and swap…");
-        const { executeUniswapSwap } = await import("@/lib/uniswap/browser");
-        const uniQuote = quote.quote;
+      setProgress("Check your wallet for approval and swap…");
+      const { executeUniswapSwap } = await import("@/lib/uniswap/browser");
+      const uniQuote = quote.quote;
 
-        const slippageBps = 50n; // 0.50%
-        const amountOutMin = (BigInt(uniQuote.amountOut) * (10000n - slippageBps)) / 10000n;
+      const slippageBps = 50n; // 0.50%
+      const amountOutMin = (BigInt(uniQuote.amountOut) * (10000n - slippageBps)) / 10000n;
 
-        const txHash = await executeUniswapSwap(
-          {
-            chainId: fromChainId as Parameters<typeof executeUniswapSwap>[0]["chainId"],
-            poolKey: uniQuote.poolKey as Parameters<typeof executeUniswapSwap>[0]["poolKey"],
-            zeroForOne: uniQuote.zeroForOne,
-            amountIn: uniQuote.action.fromAmount,
-            amountOutMinimum: amountOutMin.toString(),
-            recipient: address as `0x${string}`,
-            isNativeIn: uniQuote.isNativeIn,
-            isNativeOut: uniQuote.isNativeOut,
-          },
-          (step) => setProgress(step),
-        );
+      const txHash = await executeUniswapSwap(
+        {
+          chainId: ROBINHOOD_CHAIN_ID as Parameters<typeof executeUniswapSwap>[0]["chainId"],
+          poolKey: uniQuote.poolKey as Parameters<typeof executeUniswapSwap>[0]["poolKey"],
+          zeroForOne: uniQuote.zeroForOne,
+          amountIn: uniQuote.action.fromAmount,
+          amountOutMinimum: amountOutMin.toString(),
+          recipient: address as `0x${string}`,
+          isNativeIn: uniQuote.isNativeIn,
+          isNativeOut: uniQuote.isNativeOut,
+        },
+        (step) => setProgress(step),
+      );
 
-        await settle(txHash, "uniswap", {
-          fromToken: quote.quote.action.fromToken.address,
-          toToken: quote.quote.action.toToken.address,
-          notionalUsdCents: quote.fromAmountUsdCents,
-        });
-        return;
-      }
-
-      // LI.FI path (cross-chain)
-      setProgress("Check your wallet for allowance and swap signatures.");
-      const { executeQuotedSwap, firstExecutionHash } = await import("@/lib/lifi/browser");
-      const executed = await executeQuotedSwap(quote.quote as unknown as import("@lifi/sdk").LiFiStep, (route) => {
-        const latest = route.steps.flatMap((step) => step.execution?.actions ?? []).at(-1);
-        if (latest?.type) {
-          setProgress(`${latest.type.replaceAll("_", " ").toLowerCase()} · ${latest.status}`);
-        }
+      await settle(txHash, {
+        fromToken: quote.quote.action.fromToken.address,
+        toToken: quote.quote.action.toToken.address,
+        notionalUsdCents: quote.fromAmountUsdCents,
       });
-      const txHash = firstExecutionHash(executed);
-      if (!txHash) {
-        throw new Error("Wallet signed, but no source hash was returned.");
-      }
-      await settle(txHash, "lifi");
     } catch (error) {
       setPhase("error");
       setProgress(null);
@@ -269,13 +208,11 @@ export function SwapStudio({
     );
   }
 
-  const receiveUsd = quote?.quote.estimate.toAmountUSD
-    ? `$${Number(quote.quote.estimate.toAmountUSD).toFixed(2)}`
-    : quote
-      ? isUniswapQuote(quote.quote)
-        ? `${(Number(quote.quote.estimate.toAmount) / 10 ** (toMeta?.decimals ?? 18)).toFixed(6)} ${toMeta?.symbol ?? "TOKEN"}`
-        : `${quote.quote.estimate.toAmount} ${quote.quote.action.toToken.symbol}`
-      : "—";
+  const receiveAmount = quote
+    ? (Number(quote.quote.estimate.toAmount) / 10 ** (toMeta?.decimals ?? 18)).toFixed(6)
+    : "—";
+
+  const isStockPair = STOCK_SYMBOLS.has(fromMeta?.symbol ?? "") || STOCK_SYMBOLS.has(toMeta?.symbol ?? "");
 
   return (
     <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.15fr_0.85fr]">
@@ -286,39 +223,14 @@ export function SwapStudio({
           void onQuote();
         }}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-sm text-zinc-400">From chain</span>
-            <select
-              value={fromChainId}
-              onChange={(event) => setFromChainId(Number(event.target.value))}
-              className="w-full border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-            >
-              {chains.map((chain) => (
-                <option key={chain.id} value={chain.id}>
-                  {chain.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block space-y-2">
-            <span className="text-sm text-zinc-400">To chain</span>
-            <select
-              value={toChainId}
-              onChange={(event) => setToChainId(Number(event.target.value))}
-              className="w-full border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-            >
-              {chains.map((chain) => (
-                <option key={chain.id} value={chain.id}>
-                  {chain.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300">
+          <span>📈</span>
+          <span>Robinhood Chain · Uniswap V4</span>
         </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TokenSelect label="From token" tokens={fromTokens} value={fromToken} onChange={setFromToken} />
-          <TokenSelect label="To token" tokens={toTokens} value={toToken} onChange={setToToken} />
+          <TokenSelect label="From token" tokens={tokens} value={fromToken} onChange={setFromToken} />
+          <TokenSelect label="To token" tokens={tokens} value={toToken} onChange={setToToken} />
         </div>
         <label className="block space-y-2">
           <span className="text-sm text-zinc-400">Amount</span>
@@ -338,15 +250,9 @@ export function SwapStudio({
           >
             {phase === "quoting" ? "Quoting…" : "Get route"}
           </button>
-          {sameChain ? (
-            <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-              ⚡ Uniswap V4
-            </span>
-          ) : (
-            <span className="font-mono text-[10px] uppercase tracking-wider text-blue-400">
-              🌐 Cross-chain via LI.FI
-            </span>
-          )}
+          <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+            ⚡ {isStockPair ? "Stock swap" : "On-chain swap"}
+          </span>
         </div>
       </form>
 
@@ -354,12 +260,8 @@ export function SwapStudio({
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Route</p>
         <p className="font-mono text-xs text-zinc-500">
           {quote
-            ? quote.provider === "uniswap"
-              ? "Uniswap V4 — direct on-chain swap"
-              : "LI.FI cross-chain router"
-            : sameChain
-              ? "Uniswap V4 finds the best pool for this pair."
-              : "LI.FI picks the best cross-chain path."}
+            ? "Uniswap V4 — direct on-chain swap on Robinhood Chain"
+            : "Uniswap V4 finds the best pool for this pair on Robinhood Chain."}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">
@@ -389,15 +291,13 @@ export function SwapStudio({
                   symbol={quote.quote.action.toToken.symbol}
                   logoURI={quote.quote.action.toToken.logoURI ?? toMeta?.logoURI}
                 />
-                {receiveUsd}
+                {receiveAmount} {toMeta?.symbol ?? "TOKEN"}
               </dd>
             </div>
-            {quote.provider === "uniswap" && isUniswapQuote(quote.quote) ? (
-              <div className="flex justify-between py-3">
-                <dt className="text-zinc-500">Pool fee</dt>
-                <dd className="font-mono tabular-nums">{(quote.quote.fee / 10000).toFixed(2)}%</dd>
-              </div>
-            ) : null}
+            <div className="flex justify-between py-3">
+              <dt className="text-zinc-500">Pool fee</dt>
+              <dd className="font-mono tabular-nums">{(quote.quote.fee / 10000).toFixed(2)}%</dd>
+            </div>
             <div className="flex justify-between py-3">
               <dt className="text-zinc-500">Reward at {quote.rule?.conversionBps ?? 0} bps</dt>
               <dd className="font-mono tabular-nums text-accent">{money(quote.estimatedRewardCents)}</dd>

@@ -106,15 +106,16 @@ describe("historical scan → claim → ledger", () => {
       db,
     });
     expect(first.inserted).toBe(1);
-    expect(first.volumeReward?.creditedCents).toBe(0);
-    expect(first.volumeReward?.status).toBe("claim_required");
-    expect(await listUnclaimed(userId, db)).toHaveLength(1);
+    // Auto-settle posts credit immediately so the user counts in public stats.
+    expect(first.volumeReward?.creditedCents).toBe(256);
+    expect(first.volumeReward?.status).toBe("rewarded");
+    expect(await listUnclaimed(userId, db)).toHaveLength(0);
 
     const credits = await db.select().from(creditEvents);
-    expect(credits).toHaveLength(0);
+    expect(credits).toHaveLength(1);
 
     const [row] = await db.select().from(discoveredSwaps);
-    expect(row?.status).toBe("unclaimed");
+    expect(row?.status).toBe("volume_settled");
 
     const replay = await scanWallet({
       userId,
@@ -124,7 +125,7 @@ describe("historical scan → claim → ledger", () => {
       db,
     });
     expect(replay.inserted).toBe(0);
-    expect(await listUnclaimed(userId, db)).toHaveLength(1);
+    expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
   it("cools down after any scan, including an empty one", async () => {

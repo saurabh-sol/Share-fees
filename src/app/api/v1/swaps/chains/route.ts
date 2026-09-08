@@ -1,31 +1,31 @@
 import { getSession } from "@/lib/auth/session";
-import { fetchLifiChains, type LifiChain } from "@/lib/lifi/http";
+import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
 import { jsonError } from "@/lib/security/origin";
 
 export const dynamic = "force-dynamic";
 
-const FALLBACK: LifiChain[] = [
-  { id: 1, name: "Ethereum", key: "eth" },
-  { id: 8453, name: "Base", key: "bas" },
-  { id: 42161, name: "Arbitrum", key: "arb" },
-  { id: 10, name: "Optimism", key: "opt" },
-  { id: 137, name: "Polygon", key: "pol" },
-  { id: 4663, name: "Robinhood Chain", key: "hood" },
-];
-
+/**
+ * Swap Studio is Robinhood-Chain only. Uniswap V4 (Universal Router + V4Quoter)
+ * is the only routing surface. Cross-chain bridging is disabled — trades stay
+ * on Robinhood Chain (id 4663) so tokenized stocks (NVDA, TSLA, AAPL, etc.)
+ * can be swapped against USDG in one on-chain call.
+ */
 export async function GET(request: Request) {
   const session = await getSession(request);
   if (!session) {
     return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
   }
-  try {
-    const allChains = await fetchLifiChains();
-    const hasRobinhood = allChains.some((c) => c.id === 4663);
-    const chains = hasRobinhood
-      ? allChains
-      : [...allChains, { id: 4663, name: "Robinhood Chain", key: "hood" }];
-    return Response.json({ chains }, { headers: { "Cache-Control": "private, no-store" } });
-  } catch {
-    return Response.json({ chains: FALLBACK, degraded: true }, { headers: { "Cache-Control": "private, no-store" } });
-  }
+
+  return Response.json(
+    {
+      chains: [
+        {
+          id: ROBINHOOD_CHAIN_ID,
+          name: "Robinhood Chain",
+          key: "hood",
+        },
+      ],
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
-import { isAllowedChainId } from "@/lib/lifi/constants";
-import { isUniswapChainId } from "@/lib/uniswap/constants";
+import { ROBINHOOD_CHAIN_ID } from "@/lib/chains/robinhood";
 import { UniswapQuoteError } from "@/lib/uniswap/quote";
 import { MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
@@ -10,10 +9,6 @@ import { routeSwapQuote } from "@/lib/swap/router";
 import { quoteRequestSchema } from "@/lib/validation/swap";
 
 export const dynamic = "force-dynamic";
-
-function isSwapChainId(chainId: number): boolean {
-  return isUniswapChainId(chainId) || isAllowedChainId(chainId);
-}
 
 export async function POST(request: Request) {
   try {
@@ -29,33 +24,44 @@ export async function POST(request: Request) {
     }
 
     const body = quoteRequestSchema.parse(await request.json());
-    if (!isSwapChainId(body.fromChainId) || !isSwapChainId(body.toChainId)) {
-      return jsonError(400, "unsupported_chain", "That chain pair is not enabled.");
-    }
-
-    const tokenListResp = await fetch(
-      `${request.headers.get("origin") ?? ""}/api/v1/swaps/tokens?chainId=${body.fromChainId}`,
-      { headers: { cookie: request.headers.get("cookie") ?? "" } },
-    ).catch(() => null);
-
-    let fromTokenMeta: { symbol: string; decimals: number; priceUSD?: string; logoURI?: string } | undefined;
-    let toTokenMeta: { symbol: string; decimals: number; priceUSD?: string; logoURI?: string } | undefined;
-
-    if (tokenListResp?.ok) {
-      const tokenData = (await tokenListResp.json()) as { tokens: Array<{ address: string; symbol: string; decimals: number; priceUSD?: string; logoURI?: string }> };
-      fromTokenMeta = tokenData.tokens.find(
-        (t) => t.address.toLowerCase() === body.fromToken.toLowerCase(),
+    if (body.fromChainId !== ROBINHOOD_CHAIN_ID || body.toChainId !== ROBINHOOD_CHAIN_ID) {
+      return jsonError(
+        400,
+        "unsupported_chain",
+        "Swap Studio is Robinhood-Chain-only (id 4663).",
       );
     }
 
-    const toTokenListResp = await fetch(
-      `${request.headers.get("origin") ?? ""}/api/v1/swaps/tokens?chainId=${body.toChainId}`,
-      { headers: { cookie: request.headers.get("cookie") ?? "" } },
+    const origin = request.headers.get("origin") ?? "";
+    const cookie = request.headers.get("cookie") ?? "";
+
+    // Fetch token metadata (symbol, decimals, priceUSD) for the single chain.
+    const tokenListResp = await fetch(
+      `${origin}/api/v1/swaps/tokens?chainId=${body.fromChainId}`,
+      { headers: { cookie } },
     ).catch(() => null);
 
-    if (toTokenListResp?.ok) {
-      const toTokenData = (await toTokenListResp.json()) as { tokens: Array<{ address: string; symbol: string; decimals: number; priceUSD?: string; logoURI?: string }> };
-      toTokenMeta = toTokenData.tokens.find(
+    let fromTokenMeta:
+      | { symbol: string; decimals: number; priceUSD?: string; logoURI?: string }
+      | undefined;
+    let toTokenMeta:
+      | { symbol: string; decimals: number; priceUSD?: string; logoURI?: string }
+      | undefined;
+
+    if (tokenListResp?.ok) {
+      const data = (await tokenListResp.json()) as {
+        tokens: Array<{
+          address: string;
+          symbol: string;
+          decimals: number;
+          priceUSD?: string;
+          logoURI?: string;
+        }>;
+      };
+      fromTokenMeta = data.tokens.find(
+        (t) => t.address.toLowerCase() === body.fromToken.toLowerCase(),
+      );
+      toTokenMeta = data.tokens.find(
         (t) => t.address.toLowerCase() === body.toToken.toLowerCase(),
       );
     }
@@ -66,6 +72,7 @@ export async function POST(request: Request) {
       fromTokenMeta,
       toTokenMeta,
     });
+
     const rule = await getActiveRuleOrNull();
     const estimatedRewardCents = rule
       ? computeRewardCents(routed.fromAmountUsdCents, rule.conversionBps)

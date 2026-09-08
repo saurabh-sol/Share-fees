@@ -9,7 +9,7 @@ export type ActivityKind =
   | "other";
 
 export type HistoricalCandidate = {
-  provider: "alchemy" | "zerion" | "lifi" | "import";
+  provider: "alchemy" | "zerion" | "lifi" | "uniswap" | "import";
   txHash: string;
   fromChain: string;
   toChain: string;

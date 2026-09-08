@@ -1,7 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { discoveredSwaps, swaps, walletScans } from "@/lib/db/schema";
-import { previewScannedVolumeReward } from "@/lib/ledger/volume-reward";
+import {
+  previewScannedVolumeReward,
+  settleScannedVolumeReward,
+} from "@/lib/ledger/volume-reward";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
 import { alchemySource } from "./alchemy";
@@ -236,12 +239,26 @@ export async function scanWallet(input: {
       },
     });
 
+  // Auto-settle qualifying volume so the user earns credit and
+  // appears in the public desk stats immediately after scanning.
+  let volumeReward = await previewScannedVolumeReward(input.userId, client);
+  if (
+    volumeReward.estimatedTotalRewardCents > 0 &&
+    !volumeReward.alreadyExists
+  ) {
+    try {
+      volumeReward = await settleScannedVolumeReward(input.userId, client);
+    } catch {
+      // Non-fatal: the user can still claim manually from the Activity page.
+    }
+  }
+
   return {
     ...result,
     scanned: candidates.length,
     providers,
     minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
     windowDays: 90,
-    volumeReward: await previewScannedVolumeReward(input.userId, client),
+    volumeReward,
   };
 }
