@@ -5,13 +5,14 @@ import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 
 function humanizeScanError(message: string) {
   if (message === "rate_limited") return "Wait a few minutes before scanning again.";
+  if (message.startsWith("alchemy_")) return "Primary history provider failed. Retry the scan.";
   if (message.startsWith("zerion_401") || message.startsWith("zerion_403")) {
-    return "History provider rejected the key. Check ZERION_API_KEY.";
+    return "Fallback history provider rejected the key. Check ZERION_API_KEY.";
   }
   if (message.startsWith("zerion_429") || message === "rate_limited") {
-    return "History provider is busy. Wait a minute, or import a transaction hash instead.";
+    return "History providers are busy. Wait a minute, or import a transaction hash instead.";
   }
-  if (message.startsWith("zerion_")) return "History provider failed. Retry the scan.";
+  if (message.startsWith("zerion_")) return "Fallback history provider failed. Retry the scan.";
   if (message.includes("getTime") || message.includes("Invalid time")) {
     return "Scan state was unreadable. Retry.";
   }

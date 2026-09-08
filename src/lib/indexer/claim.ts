@@ -4,6 +4,7 @@ import { discoveredSwaps } from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { readVerifiedFill } from "@/lib/lifi/settle";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
+import { fetchAlchemyTradeByHash } from "./alchemy";
 import { fetchZerionTradeByHash } from "./zerion";
 import { isClaimableKind, type HistoricalCandidate } from "./types";
 
@@ -48,6 +49,9 @@ export async function reverifyCandidate(input: {
   } catch {
     // Fall through to Zerion. A pending LI.FI fill is not claimable yet.
   }
+
+  const alchemy = await fetchAlchemyTradeByHash(input.address, input.txHash);
+  if (alchemy) return alchemy;
 
   const zerion = await fetchZerionTradeByHash(input.address, input.txHash);
   if (!zerion) {

@@ -96,7 +96,6 @@ function UsdgPixelGlyph({ className }: { className: string }) {
 
 // Hover-state icons as string bitmaps: "." empty, "a"/"b"/"c" = palette 0/1/2.
 const SWAP_TONES = PIXEL_TONES;
-const COIN_TONES = ["#c23a3a", "rgba(194, 58, 58, 0.55)", "rgba(194, 58, 58, 0.28)"] as const;
 
 // Two opposing pixel arrows — right over left — the classic swap mark.
 const SWAP_ROWS = [
@@ -330,8 +329,8 @@ export function DitherSwapArt() {
             </div>
             <span className="font-mono text-2xl text-zinc-500 sm:text-3xl">=</span>
             <div className="flex w-20 flex-col items-center gap-2.5 sm:w-28">
-              <PixelIconGlyph rows={COINS_ROWS} palette={COIN_TONES} className="h-11 w-11 sm:h-14 sm:w-14" />
-              <span className="font-mono text-sm uppercase tracking-[0.16em] text-accent">Credits</span>
+              <PixelIconGlyph rows={COINS_ROWS} palette={PIXEL_TONES} className="h-11 w-11 sm:h-14 sm:w-14" />
+              <span className="font-mono text-sm uppercase tracking-[0.16em] text-zinc-100">Credits</span>
             </div>
           </div>
         </div>

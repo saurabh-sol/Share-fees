@@ -4,6 +4,7 @@ import { discoveredSwaps, swaps, walletScans } from "@/lib/db/schema";
 import { previewScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
+import { alchemySource } from "./alchemy";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
@@ -31,8 +32,12 @@ function newId() {
 }
 
 export function defaultTradeSources(): TradeSource[] {
+  const sources: TradeSource[] = [];
+  const alchemy = alchemySource();
+  if (alchemy) sources.push(alchemy);
   const zerion = zerionSource();
-  return zerion ? [zerion] : [];
+  if (zerion) sources.push(zerion);
+  return sources;
 }
 
 export async function persistCandidates(
@@ -180,13 +185,26 @@ export async function scanWallet(input: {
   const candidates: HistoricalCandidate[] = [];
   const providers: string[] = [];
 
+  let primarySucceeded = false;
+
   for (const source of sources) {
+    if (primarySucceeded && source.name === "zerion") {
+      providers.push("zerion(skipped)");
+      continue;
+    }
     providers.push(source.name);
     try {
       const batch = await source.fetchTrades(input.address, since);
       candidates.push(...batch);
+      if (source.name === "alchemy" && batch.length >= 0) {
+        primarySucceeded = true;
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "scan_source_failed";
+      if (source.name === "alchemy") {
+        console.warn("[scan] Alchemy failed, falling back to Zerion:", message);
+        continue;
+      }
       if (last && (message.startsWith("zerion_429") || message === "rate_limited")) {
         return cachedScan(60, true);
       }
