@@ -17,6 +17,7 @@ const LIVE_METRICS = [
   { key: "activeWallets" as const, label: "Active wallets" },
   { key: "fillsCredited" as const, label: "Fills credited" },
   { key: "creditPaidUsd" as const, label: "Credit posted" },
+  { key: "swapVolumeUsd" as const, label: "Swap volume" },
 ] as const;
 
 export function DeskStats() {
@@ -44,11 +45,13 @@ export function DeskStats() {
   if (failed) return null;
 
   return (
-    <dl className="mt-4 grid grid-cols-3 divide-x divide-white/8 border-y border-white/8">
+    <dl className="mt-4 grid grid-cols-2 divide-x divide-white/8 border-y border-white/8 sm:grid-cols-4">
       {LIVE_METRICS.map((item) => {
         const raw = stats?.[item.key] ?? null;
         const display =
-          item.key === "creditPaidUsd" ? formatUsd(raw) : formatCount(raw);
+          item.key === "creditPaidUsd" || item.key === "swapVolumeUsd"
+            ? formatUsd(raw)
+            : formatCount(raw);
         return (
           <div key={item.key} className="px-3 py-4 text-center md:py-5">
             <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">

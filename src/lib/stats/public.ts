@@ -1,6 +1,6 @@
 import { eq, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { creditEvents, swaps } from "@/lib/db/schema";
+import { creditEvents, discoveredSwaps, swaps } from "@/lib/db/schema";
 
 export type PublicDeskStats = {
   activeWallets: number;
@@ -27,22 +27,53 @@ export async function getPublicDeskStats(options?: {
 
   try {
     const client = options?.db ?? (await getDb());
-    const [row] = await client
+
+    // 1. Credit-based stats (fills that earned a reward).
+    const [creditRow] = await client
       .select({
-        activeWallets: sql<number>`count(distinct ${creditEvents.userId})`,
+        creditWallets: sql<number>`count(distinct ${creditEvents.userId})`,
         fillsCredited: sql<number>`count(${creditEvents.id})`,
         creditPaidCents: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
-        swapVolumeCents: sql<number>`coalesce(sum(${swaps.notionalUsdCents}), 0)`,
+        creditVolumeCents: sql<number>`coalesce(sum(${swaps.notionalUsdCents}), 0)`,
       })
       .from(creditEvents)
       .innerJoin(swaps, eq(creditEvents.swapId, swaps.id))
       .where(ne(swaps.source, "mock"));
 
+    // 2. Scanned wallet stats (any wallet that scanned — regardless of credit).
+    const [scanRow] = await client
+      .select({
+        scanWallets: sql<number>`count(distinct ${discoveredSwaps.userId})`,
+        scanVolumeCents: sql<number>`coalesce(sum(${discoveredSwaps.notionalUsdCents}), 0)`,
+      })
+      .from(discoveredSwaps);
+
+    // Active wallets = union of credited wallets + scanned wallets.
+    // Exclude mock-linked credit events from the wallet count.
+    const [unionRow] = await client
+      .select({
+        total: sql<number>`count(*)`,
+      })
+      .from(
+        sql`(
+          SELECT ${creditEvents.userId} AS uid
+          FROM ${creditEvents}
+          INNER JOIN ${swaps} ON ${creditEvents.swapId} = ${swaps.id}
+          WHERE ${swaps.source} != 'mock'
+          UNION
+          SELECT ${discoveredSwaps.userId} AS uid FROM ${discoveredSwaps}
+        ) AS combined`,
+      );
+
+    const activeWallets = Number(unionRow?.total ?? 0);
+    const totalVolumeCents =
+      Math.max(Number(creditRow?.creditVolumeCents ?? 0), Number(scanRow?.scanVolumeCents ?? 0));
+
     const stats: PublicDeskStats = {
-      activeWallets: Number(row?.activeWallets ?? 0),
-      fillsCredited: Number(row?.fillsCredited ?? 0),
-      creditPaidUsd: Math.round(Number(row?.creditPaidCents ?? 0) / 100),
-      swapVolumeUsd: Math.round(Number(row?.swapVolumeCents ?? 0) / 100),
+      activeWallets,
+      fillsCredited: Number(creditRow?.fillsCredited ?? 0),
+      creditPaidUsd: Math.round(Number(creditRow?.creditPaidCents ?? 0) / 100),
+      swapVolumeUsd: Math.round(totalVolumeCents / 100),
       asOf: new Date().toISOString(),
     };
 

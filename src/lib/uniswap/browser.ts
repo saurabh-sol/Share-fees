@@ -25,6 +25,10 @@ import {
   PERMIT2_ABI,
   ERC20_ABI,
   NATIVE_ADDRESS,
+  WRAPPED_NATIVE,
+  CMD_V3_SWAP_EXACT_IN,
+  CMD_WRAP_ETH,
+  CMD_UNWRAP_WETH,
   CMD_V4_SWAP,
   ACT_SWAP_EXACT_IN_SINGLE,
   ACT_SWAP_EXACT_IN,
@@ -42,17 +46,23 @@ export type UniswapSwapParams = {
   recipient: `0x${string}`;
   isNativeIn: boolean;
   isNativeOut: boolean;
+  needsWrapIn?: boolean;
+  needsUnwrapOut?: boolean;
   /**
    * The route to execute.
-   * - `single` — one pool via SWAP_EXACT_IN_SINGLE.
-   * - `multi`  — 2+ hops via SWAP_EXACT_IN with a PathKey chain.
+   * - `single`    — one V4 pool via SWAP_EXACT_IN_SINGLE.
+   * - `multi`     — V4 2+ hops via SWAP_EXACT_IN with PathKey chain.
+   * - `v3-single` — one V3 pool via V3_SWAP_EXACT_IN packed path.
+   * - `v3-multi`  — V3 2+ hops via packed path bytes.
    *
    * Legacy `poolKey` / `zeroForOne` fields on the top level are honored when
    * `route` is missing (backwards compat with older quote responses).
    */
   route?:
     | { type: "single"; poolKey: PoolKey; zeroForOne: boolean }
-    | { type: "multi"; currencyIn: `0x${string}`; path: PathKey[] };
+    | { type: "multi"; currencyIn: `0x${string}`; path: PathKey[] }
+    | { type: "v3-single"; v3TokenIn: `0x${string}`; v3TokenOut: `0x${string}`; v3Fee: number }
+    | { type: "v3-multi"; v3Path: `0x${string}` };
   /** @deprecated Use `route` instead. Kept so older callers still work. */
   poolKey?: PoolKey;
   /** @deprecated Use `route` instead. Kept so older callers still work. */
@@ -107,14 +117,28 @@ const SWAP_MULTI_PARAM_TYPES = [
 ] as const;
 
 /**
- * Execute a Uniswap V4 swap via the Universal Router.
+ * Pack a V3-style path: tokenA (20B) + fee (3B) + tokenB (20B) [+ fee + tokenC …]
+ */
+function packV3SinglePath(
+  tokenIn: `0x${string}`,
+  tokenOut: `0x${string}`,
+  fee: number,
+): `0x${string}` {
+  const inHex = tokenIn.toLowerCase().slice(2);
+  const feeHex = fee.toString(16).padStart(6, "0");
+  const outHex = tokenOut.toLowerCase().slice(2);
+  return `0x${inHex}${feeHex}${outHex}`;
+}
+
+/**
+ * Execute a Uniswap swap via the Universal Router.
+ * Supports V4 (single / multi), V3 (single / multi), and WRAP/UNWRAP for native ETH.
  * Returns the transaction hash.
  */
 export async function executeUniswapSwap(
   params: UniswapSwapParams,
   onProgress?: (step: string) => void,
 ): Promise<Hash> {
-  // Resolve the route (support legacy shape).
   const route =
     params.route ??
     (params.poolKey
@@ -125,40 +149,31 @@ export async function executeUniswapSwap(
         }
       : null);
 
-  if (!route) {
-    throw new Error("Swap route missing from quote.");
-  }
+  if (!route) throw new Error("Swap route missing from quote.");
 
   const routerAddress = UNIVERSAL_ROUTER[params.chainId];
   const amountIn = BigInt(params.amountIn);
   const amountOutMin = BigInt(params.amountOutMinimum);
+  const weth = WRAPPED_NATIVE[params.chainId];
+  const needsWrap = params.needsWrapIn ?? false;
+  const needsUnwrap = params.needsUnwrapOut ?? false;
 
   try {
     await switchChain(wagmiConfig, { chainId: params.chainId });
-  } catch {
-    /* already on the right chain */
-  }
+  } catch { /* already on the right chain */ }
 
-  // What currency does the *user* pay in? For single-hop it's the pool's
-  // zeroForOne side; for multi-hop it's the route's `currencyIn`.
-  const inputCurrency =
-    route.type === "single"
-      ? route.zeroForOne
-        ? route.poolKey.currency0
-        : route.poolKey.currency1
-      : route.currencyIn;
+  const isV3 = route.type === "v3-single" || route.type === "v3-multi";
 
-  // What currency does the user receive? Needed for the TAKE_ALL action.
-  const outputCurrency =
-    route.type === "single"
-      ? route.zeroForOne
-        ? route.poolKey.currency1
-        : route.poolKey.currency0
-      : route.path[route.path.length - 1].intermediateCurrency;
-
+  // ── Token approval ──
   if (!params.isNativeIn) {
+    const approvalToken = isV3
+      ? (route.type === "v3-single" ? route.v3TokenIn : weth)
+      : route.type === "single"
+        ? (route.zeroForOne ? route.poolKey.currency0 : route.poolKey.currency1)
+        : route.currencyIn;
+
     await ensurePermit2Approval(
-      inputCurrency,
+      approvalToken,
       routerAddress,
       amountIn,
       params.recipient,
@@ -169,82 +184,142 @@ export async function executeUniswapSwap(
 
   onProgress?.("Encoding swap…");
 
-  // Build the swap action bytes.
-  const swapActionByte =
-    route.type === "single"
-      ? ACT_SWAP_EXACT_IN_SINGLE
-      : ACT_SWAP_EXACT_IN;
-
-  const actions = concat([
-    numberToHex(swapActionByte, { size: 1 }),
-    numberToHex(ACT_SETTLE_ALL, { size: 1 }),
-    numberToHex(ACT_TAKE_ALL, { size: 1 }),
-  ]);
-
-  // Encode the swap params.
-  const swapParam =
-    route.type === "single"
-      ? encodeAbiParameters(SWAP_SINGLE_PARAM_TYPES, [
-          {
-            poolKey: {
-              currency0: route.poolKey.currency0,
-              currency1: route.poolKey.currency1,
-              fee: route.poolKey.fee,
-              tickSpacing: route.poolKey.tickSpacing,
-              hooks: route.poolKey.hooks,
-            },
-            zeroForOne: route.zeroForOne,
-            amountIn,
-            amountOutMinimum: amountOutMin,
-            hookData: "0x" as `0x${string}`,
-          },
-        ])
-      : encodeAbiParameters(SWAP_MULTI_PARAM_TYPES, [
-          {
-            currencyIn: route.currencyIn,
-            path: route.path.map((p) => ({
-              intermediateCurrency: p.intermediateCurrency,
-              fee: p.fee,
-              tickSpacing: p.tickSpacing,
-              hooks: p.hooks,
-              hookData: p.hookData,
-            })),
-            amountIn,
-            amountOutMinimum: amountOutMin,
-          },
-        ]);
-
-  const settleParam = encodeAbiParameters(
-    [{ type: "address" }, { type: "uint256" }],
-    [inputCurrency, amountIn],
-  );
-
-  const takeParam = encodeAbiParameters(
-    [{ type: "address" }, { type: "uint256" }],
-    [outputCurrency, amountOutMin],
-  );
-
-  const v4SwapInput = encodeAbiParameters(
-    [{ type: "bytes" }, { type: "bytes[]" }],
-    [actions, [swapParam, settleParam, takeParam]],
-  );
-
-  const commands = numberToHex(CMD_V4_SWAP, { size: 1 });
-
+  const commandBytes: number[] = [];
+  const inputsArr: `0x${string}`[] = [];
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+
+  // ── WRAP_ETH (if native ETH → WETH route) ──
+  if (needsWrap && params.isNativeIn) {
+    commandBytes.push(CMD_WRAP_ETH);
+    inputsArr.push(
+      encodeAbiParameters(
+        [{ type: "address" }, { type: "uint256" }],
+        [routerAddress, amountIn],
+      ),
+    );
+  }
+
+  if (isV3) {
+    // ── V3 swap ──
+    const packedPath =
+      route.type === "v3-single"
+        ? packV3SinglePath(route.v3TokenIn, route.v3TokenOut, route.v3Fee)
+        : route.v3Path;
+
+    const swapRecipient = needsUnwrap ? routerAddress : params.recipient;
+    const payerIsUser = !(needsWrap && params.isNativeIn);
+
+    commandBytes.push(CMD_V3_SWAP_EXACT_IN);
+    inputsArr.push(
+      encodeAbiParameters(
+        [
+          { type: "address" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "bytes" },
+          { type: "bool" },
+        ],
+        [swapRecipient, amountIn, amountOutMin, packedPath, payerIsUser],
+      ),
+    );
+  } else {
+    // ── V4 swap ──
+    const inputCurrency =
+      route.type === "single"
+        ? (route.zeroForOne ? route.poolKey.currency0 : route.poolKey.currency1)
+        : route.currencyIn;
+    const outputCurrency =
+      route.type === "single"
+        ? (route.zeroForOne ? route.poolKey.currency1 : route.poolKey.currency0)
+        : route.path[route.path.length - 1].intermediateCurrency;
+
+    const swapActionByte =
+      route.type === "single" ? ACT_SWAP_EXACT_IN_SINGLE : ACT_SWAP_EXACT_IN;
+
+    const actions = concat([
+      numberToHex(swapActionByte, { size: 1 }),
+      numberToHex(ACT_SETTLE_ALL, { size: 1 }),
+      numberToHex(ACT_TAKE_ALL, { size: 1 }),
+    ]);
+
+    const swapParam =
+      route.type === "single"
+        ? encodeAbiParameters(SWAP_SINGLE_PARAM_TYPES, [
+            {
+              poolKey: {
+                currency0: route.poolKey.currency0,
+                currency1: route.poolKey.currency1,
+                fee: route.poolKey.fee,
+                tickSpacing: route.poolKey.tickSpacing,
+                hooks: route.poolKey.hooks,
+              },
+              zeroForOne: route.zeroForOne,
+              amountIn,
+              amountOutMinimum: amountOutMin,
+              hookData: "0x" as `0x${string}`,
+            },
+          ])
+        : encodeAbiParameters(SWAP_MULTI_PARAM_TYPES, [
+            {
+              currencyIn: route.currencyIn,
+              path: route.path.map((p) => ({
+                intermediateCurrency: p.intermediateCurrency,
+                fee: p.fee,
+                tickSpacing: p.tickSpacing,
+                hooks: p.hooks,
+                hookData: p.hookData,
+              })),
+              amountIn,
+              amountOutMinimum: amountOutMin,
+            },
+          ]);
+
+    const settleParam = encodeAbiParameters(
+      [{ type: "address" }, { type: "uint256" }],
+      [inputCurrency, amountIn],
+    );
+    const takeParam = encodeAbiParameters(
+      [{ type: "address" }, { type: "uint256" }],
+      [needsUnwrap ? weth : outputCurrency, amountOutMin],
+    );
+
+    const v4SwapInput = encodeAbiParameters(
+      [{ type: "bytes" }, { type: "bytes[]" }],
+      [actions, [swapParam, settleParam, takeParam]],
+    );
+
+    commandBytes.push(CMD_V4_SWAP);
+    inputsArr.push(v4SwapInput);
+  }
+
+  // ── UNWRAP_WETH (if route ends in WETH but user wants ETH) ──
+  if (needsUnwrap) {
+    commandBytes.push(CMD_UNWRAP_WETH);
+    inputsArr.push(
+      encodeAbiParameters(
+        [{ type: "address" }, { type: "uint256" }],
+        [params.recipient, amountOutMin],
+      ),
+    );
+  }
+
+  // ── Build the commands byte string ──
+  let commands: `0x${string}` = "0x";
+  for (const b of commandBytes) {
+    commands = (commands + numberToHex(b, { size: 1 }).slice(2)) as `0x${string}`;
+  }
 
   onProgress?.("Confirm the swap in your wallet…");
 
-  const walletClient = await getWalletClient(wagmiConfig, {
-    chainId: params.chainId,
-  });
+  const walletClient = await getWalletClient(wagmiConfig, { chainId: params.chainId });
+  const sendValue = params.isNativeIn ? amountIn : 0n;
 
   const txHash = await walletClient.writeContract({
     address: routerAddress,
     abi: UNIVERSAL_ROUTER_ABI,
     functionName: "execute",
-    args: [commands, [v4SwapInput], deadline],
-    value: params.isNativeIn ? amountIn : 0n,
+    args: [commands, inputsArr, deadline],
+    value: sendValue,
     chain: wagmiConfig.chains.find((c) => c.id === params.chainId),
   });
 

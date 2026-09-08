@@ -5,10 +5,10 @@ import { jsonError } from "@/lib/security/origin";
 export const dynamic = "force-dynamic";
 
 /**
- * Swap Studio is Robinhood-Chain only. Uniswap V4 (Universal Router + V4Quoter)
- * is the only routing surface. Cross-chain bridging is disabled — trades stay
- * on Robinhood Chain (id 4663) so tokenized stocks (NVDA, TSLA, AAPL, etc.)
- * can be swapped against USDG in one on-chain call.
+ * Swap Studio is Robinhood-Chain only. Uniswap (V4 + V3) via the Universal
+ * Router is the routing surface. Cross-chain bridging is disabled — trades
+ * stay on Robinhood Chain (id 4663) so any ERC-20 token pair with Uniswap
+ * liquidity is swappable, including tokenized stocks.
  */
 export async function GET(request: Request) {
   const session = await getSession(request);

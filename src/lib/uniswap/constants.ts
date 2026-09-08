@@ -75,7 +75,18 @@ export const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3" as `0x${stri
 export const NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 export const ZERO_HOOKS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
+/* ─── V3 QuoterV2 per chain (null = not deployed) ─── */
+export const V3_QUOTER: Partial<Record<UniswapChainId, `0x${string}`>> = {
+  4663: "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
+};
+
+/** V3 fee tiers — try all four to discover any pool. */
+export const V3_FEE_TIERS = [100, 500, 3000, 10000] as const;
+
 /* ─── Universal Router command bytes ─── */
+export const CMD_V3_SWAP_EXACT_IN = 0x00;
+export const CMD_WRAP_ETH = 0x0b;
+export const CMD_UNWRAP_WETH = 0x0c;
 export const CMD_V4_SWAP = 0x10;
 
 /* ─── V4Router action bytes ─── */
@@ -224,6 +235,34 @@ export const PERMIT2_ABI = [
       { name: "nonce", type: "uint48" },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+/* ─── ABI: V3 QuoterV2 — quoteExactInputSingle ─── */
+export const V3_QUOTER_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "fee", type: "uint24" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "quoteExactInputSingle",
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "sqrtPriceX96After", type: "uint160" },
+      { name: "initializedTicksCrossed", type: "uint32" },
+      { name: "gasEstimate", type: "uint256" },
+    ],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ] as const;

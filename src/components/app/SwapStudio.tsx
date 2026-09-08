@@ -186,6 +186,8 @@ export function SwapStudio({
           recipient: address as `0x${string}`,
           isNativeIn: uniQuote.isNativeIn,
           isNativeOut: uniQuote.isNativeOut,
+          needsWrapIn: uniQuote.needsWrapIn,
+          needsUnwrapOut: uniQuote.needsUnwrapOut,
         },
         (step) => setProgress(step),
       );
@@ -263,10 +265,14 @@ export function SwapStudio({
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Route</p>
         <p className="font-mono text-xs text-zinc-500">
           {quote
-            ? quote.quote.route?.type === "multi"
-              ? `Uniswap V4 · multi-hop (${quote.quote.route.path.length} pools) on Robinhood Chain`
-              : "Uniswap V4 · direct on-chain swap on Robinhood Chain"
-            : "Uniswap V4 finds the best pool for this pair on Robinhood Chain."}
+            ? (() => {
+                const rt = quote.quote.route?.type;
+                if (rt === "v3-multi") return "Uniswap V3 · multi-hop on Robinhood Chain";
+                if (rt === "v3-single") return "Uniswap V3 · direct on Robinhood Chain";
+                if (rt === "multi") return `Uniswap V4 · multi-hop (${(quote.quote.route as { path: unknown[] }).path?.length ?? 2} pools) on Robinhood Chain`;
+                return "Uniswap V4 · direct on Robinhood Chain";
+              })()
+            : "Uniswap finds the best pool for this pair on Robinhood Chain (V4 + V3)."}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">

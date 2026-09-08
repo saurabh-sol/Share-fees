@@ -5,9 +5,10 @@ import { quoteUniswap, UniswapQuoteError } from "@/lib/uniswap/quote";
 /**
  * The route the client should execute against.
  *
- * - `single` — one Uniswap V4 pool. Client encodes SWAP_EXACT_IN_SINGLE.
- * - `multi`  — 2+ hops through hub currencies (USDG, ETH). Client encodes
- *              SWAP_EXACT_IN with the PathKey[] chain.
+ * - `single`    — one Uniswap V4 pool. Client encodes SWAP_EXACT_IN_SINGLE.
+ * - `multi`     — V4 2+ hops through hub currencies. Client encodes SWAP_EXACT_IN.
+ * - `v3-single` — one Uniswap V3 pool via Universal Router V3_SWAP_EXACT_IN.
+ * - `v3-multi`  — V3 2+ hops via packed path bytes.
  */
 export type UniswapRoute =
   | {
@@ -19,6 +20,16 @@ export type UniswapRoute =
       type: "multi";
       currencyIn: `0x${string}`;
       path: PathKey[];
+    }
+  | {
+      type: "v3-single";
+      v3TokenIn: `0x${string}`;
+      v3TokenOut: `0x${string}`;
+      v3Fee: number;
+    }
+  | {
+      type: "v3-multi";
+      v3Path: `0x${string}`;
     };
 
 export type UniswapQuoteView = {
@@ -34,6 +45,10 @@ export type UniswapQuoteView = {
   tokenOut: string;
   isNativeIn: boolean;
   isNativeOut: boolean;
+  /** True when ETH input must be wrapped to WETH before the swap. */
+  needsWrapIn: boolean;
+  /** True when WETH output must be unwrapped to ETH after the swap. */
+  needsUnwrapOut: boolean;
   /** The concrete route the browser executes. */
   route: UniswapRoute;
   action: {
@@ -155,21 +170,28 @@ export async function routeSwapQuote(input: {
 
   // Build the execution route. For single-hop we also expose `poolKey` /
   // `zeroForOne` at the top level so older client builds keep working.
-  const route: UniswapRoute = result.route === "single"
-    ? { type: "single", poolKey: result.poolKey, zeroForOne: result.zeroForOne }
-    : { type: "multi", currencyIn: result.currencyIn, path: result.path };
+  let route: UniswapRoute;
+  if (result.route === "single") {
+    route = { type: "single", poolKey: result.poolKey, zeroForOne: result.zeroForOne };
+  } else if (result.route === "multi") {
+    route = { type: "multi", currencyIn: result.currencyIn, path: result.path };
+  } else if (result.route === "v3-single") {
+    route = { type: "v3-single", v3TokenIn: result.v3TokenIn, v3TokenOut: result.v3TokenOut, v3Fee: result.v3Fee };
+  } else {
+    route = { type: "v3-multi", v3Path: result.v3Path };
+  }
 
-  const legacyPoolKey: PoolKey = result.route === "single"
+  const zeroAddr = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+  const legacyPoolKey: PoolKey = "poolKey" in result
     ? result.poolKey
     : {
-        // Synthetic placeholder for multi-hop — represents the first hop's pool.
-        currency0: result.path[0].intermediateCurrency,
-        currency1: result.currencyIn,
+        currency0: "currencyIn" in result ? result.currencyIn : zeroAddr,
+        currency1: zeroAddr,
         fee: result.fee,
         tickSpacing: result.tickSpacing,
-        hooks: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+        hooks: zeroAddr,
       };
-  const legacyZeroForOne = result.route === "single" ? result.zeroForOne : true;
+  const legacyZeroForOne = "zeroForOne" in result ? result.zeroForOne : true;
 
   const quoteView: UniswapQuoteView = {
     provider: "uniswap",
@@ -182,6 +204,8 @@ export async function routeSwapQuote(input: {
     tokenOut: result.tokenOut,
     isNativeIn: result.isNativeIn,
     isNativeOut: result.isNativeOut,
+    needsWrapIn: result.needsWrapIn ?? false,
+    needsUnwrapOut: result.needsUnwrapOut ?? false,
     route,
     action: {
       fromChainId: input.fromChainId,
