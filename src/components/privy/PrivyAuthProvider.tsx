@@ -4,11 +4,6 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { privyConfigBase } from "@/lib/privy/config";
 
-/** Privy app IDs are 20+ alphanumeric chars (e.g. cmtsvurwk00h80ckz4zyq6wwv). */
-function isValidPrivyAppId(id: string): boolean {
-  return /^[a-z0-9]{20,}$/i.test(id.trim());
-}
-
 function PrivyInitStatus({ children }: { children: ReactNode }) {
   const [slowInit, setSlowInit] = useState(false);
 
@@ -98,32 +93,6 @@ export function PrivyAuthProvider({
           <span className="font-mono text-zinc-200">NEXT_PUBLIC_PRIVY_APP_ID</span>{" "}
           or <span className="font-mono text-zinc-200">PRIVY_APP_ID</span> in your environment.
         </p>
-      </div>
-    );
-  }
-
-  if (!isValidPrivyAppId(cleanId)) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
-        <div className="max-w-md text-center">
-          <p className="text-sm text-accent">Invalid Privy App ID format</p>
-          <p className="mt-2 font-mono text-xs text-zinc-500">
-            Got: &quot;{cleanId.slice(0, 8)}…&quot; (length {cleanId.length})
-          </p>
-          <p className="mt-3 text-xs text-zinc-400">
-            A valid App ID starts with <span className="font-mono text-zinc-200">cl</span> and is
-            25+ characters. Copy it from{" "}
-            <a
-              href="https://dashboard.privy.io"
-              className="underline hover:text-zinc-200"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              dashboard.privy.io
-            </a>{" "}
-            → Settings → App ID.
-          </p>
-        </div>
       </div>
     );
   }
