@@ -1,0 +1,94 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { PublicDeskStats } from "@/lib/stats/public";
+
+function formatCount(value: number | null) {
+  if (value == null) return "—";
+  return value.toLocaleString("en-US");
+}
+
+function formatUsd(value: number | null) {
+  if (value == null) return "—";
+  return `$${value.toLocaleString("en-US")}`;
+}
+
+const LIVE_METRICS = [
+  { key: "activeWallets" as const, label: "Active wallets" },
+  { key: "fillsCredited" as const, label: "Fills credited" },
+  { key: "creditPaidUsd" as const, label: "Credit posted" },
+] as const;
+
+export function DeskStats() {
+  const [stats, setStats] = useState<PublicDeskStats | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/v1/stats/public")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("stats_unavailable");
+        return (await response.json()) as PublicDeskStats;
+      })
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (failed) return null;
+
+  return (
+    <dl className="mt-4 grid grid-cols-3 divide-x divide-white/8 border-y border-white/8">
+      {LIVE_METRICS.map((item) => {
+        const raw = stats?.[item.key] ?? null;
+        const display =
+          item.key === "creditPaidUsd" ? formatUsd(raw) : formatCount(raw);
+        return (
+          <div key={item.key} className="py-4 first:pl-0 last:pr-0 md:py-5">
+            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+              {item.label}
+            </dt>
+            <dd className="mt-1.5 font-mono text-lg tabular-nums tracking-tight text-accent sm:text-xl">
+              {display}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
+export function AccountStripStats() {
+  const [stats, setStats] = useState<PublicDeskStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/v1/stats/public")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as PublicDeskStats;
+      })
+      .then((data) => {
+        if (!cancelled && data) setStats(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!stats || stats.activeWallets === 0) return null;
+
+  return (
+    <p className="mt-6 font-mono text-sm text-zinc-400">
+      <span className="tabular-nums text-zinc-200">{stats.activeWallets.toLocaleString("en-US")}</span>{" "}
+      wallet{stats.activeWallets === 1 ? "" : "s"} have earned credit on the desk.
+    </p>
+  );
+}

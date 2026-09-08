@@ -5,6 +5,7 @@ import { DeskMap } from "@/components/landing/DeskMap";
 import { DitherSwapArt } from "@/components/landing/DitherSwapArt";
 import { FaqList } from "@/components/landing/FaqList";
 import { HeroCtaRow } from "@/components/landing/HeroCtaRow";
+import { DeskStats } from "@/components/landing/DeskStats";
 import { HeroMetrics } from "@/components/landing/HeroMetrics";
 import { HowItPays } from "@/components/landing/HowItPays";
 import { PublishedLimits } from "@/components/landing/PublishedLimits";
@@ -41,6 +42,7 @@ export default function HomePage() {
                 for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
               </p>
               <HeroMetrics />
+              <DeskStats />
               <HeroCtaRow />
               <div className="mt-10">
                 <CreditCalculator />

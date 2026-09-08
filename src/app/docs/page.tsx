@@ -37,6 +37,10 @@ export default function DocsHomePage() {
         Notional is the USD value of the fill, not the token amount. A $40 swap in a large-cap token is still $40.
         Changing the published rule later does not rewrite rows that already posted.
       </DocsP>
+      <DocsP>
+        The landing page shows aggregate desk stats (active wallets, fills credited, credit posted). Those numbers
+        are totals only — no wallet addresses or transaction hashes are published.
+      </DocsP>
 
       <DocsH2 id="who-it-is-for">Who it is for</DocsH2>
       <DocsUl>

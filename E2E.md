@@ -242,6 +242,19 @@ npm run build
 
 `GET /api/v1/health` must report database + Redis. Production also requires `CRON_SECRET`.
 
+### Public desk stats
+
+`GET /api/v1/stats/public` — no auth. Cached five minutes server-side and via `Cache-Control`.
+
+| Field | Meaning |
+| --- | --- |
+| `activeWallets` | Distinct wallets with at least one credited fill (swap + website credit posted) |
+| `fillsCredited` | Count of credited fills |
+| `creditPaidUsd` | Total website credit posted, rounded to whole dollars |
+| `swapVolumeUsd` | Total USD notional of credited fills, rounded to whole dollars |
+
+Mock/paper fills (`swaps.source = mock`) are excluded. No addresses or tx hashes are returned.
+
 Vercel: push `main`. Set the production secrets on the project. Minute jobs are already in `vercel.json`.
 
 Docker:

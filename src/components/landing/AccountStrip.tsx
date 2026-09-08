@@ -1,3 +1,4 @@
+import { AccountStripStats } from "./DeskStats";
 import { PeekAccountButton } from "./PeekAccountButton";
 
 export function AccountStrip() {
@@ -13,6 +14,7 @@ export function AccountStrip() {
             Connect once. Credit, USDG, and LLM sit on that address. Peek the desk, then sign. MetaMask, Phantom, and
             Coinbase Wallet are detected from the extension.
           </p>
+          <AccountStripStats />
           <div className="mt-10">
             <PeekAccountButton href="/login" label="Open the desk" />
           </div>
