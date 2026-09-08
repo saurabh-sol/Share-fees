@@ -11,28 +11,26 @@ const COLUMNS: Array<{
       { href: "/docs", label: "Docs" },
       { href: "/docs/how-it-pays", label: "How it pays" },
       { href: "/docs/api", label: "LLM API" },
-      { href: "/app/swap", label: "Swap" },
+      { href: "/app/chat", label: "Chat" },
     ],
   },
   {
     title: "Desk",
     links: [
-      { href: "#desk", label: "Four pages" },
       { href: "/login", label: "Connect wallet" },
       { href: "/app/claims", label: "Activity" },
       { href: "/app/redeem", label: "Redeem" },
+      { href: "/app/swap", label: "Swap" },
     ],
   },
   {
-    title: "Rules",
+    title: "Legal",
     links: [
-      { href: "#limits", label: "Limits" },
-      { href: "#rules", label: "Will not do" },
       { href: "/docs/faq", label: "FAQ" },
-      { href: "/api/v1/health", label: "Health" },
       { href: robinhoodAddressUrl(USDG_REWARD_VAULT), label: "Contract", external: true },
       { href: "/privacy", label: "Privacy" },
       { href: "/terms", label: "Terms" },
+      { href: "https://x.com/useaccrued", label: "Twitter / X", external: true },
     ],
   },
 ];

@@ -1,7 +1,7 @@
 import { DiscordLogo, GithubLogo, Globe, XLogo } from "@phosphor-icons/react/dist/ssr";
 
 const SOCIALS = [
-  { href: "https://x.com", label: "X", Icon: XLogo },
+  { href: "https://x.com/useaccrued", label: "X", Icon: XLogo },
   { href: "https://discord.com", label: "Discord", Icon: DiscordLogo },
   { href: "https://github.com", label: "GitHub", Icon: GithubLogo },
   { href: "/", label: "Website", Icon: Globe },
