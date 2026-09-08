@@ -7,6 +7,7 @@ import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche } from "viem
 import { robinhoodChain } from "@/lib/chains/robinhood";
 import {
   UNIVERSAL_ROUTER,
+  V3_SWAP_ROUTER_02,
   WRAPPED_NATIVE,
   NATIVE_ADDRESS,
   type UniswapChainId,
@@ -85,9 +86,14 @@ export async function verifyUniswapFill(input: {
     hash: input.txHash as `0x${string}`,
   });
 
-  if (!addressesEqual(tx.to ?? "", routerAddress)) {
+  const swapRouter02 = V3_SWAP_ROUTER_02[input.chainId];
+  const isValidRouter =
+    addressesEqual(tx.to ?? "", routerAddress) ||
+    (swapRouter02 != null && addressesEqual(tx.to ?? "", swapRouter02));
+
+  if (!isValidRouter) {
     throw new UniswapSettleError(
-      "Transaction was not sent to the Uniswap Universal Router.",
+      "Transaction was not sent to a known Uniswap router.",
       400,
     );
   }

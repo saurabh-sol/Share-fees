@@ -80,6 +80,16 @@ export const V3_QUOTER: Partial<Record<UniswapChainId, `0x${string}`>> = {
   4663: "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
 };
 
+/**
+ * V3 SwapRouter02 per chain.
+ * Used for V3 swaps instead of UniversalRouter when the chain's UR is a
+ * modified fork (e.g. Robinhood Chain adds minHopPriceX36 to V4 structs,
+ * which makes stock UR calldata revert).
+ */
+export const V3_SWAP_ROUTER_02: Partial<Record<UniswapChainId, `0x${string}`>> = {
+  4663: "0xcaf681a66d020601342297493863e78c959e5cb2",
+};
+
 /** V3 fee tiers — try all four to discover any pool. */
 export const V3_FEE_TIERS = [100, 500, 3000, 10000] as const;
 
@@ -263,6 +273,76 @@ export const V3_QUOTER_ABI = [
       { name: "gasEstimate", type: "uint256" },
     ],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+/* ─── ABI: V3 SwapRouter02 ─── */
+export const SWAP_ROUTER_02_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "exactInputSingle",
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { name: "path", type: "bytes" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "exactInput",
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "deadline", type: "uint256" },
+      { name: "data", type: "bytes[]" },
+    ],
+    name: "multicall",
+    outputs: [{ name: "results", type: "bytes[]" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "amountMinimum", type: "uint256" },
+      { name: "recipient", type: "address" },
+    ],
+    name: "unwrapWETH9",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "refundETH",
+    outputs: [],
+    stateMutability: "payable",
     type: "function",
   },
 ] as const;
