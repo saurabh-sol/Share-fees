@@ -42,8 +42,8 @@ describe("official provider shapes", () => {
     expect(body.error.code).toBe("model_not_found");
     expect(body.error.param).toBe("model");
     const request = new Request("http://localhost/v1/messages", {
-      headers: { "x-api-key": "t2c_test" },
+      headers: { "x-api-key": "acc_test" },
     });
-    expect(readGatewayApiKey(request)).toBe("Bearer t2c_test");
+    expect(readGatewayApiKey(request)).toBe("Bearer acc_test");
   });
 });

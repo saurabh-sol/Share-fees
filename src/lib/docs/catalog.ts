@@ -131,7 +131,7 @@ export const DOCS_PAGES: DocsPage[] = [
     title: "LLM credits",
     description: "Redeem a metered acc_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
     section: "Take credit",
-    keywords: ["t2c", "key", "openai", "anthropic", "deepseek", "google", "grok", "xai"],
+    keywords: ["acc", "accrued", "key", "openai", "anthropic", "deepseek", "google", "grok", "xai"],
     headings: [
       { id: "mint-a-key", title: "Mint a key" },
       { id: "shown-once", title: "Shown once" },

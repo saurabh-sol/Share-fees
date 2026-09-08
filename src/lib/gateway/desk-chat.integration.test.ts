@@ -95,7 +95,7 @@ describe("desk chat", () => {
       },
       db,
     );
-    expect(redeemed.plaintextKey?.startsWith("t2c_")).toBe(true);
+    expect(redeemed.plaintextKey?.startsWith("acc_")).toBe(true);
 
     const before = await spendableLlmCents(userId, db);
     expect(before.spendableCents).toBe(100);

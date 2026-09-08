@@ -62,10 +62,10 @@ describe("Google Gemini gateway", () => {
 
   it("reads x-goog-api-key and ?key= like official Gemini clients", () => {
     const header = new Request("http://localhost/v1beta/models/gemini-2.5-flash:generateContent", {
-      headers: { "x-goog-api-key": "t2c_google" },
+      headers: { "x-goog-api-key": "acc_google" },
     });
-    expect(readGatewayApiKey(header)).toBe("Bearer t2c_google");
-    const query = new Request("http://localhost/v1beta/models/gemini-2.5-flash:generateContent?key=t2c_query");
-    expect(readGatewayApiKey(query)).toBe("Bearer t2c_query");
+    expect(readGatewayApiKey(header)).toBe("Bearer acc_google");
+    const query = new Request("http://localhost/v1beta/models/gemini-2.5-flash:generateContent?key=acc_query");
+    expect(readGatewayApiKey(query)).toBe("Bearer acc_query");
   });
 });
