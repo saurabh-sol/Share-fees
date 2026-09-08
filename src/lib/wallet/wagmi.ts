@@ -1,25 +1,18 @@
 import { createConfig, http, injected } from "wagmi";
 import { coinbaseWallet, walletConnect } from "wagmi/connectors";
-import {
-  arbitrum,
-  avalanche,
-  base,
-  blast,
-  bsc,
-  linea,
-  mainnet,
-  optimism,
-  polygon,
-  scroll,
-  sepolia,
-} from "wagmi/chains";
+import { mainnet } from "wagmi/chains";
 import { robinhoodChain } from "@/lib/chains/robinhood";
 import { BRAND_NAME } from "@/lib/brand";
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
+/**
+ * Robinhood Chain is the PRIMARY and DEFAULT chain.
+ * Mainnet is kept only so wallets can resolve ENS names.
+ * All swaps, claims, and approvals happen on Robinhood Chain (4663).
+ */
 export const wagmiConfig = createConfig({
-  chains: [mainnet, optimism, arbitrum, base, polygon, bsc, avalanche, linea, scroll, blast, robinhoodChain, sepolia],
+  chains: [robinhoodChain, mainnet],
   connectors: [
     injected(),
     coinbaseWallet({
@@ -36,18 +29,8 @@ export const wagmiConfig = createConfig({
       : []),
   ],
   transports: {
-    [mainnet.id]: http(),
-    [optimism.id]: http(),
-    [arbitrum.id]: http(),
-    [base.id]: http(),
-    [polygon.id]: http(),
-    [bsc.id]: http(),
-    [avalanche.id]: http(),
-    [linea.id]: http(),
-    [scroll.id]: http(),
-    [blast.id]: http(),
     [robinhoodChain.id]: http("https://rpc.mainnet.chain.robinhood.com"),
-    [sepolia.id]: http(),
+    [mainnet.id]: http(),
   },
   ssr: true,
 });

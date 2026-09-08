@@ -159,9 +159,18 @@ export async function executeUniswapSwap(
   const amountOutMin = BigInt(params.amountOutMinimum);
   const weth = WRAPPED_NATIVE[params.chainId];
 
+  // Force wallet to Robinhood Chain — fees must be paid in RH ETH, never mainnet.
+  const chainId = params.chainId as (typeof wagmiConfig)["chains"][number]["id"];
   try {
-    await switchChain(wagmiConfig, { chainId: params.chainId });
-  } catch { /* already on the right chain */ }
+    await switchChain(wagmiConfig, { chainId });
+  } catch (err) {
+    // Only ignore if wallet is already on the correct chain.
+    const walletClient = await getWalletClient(wagmiConfig).catch(() => null);
+    const currentChain = walletClient ? await walletClient.getChainId() : null;
+    if (currentChain !== params.chainId) {
+      throw new Error("Please switch your wallet to Robinhood Chain (4663) to swap. Gas fees are paid in Robinhood ETH.");
+    }
+  }
 
   const isV3 = route.type === "v3-single" || route.type === "v3-multi";
 
@@ -275,7 +284,7 @@ async function executeV3ViaSwapRouter02(
   onProgress?.("Waiting for confirmation…");
   await waitForTransactionReceipt(wagmiConfig, {
     hash: txHash,
-    chainId: params.chainId,
+    chainId: params.chainId as (typeof wagmiConfig)["chains"][number]["id"],
     confirmations: 1,
   });
 
@@ -418,7 +427,8 @@ async function executeV4ViaUniversalRouter(
 
   onProgress?.("Confirm the swap in your wallet…");
 
-  const walletClient = await getWalletClient(wagmiConfig, { chainId: params.chainId });
+  const cid = params.chainId as (typeof wagmiConfig)["chains"][number]["id"];
+  const walletClient = await getWalletClient(wagmiConfig, { chainId: cid });
   const sendValue = params.isNativeIn ? amountIn : 0n;
 
   const txHash = await walletClient.writeContract({
@@ -433,7 +443,7 @@ async function executeV4ViaUniversalRouter(
   onProgress?.("Waiting for confirmation…");
   await waitForTransactionReceipt(wagmiConfig, {
     hash: txHash,
-    chainId: params.chainId,
+    chainId: cid,
     confirmations: 1,
   });
 
@@ -453,6 +463,7 @@ async function ensureDirectApproval(
   onProgress?: (step: string) => void,
 ) {
   if (token.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) return;
+  const cid = chainId as (typeof wagmiConfig)["chains"][number]["id"];
 
   onProgress?.("Checking token allowance…");
 
@@ -461,7 +472,7 @@ async function ensureDirectApproval(
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [owner, spender],
-    chainId,
+    chainId: cid,
   })) as bigint;
 
   if (currentAllowance < amount) {
@@ -471,11 +482,11 @@ async function ensureDirectApproval(
       abi: ERC20_ABI,
       functionName: "approve",
       args: [spender, BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")],
-      chainId,
+      chainId: cid,
     });
     await waitForTransactionReceipt(wagmiConfig, {
       hash: approveTx,
-      chainId,
+      chainId: cid,
       confirmations: 1,
     });
   }
@@ -493,8 +504,8 @@ async function ensurePermit2Approval(
   chainId: UniswapChainId,
   onProgress?: (step: string) => void,
 ) {
-  // Native ETH doesn't need Permit2. Sanity guard.
   if (token.toLowerCase() === NATIVE_ADDRESS.toLowerCase()) return;
+  const cid = chainId as (typeof wagmiConfig)["chains"][number]["id"];
 
   onProgress?.("Checking token allowance…");
 
@@ -503,7 +514,7 @@ async function ensurePermit2Approval(
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [owner, PERMIT2],
-    chainId,
+    chainId: cid,
   })) as bigint;
 
   if (erc20Allowance < amount) {
@@ -513,11 +524,11 @@ async function ensurePermit2Approval(
       abi: ERC20_ABI,
       functionName: "approve",
       args: [PERMIT2, BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")],
-      chainId,
+      chainId: cid,
     });
     await waitForTransactionReceipt(wagmiConfig, {
       hash: approveTx,
-      chainId,
+      chainId: cid,
       confirmations: 1,
     });
   }
@@ -527,7 +538,7 @@ async function ensurePermit2Approval(
     abi: PERMIT2_ABI,
     functionName: "allowance",
     args: [owner, token, router],
-    chainId,
+    chainId: cid,
   })) as readonly [bigint, number, number];
 
   const currentAmount = permit2Allowance[0];
@@ -537,17 +548,17 @@ async function ensurePermit2Approval(
   if (currentAmount < amount || expiration <= now) {
     onProgress?.("Approve Universal Router on Permit2…");
     const maxUint160 = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
-    const futureExpiry = now + 30 * 24 * 60 * 60; // 30 days
+    const futureExpiry = now + 30 * 24 * 60 * 60;
     const permit2Tx = await writeContract(wagmiConfig, {
       address: PERMIT2,
       abi: PERMIT2_ABI,
       functionName: "approve",
       args: [token, router, maxUint160, futureExpiry],
-      chainId,
+      chainId: cid,
     });
     await waitForTransactionReceipt(wagmiConfig, {
       hash: permit2Tx,
-      chainId,
+      chainId: cid,
       confirmations: 1,
     });
   }
