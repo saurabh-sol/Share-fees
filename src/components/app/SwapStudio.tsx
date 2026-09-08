@@ -8,7 +8,7 @@ import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
-import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDT } from "@/lib/chains/robinhood";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
@@ -23,9 +23,9 @@ type QuotePayload = {
 
 const NATIVE = "0x0000000000000000000000000000000000000000";
 
-// Default pair: NVDA → USDG (users land on stock trading by default).
+// Default pair: NVDA → USDT (users land on stock trading by default).
 const DEFAULT_FROM = ROBINHOOD_STOCKS[0]?.address ?? NATIVE;
-const DEFAULT_TO = ROBINHOOD_USDG;
+const DEFAULT_TO = ROBINHOOD_USDT;
 
 const STOCK_SYMBOLS = new Set(ROBINHOOD_STOCKS.map((s) => s.symbol));
 
@@ -330,12 +330,23 @@ export function SwapStudio({
         >
           {phase === "executing" ? "Signing…" : phase === "settling" ? "Settling…" : "Swap"}
         </button>
-        {progress ? <p className="font-mono text-xs text-zinc-500">{progress}</p> : null}
-        {message ? (
-          <p className={phase === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"} role="status">
-            {message}
-          </p>
-        ) : null}
+        {phase === "success" ? (
+          <div className="animate-in fade-in slide-in-from-bottom-2 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+            <p className="flex items-center gap-2 font-mono text-sm text-emerald-400">
+              <span className="text-lg">✓</span> Swap successful!
+            </p>
+            {message ? <p className="mt-1 text-sm text-zinc-300">{message}</p> : null}
+          </div>
+        ) : (
+          <>
+            {progress ? <p className="font-mono text-xs text-zinc-500">{progress}</p> : null}
+            {message ? (
+              <p className={phase === "error" ? "text-sm text-accent" : "text-sm text-zinc-300"} role="status">
+                {message}
+              </p>
+            ) : null}
+          </>
+        )}
         {quote && !quote.qualifies ? (
           <p className="text-sm text-zinc-500">
             Below {money(quote.rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS)} the swap still runs. The credit is stored as

@@ -1,6 +1,6 @@
 import { createPublicClient, http, type Chain } from "viem";
 import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche } from "viem/chains";
-import { robinhoodChain, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
+import { robinhoodChain, ROBINHOOD_USDG, ROBINHOOD_USDT } from "@/lib/chains/robinhood";
 import {
   V4_POOL_CONFIGS,
   V4_QUOTER,
@@ -141,6 +141,7 @@ function tokenVariants(
 function hubCandidates(chainId: UniswapChainId): `0x${string}`[] {
   if (chainId === 4663) {
     return [
+      ROBINHOOD_USDT.toLowerCase() as `0x${string}`,
       ROBINHOOD_USDG.toLowerCase() as `0x${string}`,
       WRAPPED_NATIVE[4663].toLowerCase() as `0x${string}`,
       NATIVE_LC,

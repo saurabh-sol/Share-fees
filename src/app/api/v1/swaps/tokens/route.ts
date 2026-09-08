@@ -3,7 +3,7 @@ import type { LifiToken } from "@/lib/lifi/http";
 import {
   ROBINHOOD_CHAIN_ID,
   ROBINHOOD_STOCKS,
-  ROBINHOOD_USDG,
+  ROBINHOOD_USDT,
   ROBINHOOD_WETH,
 } from "@/lib/chains/robinhood";
 import { jsonError } from "@/lib/security/origin";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 /**
  * Ordered token list for Robinhood Chain.
  * Stocks come first so users land on equity trading by default.
- * USDG is the quote currency for all stock pairs.
+ * USDT is the primary quote stablecoin (native Robinhood Chain deployment).
  */
 function buildRobinhoodTokens(): LifiToken[] {
   const stocks: LifiToken[] = ROBINHOOD_STOCKS.map((s) => ({
@@ -28,13 +28,13 @@ function buildRobinhoodTokens(): LifiToken[] {
 
   const stables: LifiToken[] = [
     {
-      address: ROBINHOOD_USDG,
-      symbol: "USDG",
-      name: "Global Dollar",
+      address: ROBINHOOD_USDT,
+      symbol: "USDT",
+      name: "Tether USD",
       decimals: 6,
       chainId: ROBINHOOD_CHAIN_ID,
       priceUSD: "1.00",
-      logoURI: "https://coin-images.coingecko.com/coins/images/51281/small/GDN_USDG_Token_200x200.png",
+      logoURI: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
     },
   ];
 
@@ -89,7 +89,7 @@ function buildRobinhoodTokens(): LifiToken[] {
     { address: "0x47F93d52cBeC7C6D2CfC080e154002370a60dAEA", symbol: "ASML",        name: "ASML · Robinhood Token",          decimals: 18, chainId: ROBINHOOD_CHAIN_ID, logoURI: "https://cdn.robinhood.com/ncw_assets/logos/0x47f93d52cbec7c6d2cfc080e154002370a60daea.png" },
   ];
 
-  // Stocks first, trending tokens, then USDG (quote), then ETH/WETH (gas).
+  // Stocks first, trending tokens, then USDT (quote), then ETH/WETH (gas).
   return [...stocks, ...trending, ...stables, ...gas];
 }
 
