@@ -66,7 +66,7 @@ const STEPS: {
 
 export function HowItPays() {
   return (
-    <section id="mechanics" className="border-t border-white/8">
+    <section id="mechanics" className="scroll-mt-16 border-t border-white/8">
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-end gap-10 px-4 py-16 md:grid-cols-[1.2fr_0.8fr] md:px-8 md:py-24">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[04] How it pays</p>

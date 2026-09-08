@@ -4,8 +4,9 @@ import { CreditCalculator } from "@/components/landing/CreditCalculator";
 import { DeskMap } from "@/components/landing/DeskMap";
 import { DitherSwapArt } from "@/components/landing/DitherSwapArt";
 import { FaqList } from "@/components/landing/FaqList";
+import { HeroCtaRow } from "@/components/landing/HeroCtaRow";
+import { HeroMetrics } from "@/components/landing/HeroMetrics";
 import { HowItPays } from "@/components/landing/HowItPays";
-import { NotchedCta } from "@/components/landing/NotchedCta";
 import { PublishedLimits } from "@/components/landing/PublishedLimits";
 import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
@@ -18,29 +19,40 @@ export default function HomePage() {
     <div className="min-h-[100dvh]">
       <SiteHeader />
       <main>
-        <section className="mx-auto grid min-h-[100dvh] max-w-[1400px] grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 md:grid-cols-[1.05fr_0.95fr] md:px-8">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
-              [01] Wallet-native rewards
-            </p>
-            <h1 className="mt-6 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 sm:text-5xl md:text-7xl">
-              You swap. We credit.
-            </h1>
-            <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400">
-              Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits for
-              Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
-            </p>
-            <div className="mt-10">
-              <NotchedCta href="/login">Connect wallet</NotchedCta>
+        <section className="relative overflow-hidden border-b border-white/8">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 desk-glass-canvas opacity-60"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 wallet-grid-bg opacity-[0.35]"
+          />
+          <div className="relative mx-auto grid min-h-[min(100dvh,920px)] max-w-[1400px] grid-cols-1 items-center gap-12 px-4 py-14 sm:py-16 md:grid-cols-[1.08fr_0.92fr] md:gap-10 md:px-8 md:py-20">
+            <div className="min-w-0">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
+                [01] Wallet-native rewards
+              </p>
+              <h1 className="mt-5 max-w-[13ch] text-4xl tracking-tighter leading-[0.95] text-zinc-100 sm:text-5xl md:text-[4.25rem] md:leading-none">
+                You swap. We credit.
+              </h1>
+              <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400 md:text-[17px] md:leading-relaxed">
+                Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits
+                for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
+              </p>
+              <HeroMetrics />
+              <HeroCtaRow />
+              <div className="mt-10">
+                <CreditCalculator />
+              </div>
+              <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+                Detected from the extension · signed with SIWE / SIWS
+              </p>
             </div>
-            <div className="mt-10">
-              <CreditCalculator />
+            <div className="md:justify-self-end md:pt-4">
+              <DitherSwapArt />
             </div>
-            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
-              Detected from the extension · signed with SIWE / SIWS
-            </p>
           </div>
-          <DitherSwapArt />
         </section>
 
         <section className="border-t border-white/8">

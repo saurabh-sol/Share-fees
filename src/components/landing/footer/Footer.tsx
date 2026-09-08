@@ -33,7 +33,7 @@ function FooterBrand() {
         DeepSeek, Google, and Grok-compatible clients.
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        <NotchedCta href="/login">Get started</NotchedCta>
+        <NotchedCta href="/login">Connect wallet</NotchedCta>
         <a
           href={robinhoodAddressUrl(USDG_REWARD_VAULT)}
           target="_blank"

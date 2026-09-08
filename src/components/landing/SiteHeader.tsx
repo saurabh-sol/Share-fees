@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { NotchedCta } from "./NotchedCta";
 
-export function SiteHeader({
-  ctaHref = "/login",
-  ctaLabel = "Get started",
-}: {
-  ctaHref?: string;
-  ctaLabel?: string;
-}) {
+export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-white/8 bg-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 md:px-8">
@@ -41,10 +35,7 @@ export function SiteHeader({
           </a>
         </nav>
         <div className="flex items-center gap-3 sm:gap-5">
-          <Link href="/login" className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-300 md:inline">
-            Sign in
-          </Link>
-          <NotchedCta href={ctaHref}>{ctaLabel}</NotchedCta>
+          <NotchedCta href="/login">Connect wallet</NotchedCta>
         </div>
       </div>
       <nav className="flex gap-5 overflow-x-auto border-t border-white/8 px-4 py-2.5 text-sm text-zinc-400 md:hidden">
@@ -63,9 +54,6 @@ export function SiteHeader({
         <a href="#faq" className="shrink-0 hover:text-zinc-100">
           FAQ
         </a>
-        <Link href="/login" className="shrink-0 hover:text-zinc-100">
-          Sign in
-        </Link>
       </nav>
     </header>
   );

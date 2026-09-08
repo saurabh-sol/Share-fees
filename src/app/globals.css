@@ -16,6 +16,12 @@ html {
   color-scheme: dark;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   background: #141416;
   color: #e4e4e7;
@@ -70,6 +76,76 @@ pre {
   .desk-skeleton {
     animation: none;
   }
+}
+
+/* Hero range — custom track; accent fill is a separate div for crisp rendering */
+.hero-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hero-range:active {
+  cursor: grabbing;
+}
+
+.hero-range:focus-visible {
+  outline: none;
+}
+
+.hero-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px #141416, 0 0 0 4px #c23a3a;
+}
+
+.hero-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px #141416, 0 0 0 4px #c23a3a;
+}
+
+.hero-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border: 2px solid #141416;
+  background: #c23a3a;
+  cursor: grab;
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+
+.hero-range:active::-webkit-slider-thumb {
+  transform: scale(1.08);
+  cursor: grabbing;
+}
+
+.hero-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #141416;
+  border-radius: 0;
+  background: #c23a3a;
+  cursor: grab;
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+
+.hero-range:active::-moz-range-thumb {
+  transform: scale(1.08);
+  cursor: grabbing;
+}
+
+.hero-range::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+
+.hero-range::-moz-range-track {
+  height: 6px;
+  background: transparent;
+  border: none;
 }
 
 .wallet-grid-bg {

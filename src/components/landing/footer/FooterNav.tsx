@@ -18,7 +18,7 @@ const COLUMNS: Array<{
     title: "Desk",
     links: [
       { href: "#desk", label: "Four pages" },
-      { href: "/login", label: "Sign in" },
+      { href: "/login", label: "Connect wallet" },
       { href: "/app/claims", label: "Activity" },
       { href: "/app/redeem", label: "Redeem" },
     ],

@@ -5,6 +5,13 @@ import { motion } from "framer-motion";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
 
+function scrollToHash(href: string) {
+  const id = href.startsWith("#") ? href.slice(1) : href;
+  const target = document.getElementById(id);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function PeekMark({ src }: { src: "/claude.png" | "/deepseek.png" }) {
   return <img src={src} alt="" width={36} height={36} className="h-9 w-9 object-contain" />;
 }
@@ -24,6 +31,14 @@ export function PeekAccountButton({
     whileHover: "hover" as const,
     whileFocus: "hover" as const,
     className: "group relative inline-flex items-center justify-center outline-none",
+  };
+
+  const handleClick = () => {
+    if (href?.startsWith("#")) {
+      scrollToHash(href);
+      return;
+    }
+    onClick?.();
   };
 
   const inner = (
@@ -64,6 +79,14 @@ export function PeekAccountButton({
       </span>
     </>
   );
+
+  if (href?.startsWith("#")) {
+    return (
+      <motion.button type="button" onClick={handleClick} {...shared}>
+        {inner}
+      </motion.button>
+    );
+  }
 
   if (href) {
     return (

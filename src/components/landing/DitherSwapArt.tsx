@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ArrowRight } from "@phosphor-icons/react";
+import { DEFAULT_CONVERSION_BPS } from "@/lib/rules/constants";
 
 const COLS = 56;
 const ROWS = 56;
@@ -285,12 +286,13 @@ export function DitherSwapArt() {
         </span>
       </div>
 
-      <div className="relative mt-4 border border-white/10 bg-raised/40">
+      <div className="relative mt-5 overflow-hidden border border-white/10 bg-raised/50">
+        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <span className="absolute -left-px -top-px h-3 w-3 border-l border-t border-accent" />
         <span className="absolute -right-px -top-px h-3 w-3 border-r border-t border-accent" />
         <span className="absolute -bottom-px -left-px h-3 w-3 border-b border-l border-accent" />
         <span className="absolute -bottom-px -right-px h-3 w-3 border-b border-r border-accent" />
-        <canvas ref={canvasRef} className="aspect-square h-auto w-full" aria-hidden />
+        <canvas ref={canvasRef} className="aspect-square h-auto w-full opacity-95" aria-hidden />
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex items-center gap-4 transition-opacity duration-300 group-hover:opacity-0 group-focus-within:opacity-0">
@@ -316,17 +318,19 @@ export function DitherSwapArt() {
         </div>
       </div>
 
-      <figcaption className="mt-5 grid grid-cols-[1fr_auto] items-end gap-6 border-t border-white/8 pt-4">
+      <figcaption className="mt-6 grid grid-cols-[1fr_auto] items-end gap-6 border-t border-white/8 pt-5">
         <div>
-          <p ref={pairRef} className="font-mono text-2xl tracking-tight text-zinc-100 md:text-3xl">
+          <p ref={pairRef} className="font-mono text-2xl tracking-tight text-zinc-100 md:text-[2rem]">
             ETH → SOL
           </p>
-          <p ref={stateRef} className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          <p ref={stateRef} className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             A live pair, then the credit
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-3xl tabular-nums tracking-tighter text-accent md:text-4xl">50</p>
+          <p className="font-mono text-3xl tabular-nums tracking-tighter text-accent md:text-[2.75rem]">
+            {DEFAULT_CONVERSION_BPS}
+          </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">bps out</p>
         </div>
       </figcaption>
@@ -344,8 +348,8 @@ function TokenFace({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex w-20 flex-col items-center gap-2 sm:w-28">
-      <span className="flex h-14 w-14 items-center justify-center border border-white/10 bg-background sm:h-20 sm:w-20">
+    <div className="flex w-20 flex-col items-center gap-2.5 sm:w-28">
+      <span className="flex h-14 w-14 items-center justify-center border border-white/12 bg-background/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 group-hover:scale-[1.02] sm:h-20 sm:w-20">
         {children}
       </span>
       <span className="font-mono text-sm tracking-[0.16em] text-zinc-100">{label}</span>
