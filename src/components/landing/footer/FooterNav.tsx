@@ -30,7 +30,6 @@ const COLUMNS: Array<{
       { href: robinhoodAddressUrl(USDG_REWARD_VAULT), label: "Contract", external: true },
       { href: "/privacy", label: "Privacy" },
       { href: "/terms", label: "Terms" },
-      { href: "https://x.com/useaccrued", label: "Twitter / X", external: true },
     ],
   },
 ];

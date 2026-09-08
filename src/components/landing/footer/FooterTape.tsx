@@ -21,7 +21,7 @@ export function FooterTape() {
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[07] Published ratio</p>
       <div className="mt-6 flex items-end justify-between gap-6">
         <div>
-          <p className="font-mono text-2xl tracking-tight text-zinc-100">ETH → SOL</p>
+          <p className="font-mono text-2xl tracking-tight text-zinc-100">ETH → USDG</p>
           <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             A live pair, then the credit
           </p>

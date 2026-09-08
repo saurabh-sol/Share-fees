@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { NotchedCta } from "./NotchedCta";
+import { SocialButtons } from "./footer/SocialButtons";
 
 export function SiteHeader() {
   return (
@@ -25,6 +26,9 @@ export function SiteHeader() {
           </a>
         </nav>
         <div className="flex items-center gap-3 sm:gap-5">
+          <div className="hidden sm:block">
+            <SocialButtons />
+          </div>
           <NotchedCta href="/login">Connect wallet</NotchedCta>
         </div>
       </div>

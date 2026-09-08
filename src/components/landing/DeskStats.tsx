@@ -50,7 +50,7 @@ export function DeskStats() {
         const display =
           item.key === "creditPaidUsd" ? formatUsd(raw) : formatCount(raw);
         return (
-          <div key={item.key} className="py-4 first:pl-0 last:pr-0 md:py-5">
+          <div key={item.key} className="px-3 py-4 text-center md:py-5">
             <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
               {item.label}
             </dt>

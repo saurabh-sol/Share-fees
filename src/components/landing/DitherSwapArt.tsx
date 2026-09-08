@@ -49,30 +49,49 @@ function ethToneAt(x: number, y: number): number {
   return x <= 7 ? 1 : 2;
 }
 
-// Solana bars: three parallel slanted bars with a dithered left-to-right ramp.
-const SOL_COLS = 16;
-const SOL_SPANS: PixelSpan[] = [
-  [4, 15],
-  [3, 14],
-  [2, 13],
-  null,
-  null,
-  null,
-  [2, 13],
-  [1, 12],
-  [0, 11],
-  null,
-  null,
-  null,
-  [4, 15],
-  [3, 14],
-  [2, 13],
-];
+// Global Dollar (USDG) mark, rasterised onto the pixel grid from its geometry:
+// a lime disc inside a dark ring, a slanted oval counter, and a mouth cut in
+// from the right at mid-height that leaves the crossbar underneath.
+const USDG_GRID = 28;
+const USDG_LIME = "#c8e263";
+const USDG_DARK = "#2f3d17";
+const USDG_COUNTER_TILT = (-52 * Math.PI) / 180;
 
-function solToneAt(x: number, y: number): number {
-  if (x < 5) return 1;
-  if (x < 11) return (x + y) % 2 === 0 ? 0 : 1;
-  return 0;
+function usdgFillAt(x: number, y: number): string | null {
+  const r = Math.hypot(x, y);
+  if (r > 1) return null;
+  if (r > 0.82) return USDG_DARK;
+  const px = x + 0.03;
+  const u = px * Math.cos(USDG_COUNTER_TILT) + y * Math.sin(USDG_COUNTER_TILT);
+  const v = -px * Math.sin(USDG_COUNTER_TILT) + y * Math.cos(USDG_COUNTER_TILT);
+  const inCounter = (u / 0.48) ** 2 + (v / 0.17) ** 2 <= 1;
+  const inMouth = x > 0.06 && y >= 0.01 && y <= 0.14;
+  return inCounter || inMouth ? USDG_DARK : USDG_LIME;
+}
+
+function UsdgPixelGlyph({ className }: { className: string }) {
+  const rects: React.ReactNode[] = [];
+  for (let j = 0; j < USDG_GRID; j += 1) {
+    for (let i = 0; i < USDG_GRID; i += 1) {
+      const x = ((i + 0.5) / USDG_GRID - 0.5) * 2;
+      const y = ((j + 0.5) / USDG_GRID - 0.5) * 2;
+      const fill = usdgFillAt(x, y);
+      if (!fill) continue;
+      rects.push(
+        <rect key={`${i}-${j}`} x={i + 0.08} y={j + 0.08} width={0.84} height={0.84} fill={fill} />,
+      );
+    }
+  }
+  return (
+    <svg
+      viewBox={`0 0 ${USDG_GRID} ${USDG_GRID}`}
+      shapeRendering="crispEdges"
+      className={className}
+      aria-hidden
+    >
+      {rects}
+    </svg>
+  );
 }
 
 // Hover-state icons as string bitmaps: "." empty, "a"/"b"/"c" = palette 0/1/2.
@@ -250,7 +269,7 @@ export function DitherSwapArt() {
       }
 
       const hovered = mix > 0.45;
-      if (pairRef.current) pairRef.current.textContent = hovered ? "SWAP = CREDITS" : "ETH → SOL";
+      if (pairRef.current) pairRef.current.textContent = hovered ? "SWAP = CREDITS" : "ETH → USDG";
       if (stateRef.current) {
         stateRef.current.textContent = hovered ? "A qualifying fill writes LLM credits" : "A live pair, then the credit";
       }
@@ -277,7 +296,7 @@ export function DitherSwapArt() {
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
       tabIndex={0}
-      aria-label="Ethereum to Solana swap, then swap equals LLM credits"
+      aria-label="Ethereum to USDG swap, then swap equals LLM credits"
     >
       <div className="flex items-center justify-between gap-4">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[02] Ratio tape</p>
@@ -300,19 +319,19 @@ export function DitherSwapArt() {
               <PixelTokenGlyph spans={ETH_SPANS} cols={ETH_COLS} toneAt={ethToneAt} />
             </TokenFace>
             <ArrowRight size={28} className="text-accent" />
-            <TokenFace label="SOL" name="Solana">
-              <PixelTokenGlyph spans={SOL_SPANS} cols={SOL_COLS} toneAt={solToneAt} />
+            <TokenFace label="USDG" name="Robinhood">
+              <UsdgPixelGlyph className="h-11 w-11 sm:h-[3.75rem] sm:w-[3.75rem]" />
             </TokenFace>
           </div>
-          <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
-            <div className="flex flex-col items-center gap-2">
-              <PixelIconGlyph rows={SWAP_ROWS} palette={SWAP_TONES} className="h-9 w-9" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-100">Swap</span>
+          <div className="absolute inset-0 flex items-center justify-center gap-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
+            <div className="flex w-20 flex-col items-center gap-2.5 sm:w-28">
+              <PixelIconGlyph rows={SWAP_ROWS} palette={SWAP_TONES} className="h-11 w-11 sm:h-14 sm:w-14" />
+              <span className="font-mono text-sm uppercase tracking-[0.16em] text-zinc-100">Swap</span>
             </div>
-            <span className="font-mono text-2xl text-zinc-500">=</span>
-            <div className="flex flex-col items-center gap-2">
-              <PixelIconGlyph rows={COINS_ROWS} palette={COIN_TONES} className="h-9 w-9" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Credits</span>
+            <span className="font-mono text-2xl text-zinc-500 sm:text-3xl">=</span>
+            <div className="flex w-20 flex-col items-center gap-2.5 sm:w-28">
+              <PixelIconGlyph rows={COINS_ROWS} palette={COIN_TONES} className="h-11 w-11 sm:h-14 sm:w-14" />
+              <span className="font-mono text-sm uppercase tracking-[0.16em] text-accent">Credits</span>
             </div>
           </div>
         </div>
@@ -321,7 +340,7 @@ export function DitherSwapArt() {
       <figcaption className="mt-6 grid grid-cols-[1fr_auto] items-end gap-6 border-t border-white/8 pt-5">
         <div>
           <p ref={pairRef} className="font-mono text-2xl tracking-tight text-zinc-100 md:text-[2rem]">
-            ETH → SOL
+            ETH → USDG
           </p>
           <p ref={stateRef} className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             A live pair, then the credit
