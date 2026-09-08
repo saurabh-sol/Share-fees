@@ -90,6 +90,9 @@ if (parsed.NODE_ENV === "production" && !isBuild) {
   if (!parsed.CRON_SECRET) {
     throw new Error("CRON_SECRET is required in production (min 16 chars).");
   }
+  if (parsed.ALLOW_MOCK_SWAPS === "true") {
+    throw new Error("ALLOW_MOCK_SWAPS cannot be true in production.");
+  }
 }
 
 export const env = {

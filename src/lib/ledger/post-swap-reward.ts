@@ -8,6 +8,7 @@ import {
   swaps,
   wallets,
 } from "@/lib/db/schema";
+import { env } from "@/lib/env";
 import { findWashPrior } from "@/lib/fraud/wash";
 import {
   MIN_REWARD_CENTS,
@@ -152,6 +153,10 @@ export async function postSwapReward(
     afterWrite?: (tx: RewardDb, result: PostSwapResult) => Promise<void>;
   },
 ): Promise<PostSwapResult> {
+  if (input.source === "mock" && env.nodeEnv === "production") {
+    throw new LedgerError("mock_disabled", 403);
+  }
+
   const client = db ?? (await getDb());
 
   if (input.notionalUsdCents < 0 || input.notionalUsdCents > 1_000_000_000) {

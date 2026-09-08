@@ -3,145 +3,9 @@
 import { useState } from "react";
 import { Check, Copy } from "@phosphor-icons/react";
 import type { LlmProvider } from "@/lib/gateway/catalog";
+import { clientSnippets, originFromGatewayBase } from "@/lib/gateway/client-snippets";
 
 type CopyTarget = "key" | "url" | "curl" | "sdk";
-
-function originFromBase(baseUrl: string) {
-  return baseUrl.replace(/\/v1\/?$/, "");
-}
-
-function snippets(provider: LlmProvider, baseUrl: string, apiKey: string, model: string) {
-  const origin = originFromBase(baseUrl);
-  if (provider === "anthropic") {
-    return {
-      host: "api.anthropic.com",
-      base: origin,
-      label: "Official Anthropic API",
-      sdkLabel: "Official Anthropic SDK",
-      curl: `curl ${origin}/v1/messages \\
-  -H "Content-Type: application/json" \\
-  -H "x-api-key: ${apiKey}" \\
-  -H "anthropic-version: 2023-06-01" \\
-  -d '{"model":"${model}","max_tokens":16,"messages":[{"role":"user","content":"Hello"}]}'`,
-      sdk: `import Anthropic from "@anthropic-ai/sdk";
-
-const client = new Anthropic({
-  apiKey: "${apiKey}",
-  baseURL: "${origin}",
-});
-
-const message = await client.messages.create({
-  model: "${model}",
-  max_tokens: 16,
-  messages: [{ role: "user", content: "Hello" }],
-});
-
-console.log(message.content);`,
-    };
-  }
-
-  if (provider === "google") {
-    return {
-      host: "generativelanguage.googleapis.com",
-      base: origin,
-      label: "Official Google Gemini API",
-      sdkLabel: "Official Google GenAI SDK",
-      curl: `curl ${origin}/v1beta/models/${model}:generateContent \\
-  -H "Content-Type: application/json" \\
-  -H "x-goog-api-key: ${apiKey}" \\
-  -d '{"contents":[{"role":"user","parts":[{"text":"Hello"}]}]}'`,
-      sdk: `import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: "${apiKey}",
-  httpOptions: { baseUrl: "${origin}" },
-});
-
-const response = await ai.models.generateContent({
-  model: "${model}",
-  contents: "Hello",
-});
-
-console.log(response.text);`,
-    };
-  }
-
-  if (provider === "deepseek") {
-    return {
-      host: "api.deepseek.com/v1",
-      base: `${origin}/v1`,
-      label: "Official DeepSeek API",
-      sdkLabel: "Official DeepSeek (OpenAI SDK)",
-      curl: `curl ${origin}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello"}]}'`,
-      sdk: `import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: "${apiKey}",
-  baseURL: "${origin}/v1",
-});
-
-const completion = await client.chat.completions.create({
-  model: "${model}",
-  messages: [{ role: "user", content: "Hello" }],
-});
-
-console.log(completion.choices[0].message.content);`,
-    };
-  }
-
-  if (provider === "grok") {
-    return {
-      host: "api.x.ai/v1",
-      base: `${origin}/v1`,
-      label: "Official xAI Grok API",
-      sdkLabel: "Official Grok (OpenAI SDK)",
-      curl: `curl ${origin}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello"}]}'`,
-      sdk: `import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: "${apiKey}",
-  baseURL: "${origin}/v1",
-});
-
-const completion = await client.chat.completions.create({
-  model: "${model}",
-  messages: [{ role: "user", content: "Hello" }],
-});
-
-console.log(completion.choices[0].message.content);`,
-    };
-  }
-
-  return {
-    host: "api.openai.com/v1",
-    base: `${origin}/v1`,
-    label: "Official OpenAI API",
-    sdkLabel: "Official OpenAI SDK",
-    curl: `curl ${origin}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello"}]}'`,
-    sdk: `import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: "${apiKey}",
-  baseURL: "${origin}/v1",
-});
-
-const completion = await client.chat.completions.create({
-  model: "${model}",
-  messages: [{ role: "user", content: "Hello" }],
-});
-
-console.log(completion.choices[0].message.content);`,
-  };
-}
 
 export function OpenAiKeyIssue({
   gatewayBaseUrl,
@@ -155,7 +19,13 @@ export function OpenAiKeyIssue({
   issuedProvider: LlmProvider;
 }) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
-  const preview = snippets(issuedProvider, gatewayBaseUrl, issuedKey ?? "acc_…", issuedModel);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const preview = clientSnippets(
+    issuedProvider,
+    gatewayBaseUrl,
+    issuedKey ?? "acc_…",
+    issuedModel,
+  );
 
   async function copy(value: string, which: CopyTarget) {
     await navigator.clipboard.writeText(value);
@@ -200,7 +70,7 @@ export function OpenAiKeyIssue({
                 <>
                   {" "}
                   The same key also works as Bearer against{" "}
-                  <span className="font-mono">{originFromBase(gatewayBaseUrl)}/v1</span>.
+                  <span className="font-mono">{originFromGatewayBase(gatewayBaseUrl)}/v1</span>.
                 </>
               ) : null}
             </p>
@@ -218,41 +88,54 @@ export function OpenAiKeyIssue({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Official curl
-              </p>
-              <button
-                type="button"
-                onClick={() => void copy(preview.curl, "curl")}
-                className="inline-flex items-center gap-2 text-sm text-zinc-300"
-              >
-                {copied === "curl" ? <Check size={16} /> : <Copy size={16} />}
-                {copied === "curl" ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-zinc-300">
-              {preview.curl}
-            </pre>
-          </div>
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((value) => !value)}
+              className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 hover:text-zinc-300"
+            >
+              {advancedOpen ? "Hide" : "Show"} curl and SDK examples
+            </button>
+            {advancedOpen ? (
+              <>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                      Official curl
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void copy(preview.curl, "curl")}
+                      className="inline-flex items-center gap-2 text-sm text-zinc-300"
+                    >
+                      {copied === "curl" ? <Check size={16} /> : <Copy size={16} />}
+                      {copied === "curl" ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-zinc-300">
+                    {preview.curl}
+                  </pre>
+                </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                {preview.sdkLabel}
-              </p>
-              <button
-                type="button"
-                onClick={() => void copy(preview.sdk, "sdk")}
-                className="inline-flex items-center gap-2 text-sm text-zinc-300"
-              >
-                {copied === "sdk" ? <Check size={16} /> : <Copy size={16} />}
-                {copied === "sdk" ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-zinc-300">
-              {preview.sdk}
-            </pre>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                      {preview.sdkLabel}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void copy(preview.sdk, "sdk")}
+                      className="inline-flex items-center gap-2 text-sm text-zinc-300"
+                    >
+                      {copied === "sdk" ? <Check size={16} /> : <Copy size={16} />}
+                      {copied === "sdk" ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-zinc-300">
+                    {preview.sdk}
+                  </pre>
+                </div>
+              </>
+            ) : null}
           </div>
         </section>
       ) : null}

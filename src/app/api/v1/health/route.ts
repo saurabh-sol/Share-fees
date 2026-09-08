@@ -29,6 +29,7 @@ export async function GET() {
       redis,
       treasuryCanBroadcast: treasuryCanBroadcast(),
       rewardVaultConfigured: Boolean(env.rewardVaultAddress),
+      mockSwapsEnabled: env.allowMockSwaps,
       cronConfigured: Boolean(env.cronSecret),
       adminConfigured: Boolean(env.adminSecret),
     },

@@ -38,6 +38,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
                   { href: "/app/claims", label: "Activity" },
                   { href: "/app/chat", label: "Chat" },
                   { href: "/app/redeem", label: "Redeem" },
+                  { href: "/app/try-api", label: "Try API" },
                   { href: "/app/rewards", label: "Ledger" },
                 ]}
               />

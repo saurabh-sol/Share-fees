@@ -1,8 +1,19 @@
+import {
+  RESPONSE_HEADER_PROVIDER,
+  RESPONSE_HEADER_REMAINING,
+  RESPONSE_HEADER_SPEND_CAP,
+} from "@/lib/brand";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta",
+  "Access-Control-Expose-Headers": [
+    RESPONSE_HEADER_REMAINING,
+    RESPONSE_HEADER_PROVIDER,
+    RESPONSE_HEADER_SPEND_CAP,
+  ].join(", "),
   "Access-Control-Max-Age": "86400",
 };
 

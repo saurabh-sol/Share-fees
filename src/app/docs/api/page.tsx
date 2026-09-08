@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { docsPageTitle } from "@/lib/brand";
 import { DocsCode } from "@/components/docs/DocsCode";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
@@ -33,6 +34,14 @@ export default function ApiDocsPage() {
       />
       <DocsP>
         Base URL is this origin. /gateway/v1 is the same API. Official SDKs work if you override baseURL.
+      </DocsP>
+      <DocsP>
+        After you redeem, open{" "}
+        <Link href="/app/try-api" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
+          Try API
+        </Link>{" "}
+        in the desk to paste your key, send a short test message, and see the reply plus credit left — no
+        terminal required.
       </DocsP>
 
       <DocsH2 id="openai-deepseek-grok">OpenAI, DeepSeek, and Grok</DocsH2>

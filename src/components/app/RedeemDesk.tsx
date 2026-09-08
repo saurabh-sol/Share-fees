@@ -16,6 +16,7 @@ import {
 } from "@/lib/redeem/reward-vault-core";
 import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
+import { ApiKeyTryPanel } from "./ApiKeyTryPanel";
 
 type Rail = "usdt" | "llm_credits";
 
@@ -100,6 +101,7 @@ export function RedeemDesk({
   const [onChainClaims, setOnChainClaims] = useState(initialOnChainClaims);
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [testingKeyId, setTestingKeyId] = useState<string | null>(null);
 
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const available =
@@ -372,6 +374,18 @@ export function RedeemDesk({
         issuedProvider={issuedKey ? issuedProvider : provider}
       />
 
+      {issuedKey ? (
+        <ApiKeyTryPanel
+          gatewayBaseUrl={gatewayBaseUrl}
+          initialProvider={issuedProvider}
+          initialModel={issuedModel}
+          initialApiKey={issuedKey}
+          lockProviderModel
+          title="Test it now"
+          onSuccess={() => void refreshLists()}
+        />
+      ) : null}
+
       {message ? (
         status === "error" ? (
           <div role="alert" className="max-w-2xl border border-accent/40 px-5 py-4">
@@ -426,18 +440,48 @@ export function RedeemDesk({
                   </div>
                 </div>
                 {key.status === "active" ? (
-                  <NotchedButton
-                    variant="ghost"
-                    disabled={status === "working"}
-                    onClick={() => void onRevoke(key.id)}
-                  >
-                    Revoke
-                  </NotchedButton>
+                  <div className="flex flex-wrap gap-2">
+                    <NotchedButton
+                      variant="ghost"
+                      disabled={status === "working"}
+                      onClick={() =>
+                        setTestingKeyId((current) => (current === key.id ? null : key.id))
+                      }
+                    >
+                      {testingKeyId === key.id ? "Close test" : "Test"}
+                    </NotchedButton>
+                    <NotchedButton
+                      variant="ghost"
+                      disabled={status === "working"}
+                      onClick={() => void onRevoke(key.id)}
+                    >
+                      Revoke
+                    </NotchedButton>
+                  </div>
                 ) : null}
               </li>
             ))}
           </ul>
         )}
+        {testingKeyId ? (
+          (() => {
+            const key = keys.find((item) => item.id === testingKeyId);
+            if (!key) return null;
+            const keyProvider =
+              key.provider && isLlmProvider(key.provider) ? key.provider : DEFAULT_LLM_PROVIDER;
+            return (
+              <ApiKeyTryPanel
+                key={key.id}
+                gatewayBaseUrl={gatewayBaseUrl}
+                initialProvider={keyProvider}
+                initialModel={key.model ?? DEFAULT_LLM_MODEL}
+                lockProviderModel
+                title={`Test ${key.prefix}…`}
+                onSuccess={() => void refreshLists()}
+              />
+            );
+          })()
+        ) : null}
       </section>
 
       <section className="space-y-4">
