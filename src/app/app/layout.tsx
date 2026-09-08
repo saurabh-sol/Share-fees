@@ -29,7 +29,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-[100dvh]">
         <header className="sticky top-0 z-20 border-b border-white/8 bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-8">
-            <BrandMark href="/app" tone="accent" suffix="Desk" className="shrink-0" />
+            <BrandMark href="/" tone="accent" suffix="Desk" suffixHref="/app" className="shrink-0" />
             <nav className="flex min-w-0 items-center gap-4 overflow-x-auto overscroll-x-contain text-sm text-zinc-400 [-ms-overflow-style:none] [scrollbar-width:none] md:gap-6 [&::-webkit-scrollbar]:hidden">
               <DeskNavLinks
                 items={[

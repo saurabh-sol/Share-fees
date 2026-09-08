@@ -1,8 +1,10 @@
-# Accrued — end to end
+# Accrued — end to end (short)
 
 **You swap. We credit.**
 
-This file is the full walk of the live site: what a wallet does, what every page shows, and what happens after credit posts. It matches the product as shipped.
+> **Full guide for articles and onboarding:** see **[END-TO-END.md](END-TO-END.md)** — every page, API, rail, deploy step, and demo script.
+
+This file is a compact operator walk of the live site. It matches the product as shipped.
 
 There is no email account. The address that signs in **is** the desk.
 
@@ -53,7 +55,7 @@ Wallet-native marketing. Canvas `#141416`, accent `#c23a3a`, Geist + Geist Mono.
 
 | Block | What it says |
 | --- | --- |
-| Hero | “You swap. We credit.” One CTA: **Connect wallet**. ETH→SOL dither field. |
+| Hero | “You swap. We credit.” **Get started** scrolls to How it pays; header **Connect wallet**. Live reward calculator + ratio tape. |
 | Houses | MetaMask, Phantom, Coinbase, Robinhood |
 | How it pays | Six steps: connect → swap or scan → $250 floor → 50 bps → claim/convert → one hash |
 | Worked example | $1,842.60 → **$9.21** |
@@ -64,9 +66,13 @@ Wallet-native marketing. Canvas `#141416`, accent `#c23a3a`, Geist + Geist Mono.
 | Rules | What the desk will not do |
 | FAQ | Who can use it, when a fill pays, how to claim, what redeem returns |
 | Account | SIWE / SIWS, health link, **Open the desk** |
-| Footer | Product / Desk / Rules, published-ratio tape, **Get started** |
+| Footer | Product / Desk / Rules, published-ratio tape, **Connect wallet** |
 
-Header jumps: How it pays, Desk, API, FAQ. Phone gets a scrollable link row.
+Header jumps: How it pays, Desk, API, **Docs**, FAQ. Phone gets a scrollable link row.
+
+### `/docs`
+
+Fourteen pages: intro, how-it-pays, connect, swap, activity, balances, chat, ledger, usdg, llm, api, limits, rules, faq. Search with ⌘K. Header shows **Accrued** on all screen sizes.
 
 ### `/login`
 

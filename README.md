@@ -4,7 +4,7 @@
 
 Accrued is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
 
-User-facing walkthrough: [/docs](/docs). Operator walk of the live site: [E2E.md](E2E.md).
+User-facing walkthrough: [/docs](/docs). **Complete article-ready guide:** [END-TO-END.md](END-TO-END.md). Shorter operator notes: [E2E.md](E2E.md).
 
 There is no email account and no username. The address that signs in is the desk. Ethereum wallets sign SIWE. Solana wallets sign SIWS. The session stays bound to that address.
 

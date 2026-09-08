@@ -13,7 +13,7 @@ function FooterBrand() {
     <div>
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[12] Close</p>
       <div className="mt-5">
-        <BrandMark />
+        <BrandMark size="lg" />
       </div>
       <h2 className="mt-8 max-w-[14ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-5xl">
         Same wallet. Same session.

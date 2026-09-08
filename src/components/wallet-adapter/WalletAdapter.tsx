@@ -21,7 +21,7 @@ export function WalletAdapter() {
 
       <div className="relative z-10 flex min-h-[100dvh] flex-col">
         <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-          <BrandMark tone="accent" />
+          <BrandMark tone="accent" size="lg" />
         </header>
 
         <div className={`flex flex-1 items-center justify-center px-4 pb-8 ${open ? "pt-[28vh] md:pt-[22vh]" : "pt-[42vh] md:pt-[48vh]"}`}>

@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="min-h-[100dvh]">
       <header className="sticky top-0 z-20 border-b border-white/8 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-4 md:px-8">
-          <BrandMark href="/admin" tone="accent" suffix="Admin" />
+          <BrandMark href="/" tone="accent" suffix="Admin" suffixHref="/admin" />
           {admin ? (
             <nav className="flex items-center gap-4 overflow-x-auto text-sm text-zinc-400 md:gap-6">
               <DeskNavLinks
