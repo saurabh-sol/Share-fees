@@ -1,12 +1,18 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getSession } from "@/lib/auth/session";
-import { WalletProvider } from "@/components/wallet/WalletProvider";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { SignOutButton } from "@/components/app/SignOutButton";
 import { DeskNavLinks } from "@/components/app/DeskNavLinks";
 import { VaultContractLink } from "@/components/onchain/VaultContractLink";
-import { BRAND_SHORT } from "@/lib/brand";
+import { WalletProvider } from "@/components/wallet/WalletProvider";
+import { getSession } from "@/lib/auth/session";
+import { pageTitle } from "@/lib/brand";
+
+export const metadata: Metadata = {
+  title: pageTitle("Desk"),
+  description: "Accrued desk — balances, swap, activity, chat, redeem, and ledger.",
+};
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -23,10 +29,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-[100dvh]">
         <header className="sticky top-0 z-20 border-b border-white/8 bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-8">
-            <Link href="/app" className="flex shrink-0 items-baseline gap-3">
-              <span className="font-mono text-xs tracking-[0.22em] text-accent">{BRAND_SHORT}</span>
-              <span className="hidden text-sm text-zinc-200 sm:inline">Desk</span>
-            </Link>
+            <BrandMark href="/app" tone="accent" suffix="Desk" className="shrink-0" />
             <nav className="flex min-w-0 items-center gap-4 overflow-x-auto overscroll-x-contain text-sm text-zinc-400 [-ms-overflow-style:none] [scrollbar-width:none] md:gap-6 [&::-webkit-scrollbar]:hidden">
               <DeskNavLinks
                 items={[

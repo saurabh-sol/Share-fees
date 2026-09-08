@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import { DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Published numbers — Docs",
+  title: docsPageTitle("Published numbers"),
   description: "Floor, 50 bps, daily cap, redeem minimum, and USDG claim cap.",
 };
 

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import { DocsCode } from "@/components/docs/DocsCode";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 import { env } from "@/lib/env";
 
 export const metadata: Metadata = {
-  title: "API — Docs",
-  description: "Use a acc_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
+  title: docsPageTitle("API"),
+  description: "Use an acc_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
 };
 
 export default function ApiDocsPage() {

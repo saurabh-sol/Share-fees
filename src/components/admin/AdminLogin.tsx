@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 
 export function AdminLogin() {
@@ -34,6 +35,7 @@ export function AdminLogin() {
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="mx-auto max-w-md space-y-6 py-16">
+      <BrandMark href="/" tone="accent" />
       <div>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Operator access</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Admin</h1>

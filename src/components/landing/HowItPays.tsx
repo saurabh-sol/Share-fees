@@ -51,7 +51,7 @@ const STEPS: {
   {
     id: "05",
     title: "Claim, then convert",
-    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a acc_ key or queue Robinhood USDG after that.",
+    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem an acc_ key or queue Robinhood USDG after that.",
     Icon: Coins,
     span: "md:col-span-7",
   },

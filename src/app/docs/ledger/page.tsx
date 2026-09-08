@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsH1, DocsH2, DocsLead, DocsP } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Ledger — Docs",
+  title: docsPageTitle("Ledger"),
   description: "Every Accrued credit, convert, and redeem writes an immutable row.",
 };
 

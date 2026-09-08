@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { ErrorScreen } from "@/components/error/ErrorScreen";
+import { pageTitle } from "@/lib/brand";
+
+export const metadata: Metadata = {
+  title: pageTitle("Page not found"),
+  description: "This path is not on the Accrued desk.",
+};
 
 export default function NotFound() {
   return (

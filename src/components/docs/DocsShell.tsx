@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
+import { BrandMark } from "@/components/brand/BrandMark";
+import { BRAND_NAME } from "@/lib/brand";
 import { getDocsPage } from "@/lib/docs/catalog";
 import { DocsSearch } from "./DocsSearch";
 import { DocsSidebar } from "./DocsSidebar";
@@ -23,20 +24,9 @@ export function DocsShell({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] bg-background">
       <header className="sticky top-0 z-30 border-b border-white/8 bg-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-4 px-4 md:px-8">
-          <Link href="/" className="flex shrink-0 items-center gap-3">
-            <span className="grid grid-cols-4 gap-px" aria-hidden>
-              <span className="h-1.5 w-1.5 bg-accent" />
-              <span className="h-1.5 w-1.5 bg-accent" />
-              <span className="h-1.5 w-1.5 bg-accent-press" />
-              <span className="h-1.5 w-1.5 bg-accent" />
-            </span>
-            <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">
-              <span className="sm:hidden">{BRAND_SHORT}</span>
-              <span className="hidden sm:inline">{BRAND_NAME}</span>
-            </span>
-          </Link>
+          <BrandMark />
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-600 md:inline">
-            Docs
+            {BRAND_NAME} Docs
           </span>
           <div className="ml-auto hidden flex-1 justify-center md:flex">
             <DocsSearch />
@@ -46,7 +36,7 @@ export function DocsShell({ children }: { children: ReactNode }) {
               href="/login"
               className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-300 md:inline"
             >
-              Sign in
+              Connect wallet
             </Link>
             <Link
               href="/app"

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Swap Studio — Docs",
+  title: docsPageTitle("Swap Studio"),
   description: "Quote and execute a live Accrued fill through the swap router or Robinhood ETH.",
 };
 

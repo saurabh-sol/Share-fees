@@ -1,3 +1,5 @@
+import { BRAND_NAME } from "@/lib/brand";
+
 function AsciiBlock({ lines, className = "" }: { lines: string[]; className?: string }) {
   return (
     <div
@@ -16,9 +18,10 @@ function AsciiBlock({ lines, className = "" }: { lines: string[]; className?: st
 export function DecorativeAscii() {
   return (
     <>
+      <AsciiBlock lines={[BRAND_NAME.toUpperCase(), "REWARDS"]} className="absolute left-8 top-[12%] hidden lg:block" />
       <AsciiBlock
         lines={["WALLET", "CONNECT"]}
-        className="absolute left-8 top-[16%] hidden lg:block"
+        className="absolute left-8 top-[22%] hidden lg:block"
       />
       <AsciiBlock
         lines={["OWN", "EXPLORE", "EARN", "ONCHAIN"]}

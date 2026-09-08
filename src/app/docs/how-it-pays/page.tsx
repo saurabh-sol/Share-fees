@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsH1, DocsH2, DocsLead, DocsOl, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "How it pays — Docs",
+  title: docsPageTitle("How it pays"),
   description: "The six steps from a signed-in wallet to posted Accrued credit.",
 };
 
@@ -38,7 +39,7 @@ export default function HowItPaysDocsPage() {
         </li>
         <li>
           <span className="text-zinc-100">Claim, then convert.</span> BPS posts website credit first. Convert
-          1:1 to LLM or USDG any time. Redeem a acc_ key or claim Robinhood USDG after that.
+          1:1 to LLM or USDG any time. Redeem an acc_ key or claim Robinhood USDG after that.
         </li>
         <li>
           <span className="text-zinc-100">One hash, one credit.</span> Each tx hash is booked once. Re-scan,

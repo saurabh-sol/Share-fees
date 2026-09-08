@@ -84,7 +84,7 @@ export default function HomePage() {
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">LLM credits</p>
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">A metered key, not a coupon.</h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-400">
-                LLM rail mints a acc_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
+                LLM rail mints an acc_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
                 balance. Claude, OpenAI, DeepSeek, Google, and Grok marks on the desk control are the same rail.
               </p>
             </article>

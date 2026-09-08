@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { PixelErrorArt } from "./PixelErrorArt";
 
 export function ErrorScreen({
@@ -16,7 +17,10 @@ export function ErrorScreen({
 }) {
   return (
     <main className="relative min-h-[100dvh] overflow-x-clip bg-background px-4 py-10 md:px-8 md:py-16">
-      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] max-w-[1400px] grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto mb-10 max-w-[1400px]">
+        <BrandMark />
+      </div>
+      <div className="mx-auto grid min-h-[calc(100dvh-8rem)] max-w-[1400px] grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[{code}]</p>
           <h1 className="mt-5 max-w-[12ch] text-4xl tracking-tighter leading-none text-zinc-100 sm:text-5xl md:text-6xl">

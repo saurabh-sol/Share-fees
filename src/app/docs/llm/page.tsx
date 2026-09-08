@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsUl } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "LLM credits — Docs",
+  title: docsPageTitle("LLM credits"),
   description: "Redeem a metered acc_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
 };
 

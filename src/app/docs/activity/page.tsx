@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Activity — Docs",
+  title: docsPageTitle("Activity"),
   description: "Scan wallet history or import a hash, then claim Accrued website credit.",
 };
 
@@ -43,7 +44,7 @@ export default function ActivityDocsPage() {
 
       <DocsH2 id="claim">Claim</DocsH2>
       <DocsP>
-        Claim writes website credit. Convert it on the desk, then redeem USDG or a acc_ key. If the hash was
+        Claim writes website credit. Convert it on the desk, then redeem USDG or an acc_ key. If the hash was
         already on the ledger, the desk says so and does not pay again.
       </DocsP>
       <DocsP>

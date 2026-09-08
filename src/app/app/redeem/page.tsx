@@ -31,7 +31,7 @@ export default async function RedeemPage() {
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
           Claimed swap credit lands here. Talk to a model on Chat without a key, take USDG as an
-          on-chain claim to this wallet, or mint a t2c_ key for Cursor. Usage spends your points.
+          on-chain claim to this wallet, or mint an acc_ key for Cursor. Usage spends your points.
         </p>
       </div>
       <RedeemDesk

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BrandMark } from "@/components/brand/BrandMark";
+import { BRAND_NAME } from "@/lib/brand";
 import { USDG_REWARD_VAULT, robinhoodAddressUrl } from "@/lib/chains/robinhood";
 import { NotchedCta } from "../NotchedCta";
 import { FooterField } from "./FooterField";
@@ -7,25 +8,13 @@ import { FooterNav } from "./FooterNav";
 import { FooterTape } from "./FooterTape";
 import { SocialButtons } from "./SocialButtons";
 
-function Mark() {
-  return (
-    <span className="grid grid-cols-4 gap-px" aria-hidden>
-      <span className="h-1.5 w-1.5 bg-accent" />
-      <span className="h-1.5 w-1.5 bg-accent" />
-      <span className="h-1.5 w-1.5 bg-accent-press" />
-      <span className="h-1.5 w-1.5 bg-accent" />
-    </span>
-  );
-}
-
 function FooterBrand() {
   return (
     <div>
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[12] Close</p>
-      <Link href="/" className="mt-5 inline-flex items-center gap-3">
-        <Mark />
-        <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">{BRAND_NAME}</span>
-      </Link>
+      <div className="mt-5">
+        <BrandMark />
+      </div>
       <h2 className="mt-8 max-w-[14ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-5xl">
         Same wallet. Same session.
       </h2>

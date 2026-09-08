@@ -1,13 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { DocsH1, DocsH2, DocsLead, DocsP, DocsUl } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
+import { docsPageTitle } from "@/lib/brand";
+
+export const metadata: Metadata = {
+  title: docsPageTitle("Introduction"),
+  description: "What Accrued is, who it is for, and how credit moves from a swap to a rail.",
+};
 
 const MAP = [
   { href: "/docs/how-it-pays", title: "How it pays", body: "Six steps from a signed wallet to posted credit." },
   { href: "/docs/swap", title: "Swap Studio", body: "Quote and settle a live fill. The same rule engine prices it." },
   { href: "/docs/activity", title: "Activity", body: "Scan history or import a hash, then claim website credit." },
   { href: "/docs/usdg", title: "USDG", body: "On-chain vault claim to the signed-in EVM address on Robinhood." },
-  { href: "/docs/llm", title: "LLM credits", body: "Mint a acc_ key. Usage burns remaining cents." },
+  { href: "/docs/llm", title: "LLM credits", body: "Mint an acc_ key. Usage burns remaining cents." },
   { href: "/docs/api", title: "API", body: "Point the official vendor SDK at this origin." },
 ];
 

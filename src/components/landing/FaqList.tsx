@@ -22,7 +22,7 @@ const FAQS = [
   },
   {
     q: "What do I get after redeem?",
-    a: "USDG queues a payout to this wallet. LLM mints a acc_ key for the provider you picked. Use the official OpenAI, Anthropic, DeepSeek, or Google API against this origin. Usage spends remaining cents.",
+    a: "USDG queues a payout to this wallet. LLM mints an acc_ key for the provider you picked. Use the official OpenAI, Anthropic, DeepSeek, or Google API against this origin. Usage spends remaining cents.",
   },
   {
     q: "Can I send USDG to another address?",

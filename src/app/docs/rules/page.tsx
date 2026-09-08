@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import { DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "What the desk will not do — Docs",
+  title: docsPageTitle("What the desk will not do"),
   description: "Accrued product constraints: destination, duplicates, wash holds, keys.",
 };
 

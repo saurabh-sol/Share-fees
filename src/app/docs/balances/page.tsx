@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Balances and convert — Docs",
+  title: docsPageTitle("Balances and convert"),
   description: "Website credit, USDG, and LLM rails. Convert is 1:1 after the fee already ran at claim.",
 };
 
@@ -25,7 +26,7 @@ export default function BalancesDocsPage() {
         rows={[
           ["Website credit", "Posted reward, not yet on a rail", "Convert 1:1"],
           ["USDG", "Credit sitting on the USDG rail", "Redeem on Robinhood"],
-          ["LLM credits", "Credit sitting on the LLM rail", "Mint a acc_ key or use Chat"],
+          ["LLM credits", "Credit sitting on the LLM rail", "Mint an acc_ key or use Chat"],
         ]}
       />
       <DocsP>

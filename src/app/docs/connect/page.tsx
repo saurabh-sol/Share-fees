@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { docsPageTitle } from "@/lib/brand";
 import Link from "next/link";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsUl } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
-  title: "Connect a wallet — Docs",
+  title: docsPageTitle("Connect a wallet"),
   description: "Sign in to Accrued with SIWE or SIWS. There is no email account.",
 };
 
