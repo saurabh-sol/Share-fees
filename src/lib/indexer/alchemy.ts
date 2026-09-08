@@ -12,7 +12,8 @@ const ALCHEMY_CHAINS: Record<number, string> = {
   137: "polygon-mainnet",
   42161: "arb-mainnet",
   8453: "base-mainnet",
-  4663: "robinhood-mainnet",
+  // Robinhood Chain (4663) is NOT served by Alchemy — it's scanned directly
+  // via RPC in ./robinhood-rpc.ts.
 };
 
 /** Reverse map: Alchemy slug → chainId */

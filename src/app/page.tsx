@@ -12,13 +12,16 @@ import { PublishedLimits } from "@/components/landing/PublishedLimits";
 import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
+import { getSession } from "@/lib/auth/session";
 
 const HOUSES = ["MetaMask", "Phantom", "Coinbase", "Robinhood"];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getSession();
+  const isLoggedIn = Boolean(session);
   return (
     <div className="min-h-[100dvh]">
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main>
         <section className="relative overflow-hidden border-b border-white/8">
           <div

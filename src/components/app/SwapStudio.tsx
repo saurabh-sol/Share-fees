@@ -8,7 +8,7 @@ import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
-import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDT } from "@/lib/chains/robinhood";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDT, robinhoodTxUrl } from "@/lib/chains/robinhood";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
@@ -73,6 +73,11 @@ export function SwapStudio({
   const [phase, setPhase] = useState<"idle" | "quoting" | "executing" | "settling" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+
+  type HistoryEntry = { txHash: string; fromToken: string; toToken: string; notionalUsdCents: number; executedAt: string };
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
   const fromMeta = tokens.find((t) => t.address.toLowerCase() === fromToken.toLowerCase());
@@ -87,6 +92,9 @@ export function SwapStudio({
         setPhase("error");
         setMessage(error instanceof Error ? error.message : "Could not load tokens.");
       });
+    void readJson<{ swaps: HistoryEntry[] }>("/api/v1/swaps/history")
+      .then((data) => setHistory(data.swaps ?? []))
+      .catch(() => {});
   }, [chainNamespace]);
 
   function importToken(token: LifiToken) {
@@ -192,11 +200,24 @@ export function SwapStudio({
         (step) => setProgress(step),
       );
 
+      setLastTxHash(txHash);
+
       await settle(txHash, {
         fromToken: quote.quote.action.fromToken.address,
         toToken: quote.quote.action.toToken.address,
         notionalUsdCents: quote.fromAmountUsdCents,
       });
+
+      setHistory((prev) => [
+        {
+          txHash,
+          fromToken: quote.quote.action.fromToken.symbol ?? fromToken,
+          toToken: quote.quote.action.toToken.symbol ?? toToken,
+          notionalUsdCents: quote.fromAmountUsdCents,
+          executedAt: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
     } catch (error) {
       setPhase("error");
       setProgress(null);
@@ -336,6 +357,17 @@ export function SwapStudio({
               <span className="text-lg">✓</span> Swap successful!
             </p>
             {message ? <p className="mt-1 text-sm text-zinc-300">{message}</p> : null}
+            {lastTxHash ? (
+              <a
+                href={robinhoodTxUrl(lastTxHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+              >
+                View on Blockscout · {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-6)}
+                <span aria-hidden>↗</span>
+              </a>
+            ) : null}
           </div>
         ) : (
           <>
@@ -354,6 +386,56 @@ export function SwapStudio({
           </p>
         ) : null}
       </aside>
+
+      {/* ── Swap History ── */}
+      <section className="col-span-full border-t border-white/8 pt-8">
+        <button
+          type="button"
+          onClick={() => setShowHistory((v) => !v)}
+          className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-400 hover:text-zinc-200"
+        >
+          <span>{showHistory ? "▾" : "▸"}</span> Swap history ({history.length})
+        </button>
+
+        {showHistory && (
+          <div className="mt-4">
+            {history.length === 0 ? (
+              <p className="text-sm text-zinc-500">No swaps yet. Your swaps will appear here after completion.</p>
+            ) : (
+              <div className="space-y-2">
+                {history.map((entry) => (
+                  <div
+                    key={entry.txHash}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border border-white/6 bg-white/[0.02] px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-xs text-zinc-300">
+                        {entry.fromToken} → {entry.toToken}
+                      </span>
+                      <span className="font-mono text-xs tabular-nums text-zinc-500">
+                        {money(entry.notionalUsdCents)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-[10px] text-zinc-600">
+                        {new Date(entry.executedAt).toLocaleString()}
+                      </span>
+                      <a
+                        href={robinhoodTxUrl(entry.txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs text-accent underline underline-offset-2 hover:text-accent-press"
+                      >
+                        {entry.txHash.slice(0, 8)}…{entry.txHash.slice(-4)} ↗
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { isClaimableKind, type HistoricalCandidate, type TradeSource } from "./types";
 import { alchemySource } from "./alchemy";
+import { robinhoodRpcSource } from "./robinhood-rpc";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
@@ -35,7 +36,9 @@ function newId() {
 }
 
 export function defaultTradeSources(): TradeSource[] {
-  const sources: TradeSource[] = [];
+  // Robinhood Chain RPC scanner first — it needs no API key and covers the
+  // chain that Alchemy/Zerion don't index (all in-app + on-chain trades).
+  const sources: TradeSource[] = [robinhoodRpcSource()];
   const alchemy = alchemySource();
   if (alchemy) sources.push(alchemy);
   const zerion = zerionSource();
@@ -204,6 +207,10 @@ export async function scanWallet(input: {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "scan_source_failed";
+      if (source.name === "robinhood") {
+        console.warn("[scan] Robinhood RPC scan failed, continuing with other sources:", message);
+        continue;
+      }
       if (source.name === "alchemy") {
         console.warn("[scan] Alchemy failed, falling back to Zerion:", message);
         continue;

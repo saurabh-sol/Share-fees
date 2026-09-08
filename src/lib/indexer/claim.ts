@@ -5,6 +5,7 @@ import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { readVerifiedFill } from "@/lib/lifi/settle";
 import { MIN_NOTIONAL_USD_CENTS, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { fetchAlchemyTradeByHash } from "./alchemy";
+import { fetchRobinhoodTradeByHash } from "./robinhood-rpc";
 import { fetchZerionTradeByHash } from "./zerion";
 import { isClaimableKind, type HistoricalCandidate } from "./types";
 
@@ -24,6 +25,14 @@ export async function reverifyCandidate(input: {
   fromChain: string;
   toChain: string;
 }): Promise<HistoricalCandidate> {
+  // Robinhood Chain rows verify straight from the chain's RPC —
+  // Alchemy/Zerion don't index chain 4663.
+  if (input.fromChain === "4663" || input.fromChain === "robinhood") {
+    const robinhood = await fetchRobinhoodTradeByHash(input.address, input.txHash);
+    if (robinhood) return robinhood;
+    throw new ClaimError("unverified_historical_swap", 422);
+  }
+
   try {
     const lifi = await readVerifiedFill({
       txHash: input.txHash,
