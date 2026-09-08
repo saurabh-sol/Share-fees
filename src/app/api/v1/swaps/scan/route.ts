@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return jsonError(401, "unauthenticated", "Sign in with a wallet first.");
     }
 
-    await rateLimitOrThrow(`scan:${session.user.id}`, 6, 15 * 60 * 1000);
+    await rateLimitOrThrow(`scan:${session.user.id}`, 30, 15 * 60 * 1000);
 
     const result = await scanWallet({
       userId: session.user.id,

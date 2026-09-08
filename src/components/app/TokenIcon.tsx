@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+const WELL_KNOWN_LOGOS: Record<string, string> = {
+  eth: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+  weth: "https://assets.coingecko.com/coins/images/2518/small/weth.png",
+  usdg: "https://cdn.robinhood.com/ncw_assets/logos/0x5fc5360d0400a0fd4f2af552add042d716f1d168.png",
+  usdc: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+  usdt: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
+  dai: "https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png",
+};
+
 export function TokenIcon({
   symbol,
   logoURI,
@@ -11,42 +20,45 @@ export function TokenIcon({
   logoURI?: string | null;
   size?: number;
 }) {
-  const fallback = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${symbol.toLowerCase()}.png`;
+  const knownLogo = WELL_KNOWN_LOGOS[symbol.toLowerCase()];
+  const cryptoIconsFallback = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${symbol.toLowerCase()}.png`;
   const safeLogo = logoURI && /^https?:\/\//i.test(logoURI) ? logoURI : null;
-  const [src, setSrc] = useState(safeLogo || fallback);
+
+  const sources = [safeLogo, knownLogo, cryptoIconsFallback].filter(Boolean) as string[];
+  const [srcIdx, setSrcIdx] = useState(0);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setSrc(safeLogo || fallback);
+    setSrcIdx(0);
     setFailed(false);
-  }, [safeLogo, fallback]);
+  }, [safeLogo, knownLogo]);
 
-  if (failed) {
+  if (failed || sources.length === 0) {
     return (
       <span
         aria-hidden
-        className="inline-flex shrink-0 items-center justify-center bg-raised font-mono text-[10px] uppercase text-zinc-400"
+        className="inline-flex shrink-0 items-center justify-center rounded-full bg-raised font-mono text-[10px] uppercase text-zinc-400"
         style={{ width: size, height: size }}
       >
-        {symbol.slice(0, 1)}
+        {symbol.slice(0, 2)}
       </span>
     );
   }
 
   return (
     <img
-      src={src}
+      src={sources[srcIdx]}
       alt=""
       width={size}
       height={size}
-      className="shrink-0 object-contain"
+      className="shrink-0 rounded-full object-contain"
       style={{ width: size, height: size }}
       onError={() => {
-        if (src !== fallback && safeLogo) {
-          setSrc(fallback);
-          return;
+        if (srcIdx + 1 < sources.length) {
+          setSrcIdx(srcIdx + 1);
+        } else {
+          setFailed(true);
         }
-        setFailed(true);
       }}
     />
   );

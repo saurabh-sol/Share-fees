@@ -43,8 +43,11 @@ export const metadata: Metadata = {
   description: BRAND_DESCRIPTION,
   applicationName: BRAND_NAME,
   icons: {
-    icon: [{ url: BRAND_LOGO_PATH, type: "image/png" }],
-    apple: [{ url: BRAND_LOGO_PATH, type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand-icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/brand-icon.png", type: "image/png" }],
   },
   alternates: {
     canonical: SITE,

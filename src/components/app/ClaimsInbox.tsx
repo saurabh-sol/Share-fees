@@ -102,8 +102,6 @@ export function ClaimsInbox({
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [importHash, setImportHash] = useState("");
-  const [fromChain, setFromChain] = useState("4663");
-  const [toChain, setToChain] = useState("4663");
 
   async function load() {
     const data = await readJson<{ claims: Claim[]; summary: VolumeSummary }>("/api/v1/swaps/claims");
@@ -154,7 +152,7 @@ export function ClaimsInbox({
     try {
       const result = await readJson<{ inserted: number }>("/api/v1/swaps/import", {
         method: "POST",
-        body: JSON.stringify({ txHash: importHash, fromChain, toChain }),
+        body: JSON.stringify({ txHash: importHash, fromChain: "4663", toChain: "4663" }),
       });
       await load();
       setMessage(result.inserted ? "Hash verified and added to the activity list." : "Already in the list or already booked.");
@@ -273,7 +271,9 @@ export function ClaimsInbox({
       )}
 
       <form onSubmit={(event) => void onImport(event)} className="max-w-xl space-y-4 border-t border-white/8 pt-8">
-        <p className="text-sm text-zinc-400">Import a source-chain hash. We verify ownership before it enters the list.</p>
+        <p className="text-sm text-zinc-400">
+          Import a Robinhood Chain transaction hash. We verify ownership before it enters the list.
+        </p>
         <label className="block space-y-2">
           <span className="text-sm text-zinc-400">Transaction hash</span>
           <input
@@ -284,26 +284,7 @@ export function ClaimsInbox({
             placeholder="0x followed by 64 hex chars"
           />
         </label>
-        <div className="grid grid-cols-2 gap-4">
-          <label className="block space-y-2">
-            <span className="text-sm text-zinc-400">From chain id</span>
-            <input
-              required
-              value={fromChain}
-              onChange={(event) => setFromChain(event.target.value)}
-              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
-            />
-          </label>
-          <label className="block space-y-2">
-            <span className="text-sm text-zinc-400">To chain id</span>
-            <input
-              required
-              value={toChain}
-              onChange={(event) => setToChain(event.target.value)}
-              className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
-            />
-          </label>
-        </div>
+        <p className="font-mono text-xs text-zinc-500">Robinhood Chain · 4663</p>
         <NotchedButton type="submit" variant="ghost" disabled={status === "working"}>
           Verify hash
         </NotchedButton>

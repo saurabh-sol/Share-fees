@@ -77,6 +77,7 @@ export function SwapStudio({
   const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
   const fromMeta = tokens.find((t) => t.address.toLowerCase() === fromToken.toLowerCase());
   const toMeta = tokens.find((t) => t.address.toLowerCase() === toToken.toLowerCase());
+  const sameChain = true; // Robinhood Chain only — always same-chain.
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
@@ -87,6 +88,13 @@ export function SwapStudio({
         setMessage(error instanceof Error ? error.message : "Could not load tokens.");
       });
   }, [chainNamespace]);
+
+  function importToken(token: LifiToken) {
+    setTokens((prev) => {
+      if (prev.some((t) => t.address.toLowerCase() === token.address.toLowerCase())) return prev;
+      return [...prev, token];
+    });
+  }
 
   async function onQuote() {
     setPhase("quoting");
@@ -170,6 +178,7 @@ export function SwapStudio({
       const txHash = await executeUniswapSwap(
         {
           chainId: ROBINHOOD_CHAIN_ID as Parameters<typeof executeUniswapSwap>[0]["chainId"],
+          route: uniQuote.route as Parameters<typeof executeUniswapSwap>[0]["route"],
           poolKey: uniQuote.poolKey as Parameters<typeof executeUniswapSwap>[0]["poolKey"],
           zeroForOne: uniQuote.zeroForOne,
           amountIn: uniQuote.action.fromAmount,
@@ -212,7 +221,6 @@ export function SwapStudio({
     ? (Number(quote.quote.estimate.toAmount) / 10 ** (toMeta?.decimals ?? 18)).toFixed(6)
     : "—";
 
-  const isStockPair = STOCK_SYMBOLS.has(fromMeta?.symbol ?? "") || STOCK_SYMBOLS.has(toMeta?.symbol ?? "");
 
   return (
     <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.15fr_0.85fr]">
@@ -223,14 +231,9 @@ export function SwapStudio({
           void onQuote();
         }}
       >
-        <div className="flex items-center gap-2 border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300">
-          <span>📈</span>
-          <span>Robinhood Chain · Uniswap V4</span>
-        </div>
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TokenSelect label="From token" tokens={tokens} value={fromToken} onChange={setFromToken} />
-          <TokenSelect label="To token" tokens={tokens} value={toToken} onChange={setToToken} />
+          <TokenSelect label="From token" tokens={tokens} value={fromToken} onChange={setFromToken} onImportToken={importToken} />
+          <TokenSelect label="To token" tokens={tokens} value={toToken} onChange={setToToken} onImportToken={importToken} />
         </div>
         <label className="block space-y-2">
           <span className="text-sm text-zinc-400">Amount</span>
@@ -250,8 +253,8 @@ export function SwapStudio({
           >
             {phase === "quoting" ? "Quoting…" : "Get route"}
           </button>
-          <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-            ⚡ {isStockPair ? "Stock swap" : "On-chain swap"}
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            {sameChain ? "Same-chain" : "Cross-chain"}
           </span>
         </div>
       </form>
@@ -260,7 +263,9 @@ export function SwapStudio({
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Route</p>
         <p className="font-mono text-xs text-zinc-500">
           {quote
-            ? "Uniswap V4 — direct on-chain swap on Robinhood Chain"
+            ? quote.quote.route?.type === "multi"
+              ? `Uniswap V4 · multi-hop (${quote.quote.route.path.length} pools) on Robinhood Chain`
+              : "Uniswap V4 · direct on-chain swap on Robinhood Chain"
             : "Uniswap V4 finds the best pool for this pair on Robinhood Chain."}
         </p>
         {!isConnected || !walletMatches ? (

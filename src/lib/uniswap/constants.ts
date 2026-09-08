@@ -4,12 +4,24 @@
  * Addresses from https://developers.uniswap.org/docs/protocols/v4/deployments
  */
 
-/** Standard V4 pool configs: (fee in hundredths of a bip, tickSpacing). Try in popularity order. */
+/**
+ * V4 pool configs: (fee in hundredths of a bip, tickSpacing).
+ * We try each in order and keep the best quote.
+ *
+ * Order matters — most common combos first. Robinhood Chain's pools.trade
+ * launchpad uses `2500 / 25` (0.25%, native-ETH-quoted), so we include that
+ * plus the classic mainnet set.
+ */
 export const V4_POOL_CONFIGS = [
-  { fee: 3000, tickSpacing: 60 },   // 0.30% — most common
-  { fee: 500, tickSpacing: 10 },    // 0.05% — popular for majors
+  { fee: 3000, tickSpacing: 60 },   // 0.30% — mainnet most common
+  { fee: 500, tickSpacing: 10 },    // 0.05% — popular for majors / stables
+  { fee: 2500, tickSpacing: 25 },   // 0.25% — Robinhood pools.trade current
+  { fee: 2500, tickSpacing: 60 },   // 0.25% — Robinhood pools.trade original
   { fee: 10000, tickSpacing: 200 }, // 1.00% — exotic pairs
-  { fee: 100, tickSpacing: 1 },     // 0.01% — stablecoins
+  { fee: 100, tickSpacing: 1 },     // 0.01% — stablecoin ↔ stablecoin
+  { fee: 1000, tickSpacing: 20 },   // 0.10% — mid-fee configs
+  { fee: 500, tickSpacing: 60 },    // 0.05% wide
+  { fee: 3000, tickSpacing: 200 },  // 0.30% wide
 ] as const;
 export type PoolConfig = (typeof V4_POOL_CONFIGS)[number];
 
@@ -68,6 +80,7 @@ export const CMD_V4_SWAP = 0x10;
 
 /* ─── V4Router action bytes ─── */
 export const ACT_SWAP_EXACT_IN_SINGLE = 0x06;
+export const ACT_SWAP_EXACT_IN = 0x07;
 export const ACT_SETTLE_ALL = 0x0c;
 export const ACT_TAKE_ALL = 0x0d;
 
@@ -80,6 +93,19 @@ export type PoolKey = {
   hooks: `0x${string}`;
 };
 
+/**
+ * V4 PathKey — one hop in a multi-hop path.
+ * `intermediateCurrency` is the token that comes OUT of this hop
+ * (the input of the *next* hop, or the final `toToken` for the last hop).
+ */
+export type PathKey = {
+  intermediateCurrency: `0x${string}`;
+  fee: number;
+  tickSpacing: number;
+  hooks: `0x${string}`;
+  hookData: `0x${string}`;
+};
+
 export function sortCurrencies(
   tokenA: `0x${string}`,
   tokenB: `0x${string}`,
@@ -90,7 +116,7 @@ export function sortCurrencies(
   return { currency0: tokenB, currency1: tokenA, zeroForOne: false };
 }
 
-/* ─── ABI: V4 Quoter quoteExactInputSingle ─── */
+/* ─── ABI: V4 Quoter — quoteExactInputSingle + quoteExactInput (multi-hop) ─── */
 export const V4_QUOTER_ABI = [
   {
     inputs: [
@@ -120,6 +146,36 @@ export const V4_QUOTER_ABI = [
       { name: "deltaAmounts", type: "int128[]" },
       { name: "sqrtPriceX96After", type: "uint160" },
       { name: "initializedTicksCrossed", type: "uint32" },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { name: "exactCurrency", type: "address" },
+          {
+            components: [
+              { name: "intermediateCurrency", type: "address" },
+              { name: "fee", type: "uint24" },
+              { name: "tickSpacing", type: "int24" },
+              { name: "hooks", type: "address" },
+              { name: "hookData", type: "bytes" },
+            ],
+            name: "path",
+            type: "tuple[]",
+          },
+          { name: "exactAmount", type: "uint128" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "quoteExactInput",
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "gasEstimate", type: "uint256" },
     ],
     stateMutability: "nonpayable",
     type: "function",

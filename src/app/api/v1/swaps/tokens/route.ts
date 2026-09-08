@@ -46,7 +46,7 @@ function buildRobinhoodTokens(): LifiToken[] {
       decimals: 18,
       chainId: ROBINHOOD_CHAIN_ID,
       priceUSD: undefined,
-      logoURI: undefined,
+      logoURI: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
     },
     {
       address: ROBINHOOD_WETH,
@@ -55,7 +55,7 @@ function buildRobinhoodTokens(): LifiToken[] {
       decimals: 18,
       chainId: ROBINHOOD_CHAIN_ID,
       priceUSD: undefined,
-      logoURI: undefined,
+      logoURI: "https://assets.coingecko.com/coins/images/2518/small/weth.png",
     },
   ];
 

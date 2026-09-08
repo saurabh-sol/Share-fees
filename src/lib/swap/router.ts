@@ -1,18 +1,41 @@
 import { ROBINHOOD_CHAIN_ID, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
-import { isUniswapChainId, type PoolKey } from "@/lib/uniswap/constants";
+import { isUniswapChainId, type PathKey, type PoolKey } from "@/lib/uniswap/constants";
 import { quoteUniswap, UniswapQuoteError } from "@/lib/uniswap/quote";
+
+/**
+ * The route the client should execute against.
+ *
+ * - `single` — one Uniswap V4 pool. Client encodes SWAP_EXACT_IN_SINGLE.
+ * - `multi`  — 2+ hops through hub currencies (USDG, ETH). Client encodes
+ *              SWAP_EXACT_IN with the PathKey[] chain.
+ */
+export type UniswapRoute =
+  | {
+      type: "single";
+      poolKey: PoolKey;
+      zeroForOne: boolean;
+    }
+  | {
+      type: "multi";
+      currencyIn: `0x${string}`;
+      path: PathKey[];
+    };
 
 export type UniswapQuoteView = {
   provider: "uniswap";
   amountOut: string;
   fee: number;
   tickSpacing: number;
+  /** Legacy — only meaningful for single-hop. Kept so older clients don't crash. */
   poolKey: PoolKey;
+  /** Legacy — only meaningful for single-hop. Kept so older clients don't crash. */
   zeroForOne: boolean;
   tokenIn: string;
   tokenOut: string;
   isNativeIn: boolean;
   isNativeOut: boolean;
+  /** The concrete route the browser executes. */
+  route: UniswapRoute;
   action: {
     fromChainId: number;
     toChainId: number;
@@ -122,8 +145,6 @@ export async function routeSwapQuote(input: {
     toPriceUsd,
   });
 
-  const fromAmountHuman = Number(input.fromAmount) / 10 ** fromDecimals;
-  const toAmountHuman = Number(result.amountOut) / 10 ** toDecimals;
   const fromAmountUsd = fromAmountUsdCents > 0
     ? (fromAmountUsdCents / 100).toFixed(2)
     : undefined;
@@ -132,17 +153,36 @@ export async function routeSwapQuote(input: {
     ? (fromAmountUsdCents / 100).toFixed(2)
     : undefined;
 
+  // Build the execution route. For single-hop we also expose `poolKey` /
+  // `zeroForOne` at the top level so older client builds keep working.
+  const route: UniswapRoute = result.route === "single"
+    ? { type: "single", poolKey: result.poolKey, zeroForOne: result.zeroForOne }
+    : { type: "multi", currencyIn: result.currencyIn, path: result.path };
+
+  const legacyPoolKey: PoolKey = result.route === "single"
+    ? result.poolKey
+    : {
+        // Synthetic placeholder for multi-hop — represents the first hop's pool.
+        currency0: result.path[0].intermediateCurrency,
+        currency1: result.currencyIn,
+        fee: result.fee,
+        tickSpacing: result.tickSpacing,
+        hooks: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+      };
+  const legacyZeroForOne = result.route === "single" ? result.zeroForOne : true;
+
   const quoteView: UniswapQuoteView = {
     provider: "uniswap",
     amountOut: result.amountOut.toString(),
     fee: result.fee,
     tickSpacing: result.tickSpacing,
-    poolKey: result.poolKey,
-    zeroForOne: result.zeroForOne,
+    poolKey: legacyPoolKey,
+    zeroForOne: legacyZeroForOne,
     tokenIn: result.tokenIn,
     tokenOut: result.tokenOut,
     isNativeIn: result.isNativeIn,
     isNativeOut: result.isNativeOut,
+    route,
     action: {
       fromChainId: input.fromChainId,
       toChainId: input.toChainId,
@@ -167,9 +207,6 @@ export async function routeSwapQuote(input: {
       fromAmountUSD: fromAmountUsd,
     },
   };
-  // Reference these so tsc doesn't complain about the local `Number()` conversions when priceUSD isn't provided.
-  void fromAmountHuman;
-  void toAmountHuman;
 
   return {
     provider: "uniswap",
