@@ -24,8 +24,15 @@ export type HistoricalCandidate = {
 
 export const CLAIMABLE_KINDS = new Set<ActivityKind>(["trade", "execute"]);
 
+/** Swaps plus USDG (and other) send/receive — all count toward scan volume. */
+export const VOLUME_KINDS = new Set<ActivityKind>(["trade", "execute", "send", "receive"]);
+
 export function isClaimableKind(kind: string | null | undefined) {
   return CLAIMABLE_KINDS.has((kind ?? "trade") as ActivityKind);
+}
+
+export function isVolumeKind(kind: string | null | undefined) {
+  return VOLUME_KINDS.has((kind ?? "trade") as ActivityKind);
 }
 
 export type TradeSource = {

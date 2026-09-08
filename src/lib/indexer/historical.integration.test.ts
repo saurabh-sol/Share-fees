@@ -72,7 +72,7 @@ describe("historical scan → claim → ledger", () => {
     expect(activity[0]?.status).toBe("below_threshold");
   });
 
-  it("sums swap volume only and ignores sends after $250 trade volume", async () => {
+  it("sums swap volume and send transfers after $250 total volume", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await persistCandidates(
@@ -88,9 +88,9 @@ describe("historical scan → claim → ledger", () => {
     const activity = await listWalletActivity(userId, db);
     const summary = summarizeWalletVolume(activity, { conversionBps: 50 });
     expect(activity).toHaveLength(3);
-    expect(summary.totalVolumeCents).toBe(40_000);
+    expect(summary.totalVolumeCents).toBe(55_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(200);
+    expect(summary.estimatedTotalRewardCents).toBe(275);
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
@@ -128,7 +128,7 @@ describe("historical scan → claim → ledger", () => {
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
-  it("cools down after any scan, including an empty one", async () => {
+  it("allows an immediate rescan with no cooldown", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     const empty = await scanWallet({
@@ -145,8 +145,7 @@ describe("historical scan → claim → ledger", () => {
       sources: [{ name: "mock", fetchTrades: async () => [] }],
       db,
     });
-    expect(retryEmpty.cooldown).toBe(true);
-    expect(retryEmpty.retryAfterSec).toBeGreaterThan(0);
+    expect(retryEmpty.cooldown).toBeUndefined();
   });
 
   it("returns the last scan when Zerion rate-limits", async () => {

@@ -4,7 +4,7 @@ import {
   MIN_REWARD_CENTS,
   computeRewardCents,
 } from "@/lib/rules/engine";
-import { isClaimableKind } from "./types";
+import { isVolumeKind } from "./types";
 
 export type ActivityVolumeRow = {
   notionalUsdCents: number;
@@ -13,12 +13,11 @@ export type ActivityVolumeRow = {
 };
 
 /**
- * Aggregate a wallet's swap activity for display and aggregate-volume rewards.
+ * Aggregate wallet activity for display and aggregate-volume rewards.
  *
- * Reward is computed from **total swap volume** (every trade/execute), including
- * fills that were already booked in-app. The $250 floor applies to that total.
- * Sends and receives never count. Ledger settle still posts only the unpaid
- * delta so an already-credited fill is not paid twice.
+ * Volume is every trade, execute, send, and receive (USDG transfers included).
+ * Approves and other noise stay out. The $250 floor applies to that total.
+ * Ledger settle posts only the unpaid delta so a credited fill is not paid twice.
  */
 export function summarizeWalletVolume(
   rows: ActivityVolumeRow[],
@@ -30,7 +29,7 @@ export function summarizeWalletVolume(
   const conversionBps = input?.conversionBps ?? DEFAULT_CONVERSION_BPS;
   const minNotionalUsdCents = input?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
 
-  const trades = rows.filter((row) => isClaimableKind(row.kind));
+  const trades = rows.filter((row) => isVolumeKind(row.kind));
   const totalVolumeCents = trades.reduce(
     (sum, row) => sum + Math.max(0, row.notionalUsdCents),
     0,

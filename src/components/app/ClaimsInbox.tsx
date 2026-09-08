@@ -188,7 +188,7 @@ export function ClaimsInbox({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="max-w-[65ch] text-sm text-zinc-400">
           {autoScan
-            ? `Scan lists 90 days of transfers and sums swap volume. The history key is shared, so a busy minute reuses your last scan. Import a hash if you need one fill now. Reward shows after volume clears ${money(minNotionalUsdCents)}.`
+            ? `Scan lists 90 days of transfers and sums swaps plus send/receive volume. Import a hash if you need one fill now. Reward shows after volume clears ${money(minNotionalUsdCents)}.`
             : "Wallet scan is temporarily unavailable. You can still import a verified transaction hash."}
         </p>
         <NotchedButton disabled={status === "working"} onClick={() => void onScan()}>

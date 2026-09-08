@@ -44,19 +44,20 @@ describe("summarizeWalletVolume", () => {
     expect(summary.estimatedTotalRewardCents).toBe(175);
   });
 
-  it("ignores sends and other non-swap kinds when summing volume", () => {
+  it("counts send and receive transfers in volume, ignores approvals", () => {
     const summary = summarizeWalletVolume(
       [
         { notionalUsdCents: 18_000, kind: "trade" },
         { notionalUsdCents: 10_000, kind: "send" },
         { notionalUsdCents: 8_000, kind: "execute" },
         { notionalUsdCents: 50_000, kind: "receive" },
+        { notionalUsdCents: 99_000, kind: "approve" },
       ],
       { conversionBps: 50 },
     );
-    expect(summary.transferCount).toBe(4);
-    expect(summary.totalVolumeCents).toBe(26_000);
+    expect(summary.transferCount).toBe(5);
+    expect(summary.totalVolumeCents).toBe(86_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(130);
+    expect(summary.estimatedTotalRewardCents).toBe(430);
   });
 });

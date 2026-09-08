@@ -12,7 +12,8 @@ import { robinhoodRpcSource } from "./robinhood-rpc";
 import { zerionSource } from "./zerion";
 
 export const SCAN_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
-export const SCAN_COOLDOWN_MS = 2 * 60 * 1000;
+/** No wait between wallet scans — each click runs a live fetch. */
+export const SCAN_COOLDOWN_MS = 0;
 
 export function asDate(value: Date | string | number | null | undefined) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -198,6 +199,7 @@ export async function scanWallet(input: {
   });
 
   if (
+    SCAN_COOLDOWN_MS > 0 &&
     !input.force &&
     last &&
     lastScannedAt &&
