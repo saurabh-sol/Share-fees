@@ -2,12 +2,12 @@ import type { PrivyClientConfig } from "@privy-io/react-auth";
 import { mainnet } from "viem/chains";
 import { robinhoodChain } from "@/lib/chains/robinhood";
 
-/** Installed browser-extension wallets only (EIP-6963). No WalletConnect QR or full catalog. */
+/**
+ * Show ONLY browser-extension wallets detected via EIP-6963.
+ * No hardcoded entries — if the wallet isn't installed, it won't appear.
+ */
 export const PRIVY_INSTALLED_WALLET_LIST = [
   "detected_ethereum_wallets",
-  "metamask",
-  "coinbase_wallet",
-  "robinhood_wallet",
 ] as const;
 
 export const privyConfigBase: PrivyClientConfig = {
