@@ -4,9 +4,9 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { privyConfigBase } from "@/lib/privy/config";
 
-/** Privy app IDs start with "cl" and are 25+ chars. */
+/** Privy app IDs are 20+ alphanumeric chars (e.g. cmtsvurwk00h80ckz4zyq6wwv). */
 function isValidPrivyAppId(id: string): boolean {
-  return /^cl[a-z0-9]{23,}$/i.test(id.trim());
+  return /^[a-z0-9]{20,}$/i.test(id.trim());
 }
 
 function PrivyInitStatus({ children }: { children: ReactNode }) {
