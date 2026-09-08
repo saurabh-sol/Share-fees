@@ -12,6 +12,7 @@ import {
   robinhoodChain,
   ROBINHOOD_CHAIN_ID,
   ROBINHOOD_USDG,
+  ROBINHOOD_USDT,
   ROBINHOOD_WETH,
 } from "@/lib/chains/robinhood";
 import { resolveErc20 } from "@/lib/chains/resolve-token";
@@ -175,8 +176,9 @@ async function sideUsdCents(
   const human = Number(formatUnits(value, decimals));
   if (!Number.isFinite(human) || human <= 0) return 0;
   const usdg = ROBINHOOD_USDG.toLowerCase();
+  const usdt = ROBINHOOD_USDT.toLowerCase();
   const weth = ROBINHOOD_WETH.toLowerCase();
-  if (token === usdg) return Math.round(human * 100);
+  if (token === usdg || token === usdt) return Math.round(human * 100);
   if (token === weth) return Math.round(human * (await ethUsdCents()));
   return 0;
 }
@@ -195,16 +197,60 @@ export async function fetchRobinhoodTrades(
   const groups = groupByTx([...outLogs, ...inLogs]).slice(0, MAX_CANDIDATES);
   if (groups.length === 0) return [];
 
-  // Resolve block timestamps for the involved blocks (batched RPC).
+  // Resolve block timestamps in small sequential chunks so the public RPC
+  // doesn't rate-limit us, with one retry pass for stragglers.
   const uniqueBlocks = [...new Set(groups.map((g) => g.blockNumber))];
   const blockTimes = new Map<bigint, Date>();
-  const blockResults = await Promise.allSettled(
-    uniqueBlocks.map((n) => client.getBlock({ blockNumber: n })),
-  );
-  for (const result of blockResults) {
-    if (result.status === "fulfilled") {
-      blockTimes.set(result.value.number, new Date(Number(result.value.timestamp) * 1000));
+
+  async function fetchBlockTimes(blocks: bigint[]) {
+    const failed: bigint[] = [];
+    const CHUNK = 20;
+    for (let i = 0; i < blocks.length; i += CHUNK) {
+      const chunk = blocks.slice(i, i + CHUNK);
+      const results = await Promise.allSettled(
+        chunk.map((n) => client.getBlock({ blockNumber: n })),
+      );
+      results.forEach((result, idx) => {
+        if (result.status === "fulfilled") {
+          blockTimes.set(result.value.number, new Date(Number(result.value.timestamp) * 1000));
+        } else {
+          failed.push(chunk[idx]);
+        }
+      });
+      if (i + CHUNK < blocks.length) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
     }
+    return failed;
+  }
+
+  const failedBlocks = await fetchBlockTimes(uniqueBlocks);
+  if (failedBlocks.length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await fetchBlockTimes(failedBlocks);
+  }
+
+  // Interpolation fallback for blocks the RPC never answered: estimate the
+  // timestamp from the two nearest known anchors (block times are ~uniform).
+  const anchors = [...blockTimes.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  function estimateTime(blockNumber: bigint): Date | null {
+    if (anchors.length === 0) return null;
+    if (anchors.length === 1) return anchors[0][1];
+    let lower = anchors[0];
+    let upper = anchors[anchors.length - 1];
+    for (const anchor of anchors) {
+      if (anchor[0] <= blockNumber) lower = anchor;
+      if (anchor[0] >= blockNumber) {
+        upper = anchor;
+        break;
+      }
+    }
+    if (upper[0] === lower[0]) return lower[1];
+    const ratio =
+      Number(blockNumber - lower[0]) / Number(upper[0] - lower[0]);
+    return new Date(
+      lower[1].getTime() + ratio * (upper[1].getTime() - lower[1].getTime()),
+    );
   }
 
   // For single-sided txs, look up the transaction to detect ETH ↔ token swaps
@@ -228,7 +274,7 @@ export async function fetchRobinhoodTrades(
   const candidates: HistoricalCandidate[] = [];
 
   for (const group of groups) {
-    const executedAt = blockTimes.get(group.blockNumber);
+    const executedAt = blockTimes.get(group.blockNumber) ?? estimateTime(group.blockNumber);
     if (!executedAt || executedAt < since) continue;
 
     const outT = largest(group.out);
