@@ -2,6 +2,7 @@
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 #
 # Postgres and Redis stay on the Docker network. Only the app is published.
+# Privy: set APP_ORIGIN to your public https URL and allow it in the Privy dashboard.
 
 services:
   postgres:
@@ -37,16 +38,12 @@ services:
       - "${APP_PORT:-3000}:3000"
     env_file:
       - path: .env.production
-        required: false
+        required: true
     environment:
       NODE_ENV: production
       ALLOW_MOCK_SWAPS: "false"
       DATABASE_URL: ${DATABASE_URL:-postgresql://t2c:${POSTGRES_PASSWORD}@postgres:5432/trade2credits}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN to the public https origin}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-${APP_ORIGIN}}
-      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
-      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,8 +68,9 @@ services:
     depends_on:
       app:
         condition: service_healthy
-    environment:
-      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET}
+    env_file:
+      - path: .env.production
+        required: true
     command:
       - /bin/sh
       - -c

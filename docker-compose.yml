@@ -1,7 +1,13 @@
-# Local desk:   docker compose up --build
-# Hostdev deps: docker compose up postgres redis
-#               then npm run dev with localhost DATABASE_URL / REDIS_URL
-# Production:   docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+# Local desk (Postgres + Redis + app + cron):
+#   cp .env.docker.example .env.local   # fill Privy + SESSION_SECRET + CRON_SECRET
+#   docker compose up --build
+#
+# Host Next + Docker data only:
+#   docker compose up postgres redis
+#   npm run dev   # .env.local → localhost:5432 / localhost:6379
+#
+# Production stack:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 
 services:
   postgres:
@@ -38,10 +44,10 @@ services:
       - "3000:3000"
     env_file:
       - path: .env.local
-        required: false
+        required: true
     environment:
       NODE_ENV: development
-      ALLOW_MOCK_SWAPS: "true"
+      ALLOW_MOCK_SWAPS: "false"
       DATABASE_URL: postgresql://t2c:t2c@postgres:5432/trade2credits
       REDIS_URL: redis://redis:6379
       APP_ORIGIN: http://localhost:3000
@@ -71,9 +77,7 @@ services:
         condition: service_healthy
     env_file:
       - path: .env.local
-        required: false
-    environment:
-      CRON_SECRET: ${CRON_SECRET:-}
+        required: true
     command:
       - /bin/sh
       - -c

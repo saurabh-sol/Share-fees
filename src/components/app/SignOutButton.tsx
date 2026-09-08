@@ -10,7 +10,7 @@ export function SignOutButton() {
   const { disconnectAsync } = useDisconnect();
   const [busy, setBusy] = useState(false);
 
-  async function onSignOut() {
+  async function onDisconnect() {
     setBusy(true);
     try {
       await fetch("/api/v1/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -26,11 +26,11 @@ export function SignOutButton() {
   return (
     <button
       type="button"
-      onClick={onSignOut}
+      onClick={onDisconnect}
       disabled={busy}
       className="text-sm text-zinc-300 transition-transform active:scale-[0.98] hover:text-zinc-100 disabled:opacity-40"
     >
-      {busy ? "Signing out…" : "Sign out"}
+      {busy ? "Disconnecting…" : "Disconnect"}
     </button>
   );
 }

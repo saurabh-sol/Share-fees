@@ -12,6 +12,7 @@ coverage
 .env.*
 !.env.example
 !.env.production.example
+!.env.docker.example
 AGENTS.md
 CLAUDE.md
 DESIGN.md

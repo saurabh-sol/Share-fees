@@ -107,8 +107,11 @@ Open [http://localhost:3000](http://localhost:3000), connect a wallet, and use t
 To run the site together with local Postgres, Redis, and the minute payout/settle jobs:
 
 ```bash
+cp .env.docker.example .env.local   # fill Privy keys + SESSION_SECRET + CRON_SECRET
 docker compose up --build
 ```
+
+Open [http://localhost:3000/login](http://localhost:3000/login). In the [Privy dashboard](https://dashboard.privy.io), allow `http://localhost:3000` as an origin and paste your `PRIVY_APP_ID`, `PRIVY_CLIENT_ID`, and `PRIVY_APP_SECRET` into `.env.local`.
 
 To keep Next.js on the machine and only run the data services:
 
@@ -139,7 +142,7 @@ Push `main`. Set production env on the project: `SESSION_SECRET`, `APP_ORIGIN`, 
 
 ```bash
 cp .env.production.example .env.production
-# fill SESSION_SECRET, APP_ORIGIN, POSTGRES_PASSWORD, CRON_SECRET
+# fill SESSION_SECRET, APP_ORIGIN, POSTGRES_PASSWORD, CRON_SECRET, Privy keys
 docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 curl -fsS http://localhost:3000/api/v1/health
 ```
@@ -168,6 +171,9 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 | `CRON_SECRET` | Authorizes the payout and settle jobs. Local `next dev` ticks them every minute. Vercel Cron uses the same secret. |
 | `LIFI_WEBHOOK_SECRET` / `CHANGENOW_WEBHOOK_SECRET` | Shared secrets for swap-route settle webhooks. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional. WalletConnect stays hidden if empty. |
+| `PRIVY_APP_ID` / `NEXT_PUBLIC_PRIVY_APP_ID` | Privy wallet login on `/login`. Required for Docker and production. |
+| `PRIVY_CLIENT_ID` / `NEXT_PUBLIC_PRIVY_CLIENT_ID` | Privy client id (`client_id` alias works in `.env.local`). |
+| `PRIVY_APP_SECRET` | Privy app secret (`privy_secret` alias works). Server-only. |
 
 Do not put treasury or vendor keys in an image or a committed file.
 

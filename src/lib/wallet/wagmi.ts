@@ -24,7 +24,7 @@ export const wagmiConfig = createConfig({
     injected(),
     coinbaseWallet({
       appName: BRAND_NAME,
-      preference: "all",
+      preference: { options: "all" },
     }),
     ...(projectId
       ? [

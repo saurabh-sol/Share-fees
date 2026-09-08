@@ -35,7 +35,16 @@ const envSchema = z.object({
   CRON_SECRET: z.string().min(16).optional(),
   LIFI_WEBHOOK_SECRET: z.string().min(8).optional(),
   CHANGENOW_WEBHOOK_SECRET: z.string().min(8).optional(),
+  NEXT_PUBLIC_PRIVY_APP_ID: z.string().min(1).optional(),
+  PRIVY_APP_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_PRIVY_CLIENT_ID: z.string().min(1).optional(),
+  PRIVY_CLIENT_ID: z.string().min(1).optional(),
+  PRIVY_APP_SECRET: z.string().min(1).optional(),
 });
+
+function cleanEnv(value: string | undefined) {
+  return value?.trim().replace(/^['"]|['"]$/g, "") || undefined;
+}
 
 const parsed = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
@@ -70,6 +79,11 @@ const parsed = envSchema.parse({
   CRON_SECRET: process.env.CRON_SECRET,
   LIFI_WEBHOOK_SECRET: process.env.LIFI_WEBHOOK_SECRET,
   CHANGENOW_WEBHOOK_SECRET: process.env.CHANGENOW_WEBHOOK_SECRET,
+  NEXT_PUBLIC_PRIVY_APP_ID: cleanEnv(process.env.NEXT_PUBLIC_PRIVY_APP_ID),
+  PRIVY_APP_ID: cleanEnv(process.env.PRIVY_APP_ID),
+  NEXT_PUBLIC_PRIVY_CLIENT_ID: cleanEnv(process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID),
+  PRIVY_CLIENT_ID: cleanEnv(process.env.PRIVY_CLIENT_ID ?? process.env.client_id),
+  PRIVY_APP_SECRET: cleanEnv(process.env.PRIVY_APP_SECRET ?? process.env.privy_secret),
 });
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
@@ -130,6 +144,9 @@ export const env = {
   cronSecret: parsed.CRON_SECRET,
   lifiWebhookSecret: parsed.LIFI_WEBHOOK_SECRET,
   changeNowWebhookSecret: parsed.CHANGENOW_WEBHOOK_SECRET,
+  privyAppId: parsed.NEXT_PUBLIC_PRIVY_APP_ID ?? parsed.PRIVY_APP_ID,
+  privyClientId: parsed.NEXT_PUBLIC_PRIVY_CLIENT_ID ?? parsed.PRIVY_CLIENT_ID,
+  privyAppSecret: parsed.PRIVY_APP_SECRET,
 };
 
 export function appDomain(): string {

@@ -6,7 +6,7 @@ export const BRAND_DESCRIPTION =
 /** Square mark in /public — used in headers, footer, favicon, and metadata. */
 export const BRAND_LOGO_PATH = "/logo.png" as const;
 export const BRAND_TITLE = `${BRAND_NAME} — ${BRAND_TAGLINE}` as const;
-export const SIWE_STATEMENT = `${BRAND_NAME} wants you to sign in` as const;
+export const SIWE_STATEMENT = `${BRAND_NAME} wants to connect your wallet` as const;
 
 /** Prefix for metered LLM virtual keys (shown once at redeem). */
 export const VIRTUAL_KEY_PREFIX = "acc_" as const;

@@ -18,6 +18,7 @@ import {
   moneyFromCents,
   readTryResultHeaders,
 } from "@/lib/gateway/try-request";
+import { ProviderMark } from "@/components/llm/ProviderMark";
 import { isVirtualKey } from "@/lib/brand";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 
@@ -70,6 +71,9 @@ export function ApiKeyTryPanel({
   }, [provider, model]);
 
   const snippet = clientSnippets(provider, gatewayBaseUrl, apiKey.trim() || "acc_…", model, message);
+  const providerLabel = LLM_CATALOG.find((item) => item.id === provider)?.label ?? provider;
+  const modelLabel =
+    modelsForProvider(provider).find((item) => item.id === model)?.label ?? model;
 
   async function onRun() {
     const key = apiKey.trim();
@@ -150,10 +154,13 @@ export function ApiKeyTryPanel({
             <label className="block space-y-2">
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Provider</span>
               <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+                  <ProviderMark provider={provider} size={22} />
+                </span>
                 <select
                   value={provider}
                   onChange={(event) => setProvider(event.target.value as LlmProvider)}
-                  className="w-full appearance-none border border-white/10 bg-transparent px-3 py-2.5 pr-9 font-mono text-sm text-zinc-100 outline-none focus:border-accent"
+                  className="w-full appearance-none border border-white/10 bg-transparent py-2.5 pl-11 pr-9 font-mono text-sm text-zinc-100 outline-none focus:border-accent"
                 >
                   {LLM_CATALOG.map((item) => (
                     <option key={item.id} value={item.id} className="bg-background">
@@ -170,10 +177,13 @@ export function ApiKeyTryPanel({
             <label className="block space-y-2">
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Model</span>
               <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+                  <ProviderMark provider={provider} size={22} />
+                </span>
                 <select
                   value={model}
                   onChange={(event) => setModel(event.target.value)}
-                  className="w-full appearance-none border border-white/10 bg-transparent px-3 py-2.5 pr-9 font-mono text-sm text-zinc-100 outline-none focus:border-accent"
+                  className="w-full appearance-none border border-white/10 bg-transparent py-2.5 pl-11 pr-9 font-mono text-sm text-zinc-100 outline-none focus:border-accent"
                 >
                   {modelsForProvider(provider).map((item) => (
                     <option key={item.id} value={item.id} className="bg-background">
@@ -189,9 +199,12 @@ export function ApiKeyTryPanel({
             </label>
           </div>
         ) : (
-          <p className="font-mono text-xs text-zinc-500">
-            Locked to {provider} · {model}
-          </p>
+          <div className="flex items-center gap-2.5 border border-white/10 px-3 py-2.5">
+            <ProviderMark provider={provider} size={22} />
+            <p className="font-mono text-xs text-zinc-400">
+              Locked to {providerLabel} · {modelLabel}
+            </p>
+          </div>
         )}
 
         <label className="block space-y-2">
