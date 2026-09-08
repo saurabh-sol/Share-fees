@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const WELL_KNOWN_LOGOS: Record<string, string> = {
   eth: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
   weth: "https://assets.coingecko.com/coins/images/2518/small/weth.png",
-  usdg: "https://cdn.robinhood.com/ncw_assets/logos/0x5fc5360d0400a0fd4f2af552add042d716f1d168.png",
+  usdg: "https://coin-images.coingecko.com/coins/images/51281/small/GDN_USDG_Token_200x200.png",
   usdc: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
   usdt: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
   dai: "https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png",

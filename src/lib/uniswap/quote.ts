@@ -204,7 +204,10 @@ async function quoteV4SingleHop(
 
   let best: SingleHop | null = null;
   for (const r of results) {
-    if (r.status !== "fulfilled") continue;
+    if (r.status === "rejected") {
+      console.warn("[v4-quote] pool revert:", (r.reason as Error)?.message?.slice(0, 120));
+      continue;
+    }
     const { amountOut, poolKey, cfg } = r.value;
     if (amountOut === 0n) continue;
     if (!best || amountOut > best.amountOut) {
@@ -261,7 +264,10 @@ async function quoteV3SingleHop(
 
   let best: V3SingleHop | null = null;
   for (const r of results) {
-    if (r.status !== "fulfilled") continue;
+    if (r.status === "rejected") {
+      console.warn("[v3-quote] fee revert:", (r.reason as Error)?.message?.slice(0, 120));
+      continue;
+    }
     const { amountOut, fee } = r.value;
     if (amountOut === 0n) continue;
     if (!best || amountOut > best.amountOut) {
@@ -357,6 +363,9 @@ export async function quoteUniswap(input: {
   const isNativeIn = userIn === NATIVE_LC;
   const isNativeOut = userOut === NATIVE_LC;
   const weth = WRAPPED_NATIVE[input.chainId].toLowerCase() as `0x${string}`;
+
+  console.log("[quote] chain=%d in=%s out=%s amountIn=%s native_in=%s native_out=%s",
+    input.chainId, userIn, userOut, amountIn.toString(), isNativeIn, isNativeOut);
 
   type Candidate = {
     amountOut: bigint;
@@ -586,8 +595,14 @@ export async function quoteUniswap(input: {
     return best;
   }, null);
 
-  if (winner) return winner.build();
+  if (winner) {
+    const result = winner.build();
+    console.log("[quote] winner route=%s amountOut=%s fee=%d", result.route, result.amountOut.toString(), result.fee);
+    return result;
+  }
 
+  console.error("[quote] NO LIQUIDITY for %s → %s (chain %d, amount %s). Tried %d candidates.",
+    userIn, userOut, input.chainId, amountIn.toString(), candidates.length);
   throw new UniswapQuoteError(
     "No Uniswap liquidity found for this pair. Checked V4 and V3 pools across all fee tiers, " +
       "including multi-hop routes through USDG and WETH.",

@@ -267,12 +267,12 @@ export function SwapStudio({
           {quote
             ? (() => {
                 const rt = quote.quote.route?.type;
-                if (rt === "v3-multi") return "Uniswap V3 · multi-hop on Robinhood Chain";
-                if (rt === "v3-single") return "Uniswap V3 · direct on Robinhood Chain";
-                if (rt === "multi") return `Uniswap V4 · multi-hop (${(quote.quote.route as { path: unknown[] }).path?.length ?? 2} pools) on Robinhood Chain`;
-                return "Uniswap V4 · direct on Robinhood Chain";
+                if (rt === "v3-multi") return "Uniswap · multi-hop on Robinhood Chain";
+                if (rt === "v3-single") return "Uniswap · direct on Robinhood Chain";
+                if (rt === "multi") return `Uniswap · multi-hop (${(quote.quote.route as { path: unknown[] }).path?.length ?? 2} pools) on Robinhood Chain`;
+                return "Uniswap · direct on Robinhood Chain";
               })()
-            : "Uniswap finds the best pool for this pair on Robinhood Chain (V4 + V3)."}
+            : "The desk finds the best pool for this pair."}
         </p>
         {!isConnected || !walletMatches ? (
           <div className="space-y-3">

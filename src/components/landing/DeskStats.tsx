@@ -53,11 +53,11 @@ export function DeskStats() {
             ? formatUsd(raw)
             : formatCount(raw);
         return (
-          <div key={item.key} className="px-3 py-4 text-center md:py-5">
-            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          <div key={item.key} className="flex flex-col px-3 py-4 text-center md:py-5">
+            <dt className="flex min-h-[2em] items-start justify-center font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
               {item.label}
             </dt>
-            <dd className="mt-1.5 font-mono text-lg tabular-nums tracking-tight text-accent sm:text-xl">
+            <dd className="mt-auto pt-1.5 font-mono text-lg tabular-nums tracking-tight text-accent sm:text-xl">
               {display}
             </dd>
           </div>

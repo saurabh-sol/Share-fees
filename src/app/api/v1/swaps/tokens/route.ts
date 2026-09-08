@@ -31,10 +31,10 @@ function buildRobinhoodTokens(): LifiToken[] {
       address: ROBINHOOD_USDG,
       symbol: "USDG",
       name: "Global Dollar",
-      decimals: 18,
+      decimals: 6,
       chainId: ROBINHOOD_CHAIN_ID,
       priceUSD: "1.00",
-      logoURI: "https://cdn.robinhood.com/ncw_assets/logos/0x5fc5360d0400a0fd4f2af552add042d716f1d168.png",
+      logoURI: "https://coin-images.coingecko.com/coins/images/51281/small/GDN_USDG_Token_200x200.png",
     },
   ];
 

@@ -14,7 +14,7 @@ export default async function SwapPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Execution</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Swap studio</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Trade any tokens on Robinhood Chain via Uniswap V4. Every completed swap credits your
+          Trade any tokens on Robinhood Chain via Uniswap. Every completed swap credits your
           website balance and counts toward your on-platform volume. Below the reward floor the
           fill still happens; the credit is held.
         </p>
