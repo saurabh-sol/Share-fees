@@ -32,7 +32,7 @@ function money(cents: number) {
 }
 
 function isUniswapQuote(quote: LifiQuote | UniswapQuoteView): quote is UniswapQuoteView {
-  return "provider" in quote && quote.provider === "uniswap";
+  return "provider" in quote && (quote as UniswapQuoteView).provider === "uniswap";
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -214,11 +214,10 @@ export function SwapStudio({
         const txHash = await executeUniswapSwap(
           {
             chainId: fromChainId as Parameters<typeof executeUniswapSwap>[0]["chainId"],
-            tokenIn: uniQuote.tokenIn as `0x${string}`,
-            tokenOut: uniQuote.tokenOut as `0x${string}`,
+            poolKey: uniQuote.poolKey as Parameters<typeof executeUniswapSwap>[0]["poolKey"],
+            zeroForOne: uniQuote.zeroForOne,
             amountIn: uniQuote.action.fromAmount,
             amountOutMinimum: amountOutMin.toString(),
-            fee: uniQuote.fee as Parameters<typeof executeUniswapSwap>[0]["fee"],
             recipient: address as `0x${string}`,
             isNativeIn: uniQuote.isNativeIn,
             isNativeOut: uniQuote.isNativeOut,
@@ -341,7 +340,7 @@ export function SwapStudio({
           </button>
           {sameChain ? (
             <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-              ⚡ Uniswap V3
+              ⚡ Uniswap V4
             </span>
           ) : (
             <span className="font-mono text-[10px] uppercase tracking-wider text-blue-400">
@@ -356,10 +355,10 @@ export function SwapStudio({
         <p className="font-mono text-xs text-zinc-500">
           {quote
             ? quote.provider === "uniswap"
-              ? "Uniswap V3 — direct on-chain swap"
+              ? "Uniswap V4 — direct on-chain swap"
               : "LI.FI cross-chain router"
             : sameChain
-              ? "Uniswap V3 finds the best pool for this pair."
+              ? "Uniswap V4 finds the best pool for this pair."
               : "LI.FI picks the best cross-chain path."}
         </p>
         {!isConnected || !walletMatches ? (

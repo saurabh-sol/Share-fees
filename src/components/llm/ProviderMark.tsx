@@ -1,11 +1,12 @@
 "use client";
 
-import { GoogleLogo, OpenAiLogo } from "@phosphor-icons/react";
+import { OpenAiLogo } from "@phosphor-icons/react";
 import type { LlmProvider } from "@/lib/gateway/catalog";
 
 const IMAGE_MARK: Partial<Record<LlmProvider, string>> = {
   anthropic: "/claude.png",
   deepseek: "/deepseek.png",
+  google: "/gemini.png",
   grok: "/grok.png",
 };
 
@@ -30,8 +31,6 @@ export function ProviderMark({
     >
       {provider === "openai" ? (
         <OpenAiLogo size={iconSize} weight="regular" className="text-zinc-100" />
-      ) : provider === "google" ? (
-        <GoogleLogo size={iconSize} weight="regular" className="text-zinc-100" />
       ) : (
         <img
           src={IMAGE_MARK[provider]}

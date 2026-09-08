@@ -1,12 +1,12 @@
 /**
- * Server-side Uniswap swap verification.
- * Reads the tx receipt to verify the swap happened from the session address.
+ * Server-side Uniswap V4 swap verification.
+ * Reads the tx receipt to verify the swap happened via Universal Router.
  */
-import { createPublicClient, http, parseAbiItem, type Chain } from "viem";
-import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche, blast } from "viem/chains";
+import { createPublicClient, http, type Chain } from "viem";
+import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche } from "viem/chains";
 import { robinhoodChain } from "@/lib/chains/robinhood";
 import {
-  SWAP_ROUTER_02,
+  UNIVERSAL_ROUTER,
   WRAPPED_NATIVE,
   NATIVE_ADDRESS,
   type UniswapChainId,
@@ -21,11 +21,10 @@ const CHAIN_MAP: Record<UniswapChainId, Chain> = {
   8453: base,
   56: bsc,
   43114: avalanche,
-  81457: blast,
   4663: robinhoodChain,
 };
 
-const Transfer = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)");
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
 export type VerifiedUniswapFill = {
   kind: "done";
@@ -42,7 +41,7 @@ export type UniswapSettleResult =
   | { kind: "pending" };
 
 /**
- * Verify a Uniswap swap from the tx receipt.
+ * Verify a Uniswap V4 swap from the tx receipt.
  * Parses ERC-20 Transfer events to extract input/output amounts.
  */
 export async function verifyUniswapFill(input: {
@@ -59,7 +58,7 @@ export async function verifyUniswapFill(input: {
     transport: http(undefined, { timeout: 20_000 }),
   });
 
-  const routerAddress = SWAP_ROUTER_02[input.chainId];
+  const routerAddress = UNIVERSAL_ROUTER[input.chainId];
   const wrappedNative = WRAPPED_NATIVE[input.chainId];
 
   let receipt;
@@ -88,7 +87,7 @@ export async function verifyUniswapFill(input: {
 
   if (!addressesEqual(tx.to ?? "", routerAddress)) {
     throw new UniswapSettleError(
-      "Transaction was not sent to the Uniswap SwapRouter.",
+      "Transaction was not sent to the Uniswap Universal Router.",
       400,
     );
   }
@@ -104,10 +103,7 @@ export async function verifyUniswapFill(input: {
   const transfers = receipt.logs
     .map((log) => {
       try {
-        const decoded = client.chain
-          ? { args: { from: log.topics[1], to: log.topics[2], value: log.data } }
-          : null;
-        if (log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef") {
+        if (log.topics[0] === TRANSFER_TOPIC) {
           const from_ = ("0x" + (log.topics[1] ?? "").slice(26)) as `0x${string}`;
           const to_ = ("0x" + (log.topics[2] ?? "").slice(26)) as `0x${string}`;
           const value_ = BigInt(log.data);
@@ -138,9 +134,6 @@ export async function verifyUniswapFill(input: {
       fromAmount = inTransfer.value.toString();
       fromToken = inTransfer.address;
     }
-    const nativeValue = receipt.logs.length > 0 ? tx.value.toString() : "0";
-    toAmount = nativeValue;
-    toToken = NATIVE_ADDRESS;
     const wethOutTransfer = transfers.find(
       (t) =>
         addressesEqual(t.address, wrappedNative) &&
@@ -148,7 +141,10 @@ export async function verifyUniswapFill(input: {
     );
     if (wethOutTransfer) {
       toAmount = wethOutTransfer.value.toString();
+    } else {
+      toAmount = tx.value.toString();
     }
+    toToken = NATIVE_ADDRESS;
   } else {
     const inTransfer = transfers.find(
       (t) => addressesEqual(t.from, input.sessionAddress),

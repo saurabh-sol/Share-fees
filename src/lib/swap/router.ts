@@ -1,16 +1,18 @@
 import { fetchLifiQuote, type LifiQuote } from "@/lib/lifi/http";
 import { usdToCents } from "@/lib/lifi/notional";
 import { isAllowedChainId } from "@/lib/lifi/constants";
-import { isUniswapChainId } from "@/lib/uniswap/constants";
+import { isUniswapChainId, type PoolKey } from "@/lib/uniswap/constants";
 import { quoteUniswap, UniswapQuoteError, type UniswapQuoteResult } from "@/lib/uniswap/quote";
 
 export type UniswapQuoteView = {
   provider: "uniswap";
   amountOut: string;
   fee: number;
+  tickSpacing: number;
+  poolKey: PoolKey;
+  zeroForOne: boolean;
   tokenIn: string;
   tokenOut: string;
-  gasEstimate: string;
   isNativeIn: boolean;
   isNativeOut: boolean;
   action: {
@@ -76,9 +78,11 @@ export async function routeSwapQuote(input: {
         provider: "uniswap",
         amountOut: result.amountOut.toString(),
         fee: result.fee,
+        tickSpacing: result.tickSpacing,
+        poolKey: result.poolKey,
+        zeroForOne: result.zeroForOne,
         tokenIn: result.tokenIn,
         tokenOut: result.tokenOut,
-        gasEstimate: result.gasEstimate.toString(),
         isNativeIn: result.isNativeIn,
         isNativeOut: result.isNativeOut,
         action: {
@@ -115,7 +119,6 @@ export async function routeSwapQuote(input: {
       if (!isAllowedChainId(input.fromChainId) || !isAllowedChainId(input.toChainId)) {
         throw error;
       }
-      // Fall through to LI.FI
     }
   }
 
