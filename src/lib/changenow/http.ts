@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { BRAND_NAME } from "@/lib/brand";
 import { ChangeNowError, type ChangeNowCurrency, type ChangeNowEstimate, type ChangeNowExchange } from "./types";
 
 const CHANGE_NOW_BASE = "https://api.changenow.io/v2";
@@ -233,7 +234,7 @@ export async function createChangeNowExchange(input: {
       userId: input.userId,
       payload: "",
       contactEmail: "",
-      source: "Trade2Credits",
+      source: BRAND_NAME,
       flow: "standard",
       type: "direct",
       rateId: "",

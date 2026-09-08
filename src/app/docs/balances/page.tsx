@@ -25,7 +25,7 @@ export default function BalancesDocsPage() {
         rows={[
           ["Website credit", "Posted reward, not yet on a rail", "Convert 1:1"],
           ["USDG", "Credit sitting on the USDG rail", "Redeem on Robinhood"],
-          ["LLM credits", "Credit sitting on the LLM rail", "Mint a t2c_ key or use Chat"],
+          ["LLM credits", "Credit sitting on the LLM rail", "Mint a acc_ key or use Chat"],
         ]}
       />
       <DocsP>

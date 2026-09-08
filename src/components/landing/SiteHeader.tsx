@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
 import { NotchedCta } from "./NotchedCta";
 
 export function SiteHeader() {
@@ -13,8 +14,8 @@ export function SiteHeader() {
             <span className="h-1.5 w-1.5 bg-accent" />
           </span>
           <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">
-            <span className="sm:hidden">T2C</span>
-            <span className="hidden sm:inline">Trade2Credits</span>
+            <span className="sm:hidden">{BRAND_SHORT}</span>
+            <span className="hidden sm:inline">{BRAND_NAME}</span>
           </span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">

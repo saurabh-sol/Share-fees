@@ -13,6 +13,7 @@ import {
   handleListModels,
   handleMessages,
 } from "./service";
+import { RESPONSE_HEADER_PROVIDER, RESPONSE_HEADER_REMAINING } from "@/lib/brand";
 import { providerReady } from "./providers";
 
 const ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -89,7 +90,7 @@ function chatBody(model: string) {
   };
 }
 
-describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gateway", () => {
+describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gateway", () => {
   it("redeems one key per provider and probes models, chat, and error cases", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db, "user_gw_e2e");
@@ -110,7 +111,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gatewa
         db,
       );
       expect(issued.alreadyExists).toBe(false);
-      expect(issued.plaintextKey?.startsWith("t2c_")).toBe(true);
+      expect(issued.plaintextKey?.startsWith("acc_")).toBe(true);
       const key = issued.plaintextKey!;
       const auth = `Bearer ${key}`;
 
@@ -168,8 +169,8 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gatewa
         db,
       });
       expect(live.status).toBe(200);
-      expect(live.headers.get("X-T2C-Provider")).toBe(probe.provider);
-      const remaining = Number(live.headers.get("X-T2C-Remaining-Cents"));
+      expect(live.headers.get(RESPONSE_HEADER_PROVIDER)).toBe(probe.provider);
+      const remaining = Number(live.headers.get(RESPONSE_HEADER_REMAINING));
       expect(remaining).toBeLessThan(5);
       expect(remaining).toBeGreaterThanOrEqual(0);
 
@@ -227,7 +228,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gatewa
       }),
     });
     expect(first.status).toBe(200);
-    expect(first.headers.get("X-T2C-Remaining-Cents")).toBe("0");
+    expect(first.headers.get(RESPONSE_HEADER_REMAINING)).toBe("0");
     const shaped = (await first.json()) as { object?: string; choices?: unknown[]; usage?: { total_tokens?: number } };
     expect(shaped.object).toBe("chat.completion");
     expect(Array.isArray(shaped.choices)).toBe(true);
@@ -312,7 +313,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gatewa
       }),
     });
     expect(response.status).toBe(200);
-    expect(response.headers.get("X-T2C-Provider")).toBe("anthropic");
+    expect(response.headers.get(RESPONSE_HEADER_PROVIDER)).toBe("anthropic");
     const body = (await response.json()) as { type?: string; content?: Array<{ text?: string }> };
     expect(body.type).toBe("message");
     expect(body.content?.[0]?.text).toBe("ok");
@@ -377,7 +378,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → t2c_ → AI Gatewa
       }),
     });
     expect(response.status).toBe(200);
-    expect(response.headers.get("X-T2C-Provider")).toBe("google");
+    expect(response.headers.get(RESPONSE_HEADER_PROVIDER)).toBe("google");
     const body = (await response.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       usageMetadata?: { totalTokenCount?: number };

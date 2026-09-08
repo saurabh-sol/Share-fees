@@ -402,7 +402,7 @@ export function RedeemDesk({
           <EmptyState
             eyebrow="Virtual keys"
             title="No keys minted yet."
-            body="Redeem LLM credits above and a capped t2c_ key is issued instantly. Paste it into any OpenAI-compatible client; usage burns the credit."
+            body="Redeem LLM credits above and a capped acc_ key is issued instantly. Paste it into any OpenAI-compatible client; usage burns the credit."
           />
         ) : (
           <ul className="divide-y divide-white/8 border-y border-white/8">

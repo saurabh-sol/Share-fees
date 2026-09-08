@@ -21,7 +21,7 @@ const RULES = [
   },
   {
     title: "Key shown once",
-    body: "The plaintext t2c_ key is not stored. Leave the page and you mint a new one from remaining credit.",
+    body: "The plaintext acc_ key is not stored. Leave the page and you mint a new one from remaining credit.",
   },
 ];
 

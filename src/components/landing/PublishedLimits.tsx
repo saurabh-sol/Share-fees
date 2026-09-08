@@ -21,7 +21,7 @@ const LIMITS = [
     id: "redeem",
     label: "Minimum redeem",
     value: "$1.00",
-    body: "USDT and LLM redeem both start at one dollar. The t2c_ cap equals that amount.",
+    body: "USDT and LLM redeem both start at one dollar. The acc_ cap equals that amount.",
   },
   {
     id: "usdg-claim",

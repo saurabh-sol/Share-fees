@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title UsdgRewardVault
-/// @notice On-chain USDG reward claims for Trade2Credits on Robinhood Chain.
+/// @notice On-chain USDG reward claims for Accrued on Robinhood Chain.
 /// @dev Swap scoring and LLM credits stay off-chain. A USDG redeem is not paid until
 ///      this contract stores the claim and transfers USDG. Duplicate redemption ids revert.
 contract UsdgRewardVault {

@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Ledger — Docs",
-  description: "Every Trade2Credits credit, convert, and redeem writes an immutable row.",
+  description: "Every Accrued credit, convert, and redeem writes an immutable row.",
 };
 
 export default function LedgerDocsPage() {

@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Swap Studio — Docs",
-  description: "Quote and execute a live Trade2Credits fill through the swap router or Robinhood ETH.",
+  description: "Quote and execute a live Accrued fill through the swap router or Robinhood ETH.",
 };
 
 export default function SwapDocsPage() {

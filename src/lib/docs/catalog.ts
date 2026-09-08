@@ -21,9 +21,9 @@ export const DOCS_PAGES: DocsPage[] = [
   {
     href: "/docs",
     title: "Introduction",
-    description: "What Trade2Credits is, who it is for, and how credit moves from a swap to a rail.",
+    description: "What Accrued is, who it is for, and how credit moves from a swap to a rail.",
     section: "Start here",
-    keywords: ["t2c", "trade2credits", "overview", "wallet", "credit"],
+    keywords: ["acc", "accrued", "overview", "wallet", "credit"],
     headings: [
       { id: "what-it-is", title: "What it is" },
       { id: "who-it-is-for", title: "Who it is for" },
@@ -129,7 +129,7 @@ export const DOCS_PAGES: DocsPage[] = [
   {
     href: "/docs/llm",
     title: "LLM credits",
-    description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
+    description: "Redeem a metered acc_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
     section: "Take credit",
     keywords: ["t2c", "key", "openai", "anthropic", "deepseek", "google", "grok", "xai"],
     headings: [

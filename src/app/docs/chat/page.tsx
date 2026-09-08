@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Chat — Docs",
-  description: "Talk to a model on the Trade2Credits desk without minting a t2c_ key.",
+  description: "Talk to a model on the Accrued desk without minting a acc_ key.",
 };
 
 export default function ChatDocsPage() {
@@ -32,7 +32,7 @@ export default function ChatDocsPage() {
 
       <DocsH2 id="when-to-mint-a-key">When to mint a key</DocsH2>
       <DocsP>
-        Mint a t2c_ key when you need the official vendor API in Cursor or another client. Chat does not give
+        Mint a acc_ key when you need the official vendor API in Cursor or another client. Chat does not give
         you that key. Redeem on{" "}
         <Link href="/docs/llm" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
           LLM credits

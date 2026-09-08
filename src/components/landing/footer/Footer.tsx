@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { USDG_REWARD_VAULT, robinhoodAddressUrl } from "@/lib/chains/robinhood";
 import { NotchedCta } from "../NotchedCta";
 import { FooterField } from "./FooterField";
@@ -23,17 +24,17 @@ function FooterBrand() {
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">[12] Close</p>
       <Link href="/" className="mt-5 inline-flex items-center gap-3">
         <Mark />
-        <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">Trade2Credits</span>
+        <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">{BRAND_NAME}</span>
       </Link>
-      <h2 className="mt-8 max-w-[10ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-5xl">
-        You swap. We credit.
+      <h2 className="mt-8 max-w-[14ch] text-4xl tracking-tighter leading-none text-zinc-100 md:text-5xl">
+        Same wallet. Same session.
       </h2>
       <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-zinc-400">
-        Qualifying $250+ fills convert at 50 bps. Take USDG to the same wallet, or LLM credits for Claude, OpenAI,
-        DeepSeek, Google, and Grok-compatible clients.
+        Sign in once. Swap, claim, convert, and redeem from one desk address. USDG pays on Robinhood Chain.
+        LLM keys meter usage until the cap is spent.
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-4">
-        <NotchedCta href="/login">Connect wallet</NotchedCta>
+        <NotchedCta href="/login">Open the desk</NotchedCta>
         <a
           href={robinhoodAddressUrl(USDG_REWARD_VAULT)}
           target="_blank"
@@ -54,7 +55,7 @@ function FooterBottom() {
   return (
     <div className="border-t border-white/8">
       <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-3 px-4 py-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 md:flex-row md:items-center md:px-8">
-        <p>© 2026 Trade2Credits. All rights reserved.</p>
+        <p>© 2026 {BRAND_NAME}. All rights reserved.</p>
         <p className="text-zinc-300">
           <span className="text-accent">+</span> Built for qualifying fills{" "}
           <span className="text-accent">+</span>

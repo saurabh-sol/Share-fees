@@ -14,6 +14,7 @@ import {
   sepolia,
 } from "wagmi/chains";
 import { robinhoodChain } from "@/lib/chains/robinhood";
+import { BRAND_NAME } from "@/lib/brand";
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
@@ -22,7 +23,7 @@ export const wagmiConfig = createConfig({
   connectors: [
     injected(),
     coinbaseWallet({
-      appName: "Trade2Credits",
+      appName: BRAND_NAME,
       preference: "all",
     }),
     ...(projectId

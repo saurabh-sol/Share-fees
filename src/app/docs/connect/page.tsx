@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Connect a wallet — Docs",
-  description: "Sign in to Trade2Credits with SIWE or SIWS. There is no email account.",
+  description: "Sign in to Accrued with SIWE or SIWS. There is no email account.",
 };
 
 export default function ConnectDocsPage() {

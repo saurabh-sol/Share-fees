@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "FAQ — Docs",
-  description: "Short answers before you connect a wallet to Trade2Credits.",
+  description: "Short answers before you connect a wallet to Accrued.",
 };
 
 export default function FaqDocsPage() {
@@ -42,7 +42,7 @@ export default function FaqDocsPage() {
 
       <DocsH2 id="after-redeem">After redeem</DocsH2>
       <DocsP>
-        USDG is an on-chain vault claim to this wallet on Robinhood. LLM mints a t2c_ key for the provider you
+        USDG is an on-chain vault claim to this wallet on Robinhood. LLM mints a acc_ key for the provider you
         picked. Use the official OpenAI, Anthropic, DeepSeek, or Google API against this origin. Usage spends
         remaining cents. The key is shown once.
       </DocsP>

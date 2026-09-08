@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "API — Docs",
-  description: "Use a t2c_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
+  description: "Use a acc_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
 };
 
 export default function ApiDocsPage() {
@@ -16,18 +16,18 @@ export default function ApiDocsPage() {
     <>
       <DocsH1>API</DocsH1>
       <DocsLead>
-        Redeem locks a provider. The t2c_ key is that vendor’s real contract. Usage hits the live model and
+        Redeem locks a provider. The acc_ key is that vendor’s real contract. Usage hits the live model and
         burns remaining cents. Upstream credentials stay on the server.
       </DocsLead>
 
       <DocsTable
         headers={["Vendor", "Path", "Auth"]}
         rows={[
-          ["OpenAI", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
-          ["DeepSeek", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
-          ["Anthropic", "POST /v1/messages", "x-api-key: t2c_…"],
-          ["Google", "POST /v1beta/models/{model}:generateContent", "x-goog-api-key: t2c_…"],
-          ["Grok", "POST /v1/chat/completions", "Authorization: Bearer t2c_…"],
+          ["OpenAI", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
+          ["DeepSeek", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
+          ["Anthropic", "POST /v1/messages", "x-api-key: acc_…"],
+          ["Google", "POST /v1beta/models/{model}:generateContent", "x-goog-api-key: acc_…"],
+          ["Grok", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
         ]}
       />
       <DocsP>
@@ -40,7 +40,7 @@ export default function ApiDocsPage() {
         code={`import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: "t2c_…",
+  apiKey: "acc_…",
   baseURL: "${origin}/v1",
 });
 
@@ -56,7 +56,7 @@ await client.chat.completions.create({
         code={`import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({
-  apiKey: "t2c_…",
+  apiKey: "acc_…",
   baseURL: "${origin}",
 });
 
@@ -69,13 +69,13 @@ await client.messages.create({
 
       <DocsH2 id="google">Google</DocsH2>
       <DocsP>
-        Use the official generateContent path against this origin. Header is x-goog-api-key with the t2c_ key.
+        Use the official generateContent path against this origin. Header is x-goog-api-key with the acc_ key.
         The model id is the one you locked at redeem.
       </DocsP>
       <DocsCode
         language="bash"
         code={`curl ${origin}/v1beta/models/gemini-2.0-flash:generateContent \\
-  -H "x-goog-api-key: t2c_…" \\
+  -H "x-goog-api-key: acc_…" \\
   -H "content-type: application/json" \\
   -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'`}
       />
@@ -87,7 +87,7 @@ await client.messages.create({
         even when Gateway is healthy.
       </DocsP>
       <DocsCallout title="Do not put vendor keys in the client">
-        t2c_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, Google, and Grok
+        acc_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, Google, and Grok
         keys never leave the server.
       </DocsCallout>
       <DocsPager href="/docs/api" />

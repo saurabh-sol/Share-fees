@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { PeekAccountButton } from "@/components/landing/PeekAccountButton";
+import { BRAND_SHORT } from "@/lib/brand";
 import { PixelWalletArt, PixelWalletArtMobile } from "./PixelWalletArt";
 import { DecorativeAscii } from "./DecorativeAscii";
 import { WalletCard } from "./WalletCard";
@@ -25,7 +26,7 @@ export function WalletAdapter() {
             href="/"
             className="font-mono text-xs tracking-[0.22em] text-accent transition-opacity hover:opacity-80"
           >
-            T2C
+            {BRAND_SHORT}
           </Link>
         </header>
 

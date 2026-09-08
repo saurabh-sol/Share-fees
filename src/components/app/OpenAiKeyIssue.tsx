@@ -155,7 +155,7 @@ export function OpenAiKeyIssue({
   issuedProvider: LlmProvider;
 }) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
-  const preview = snippets(issuedProvider, gatewayBaseUrl, issuedKey ?? "t2c_…", issuedModel);
+  const preview = snippets(issuedProvider, gatewayBaseUrl, issuedKey ?? "acc_…", issuedModel);
 
   async function copy(value: string, which: CopyTarget) {
     await navigator.clipboard.writeText(value);
@@ -168,7 +168,7 @@ export function OpenAiKeyIssue({
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">{preview.label}</p>
         <p className="text-sm leading-relaxed text-zinc-400">
           Same paths and body as <span className="font-mono text-zinc-300">{preview.host}</span>.
-          Redeem picks the provider. The <span className="font-mono">t2c_</span> key is that
+          Redeem picks the provider. The <span className="font-mono">acc_</span> key is that
           provider’s API key. Each call hits the real API and spends desk points.
         </p>
         <div className="flex items-center justify-between gap-4">

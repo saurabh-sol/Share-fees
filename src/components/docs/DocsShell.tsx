@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { BRAND_NAME, BRAND_SHORT } from "@/lib/brand";
 import { getDocsPage } from "@/lib/docs/catalog";
 import { DocsSearch } from "./DocsSearch";
 import { DocsSidebar } from "./DocsSidebar";
@@ -30,8 +31,8 @@ export function DocsShell({ children }: { children: ReactNode }) {
               <span className="h-1.5 w-1.5 bg-accent" />
             </span>
             <span className="font-mono text-xs tracking-[0.22em] text-zinc-100">
-              <span className="sm:hidden">T2C</span>
-              <span className="hidden sm:inline">Trade2Credits</span>
+              <span className="sm:hidden">{BRAND_SHORT}</span>
+              <span className="hidden sm:inline">{BRAND_NAME}</span>
             </span>
           </Link>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-600 md:inline">

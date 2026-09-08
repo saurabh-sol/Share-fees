@@ -1,8 +1,8 @@
-# Trade2Credits
+# Accrued
 
 **You swap. We credit.**
 
-Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
+Accrued is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into website credit. That credit can be taken as **USDG** to the same wallet, or as **LLM credits** for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
 
 User-facing walkthrough: [/docs](/docs). Operator walk of the live site: [E2E.md](E2E.md).
 
@@ -17,7 +17,7 @@ There is no email account and no username. The address that signs in is the desk
 | Worked example | $1,842.60 notional × 50 bps = **$9.21** credit |
 | Daily cap | **$2,500** of credit per day |
 | USDG destination | Signed-in EVM address only, on **Robinhood Chain** |
-| LLM credit | Metered `t2c_` key, shown once |
+| LLM credit | Metered `acc_` key, shown once |
 
 Notional is the **USD value of the fill**, not the token amount. A $40 swap in a large-cap token is still $40. Changing the published rule later does not rewrite rows that already posted.
 
@@ -27,7 +27,7 @@ Notional is the **USD value of the fill**, not the token amount. A $40 swap in a
 2. **Swap live, or bring history.** Swap Studio quotes and executes through the swap router or Robinhood ETH. Activity can scan the same wallet (last 90 days, when configured) or accept a verified transaction hash.
 3. **Clear the $250 floor.** Confirmed swap volume on the connected wallet must reach $250 before BPS is listed. Smaller swaps still count toward that total. Sends do not. A live fill below $250 still executes; it does not pay on its own.
 4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
-5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. USDG redeem is an on-chain vault claim on Robinhood. LLM redeem stays a `t2c_` key.
+5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. USDG redeem is an on-chain vault claim on Robinhood. LLM redeem stays a `acc_` key.
 6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
 
 Partners named on the site: MetaMask, Phantom, Coinbase, and Robinhood.
@@ -41,7 +41,7 @@ Partners named on the site: MetaMask, Phantom, Coinbase, and Robinhood.
 | `/app` | Balances for website credit, USDG rail, and LLM rail |
 | `/app/swap` | Quote a pair, execute the fill, settle the credit |
 | `/app/claims` | Scan wallet history or import a hash, then claim |
-| `/app/redeem` | Convert credit and redeem USDG or a `t2c_` key |
+| `/app/redeem` | Convert credit and redeem USDG or a `acc_` key |
 
 ## Rails
 
@@ -59,9 +59,9 @@ npx tsx scripts/deploy-reward-vault.ts
 
 ### LLM credits
 
-Pick the LLM rail, then redeem. The desk mints a `t2c_` virtual key. The full key is shown **once**. After that, only a hash is stored.
+Pick the LLM rail, then redeem. The desk mints a `acc_` virtual key. The full key is shown **once**. After that, only a hash is stored.
 
-The `t2c_` key is the official provider key. Redeem locks the vendor. Usage burns desk points.
+The `acc_` key is the official provider key. Redeem locks the vendor. Usage burns desk points.
 
 - OpenAI: `POST {origin}/v1/chat/completions` — official OpenAI SDK, `baseURL` `{origin}/v1`
 - DeepSeek: same chat-completions path as `api.deepseek.com/v1`
@@ -69,21 +69,21 @@ The `t2c_` key is the official provider key. Redeem locks the vendor. Usage burn
 
 ```js
 import OpenAI from "openai";
-const client = new OpenAI({ apiKey: "t2c_…", baseURL: "{origin}/v1" });
+const client = new OpenAI({ apiKey: "acc_…", baseURL: "{origin}/v1" });
 await client.chat.completions.create({
   model: "gpt-4o-mini",
   messages: [{ role: "user", content: "Hello" }],
 });
 ```
 
-Upstream calls go through **Vercel AI Gateway**. You do not paste OpenAI, Anthropic, or DeepSeek keys. Set `AI_GATEWAY_API_KEY`, or on Vercel use the automatic OIDC token. Desk credit still caps the `t2c_` key. If Gateway is unset and a leftover provider key is also empty, that provider returns `503`. `/gateway/v1` is the same API.
+Upstream calls go through **Vercel AI Gateway**. You do not paste OpenAI, Anthropic, or DeepSeek keys. Set `AI_GATEWAY_API_KEY`, or on Vercel use the automatic OIDC token. Desk credit still caps the `acc_` key. If Gateway is unset and a leftover provider key is also empty, that provider returns `503`. `/gateway/v1` is the same API.
 
 ## What the desk will not do
 
 - Pay a fill below **$250 USD**.
 - Credit the same transaction twice.
 - Send USDG to any address other than the signed-in EVM wallet.
-- Show a `t2c_` key a second time.
+- Show a `acc_` key a second time.
 - Invent a second balance. Website credit, USDG, and LLM are the same ledger, different rails.
 - Treat a paper fill as a live chain swap. Practice rows exist only when `ALLOW_MOCK_SWAPS=true`, and that switch is rejected in production.
 
@@ -162,7 +162,7 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 | `CHANGENOW_API_KEY` | Required to open a desk pay-in route. |
 | `ZERION_API_KEY` | Shared 90-day wallet scan key. Calls are queued (2/sec) and a scan is reused for 15 minutes. Without it, users can still import a verified hash. |
 | `AI_GATEWAY_API_KEY` | One Vercel AI Gateway key for OpenAI, Anthropic, and DeepSeek. On Vercel, `VERCEL_OIDC_TOKEN` is enough. |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY` | Optional fallbacks if Gateway is unset. Virtual `t2c_` keys never see these. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY` | Optional fallbacks if Gateway is unset. Virtual `acc_` keys never see these. |
 | `TREASURY_ENABLED` / `TREASURY_LIVE` / `TREASURY_PRIVATE_KEY` | Signs Robinhood USDG claim vouchers and `payClaim`. Locally a valid key is enough unless `TREASURY_ENABLED=false`. Production also needs enabled + live. The private key stays server-only. |
 | `REWARD_VAULT_ADDRESS` | Deployed `UsdgRewardVault` on Robinhood Chain. Required for live USDG claims. |
 | `CRON_SECRET` | Authorizes the payout and settle jobs. Local `next dev` ticks them every minute. Vercel Cron uses the same secret. |
@@ -171,7 +171,7 @@ Copy `.env.example` to `.env.local`. Keys the desk actually uses:
 
 Do not put treasury or vendor keys in an image or a committed file.
 
-LLM path: credit → redeem(provider) → `t2c_` → official `/v1/chat/completions` → AI Gateway. After `AI_GATEWAY_API_KEY` or OIDC is set, `npx vitest run src/lib/gateway/live.e2e.test.ts` probes models, chat, and the 401 / 400 / 402 / 503 cases per provider.
+LLM path: credit → redeem(provider) → `acc_` → official `/v1/chat/completions` → AI Gateway. After `AI_GATEWAY_API_KEY` or OIDC is set, `npx vitest run src/lib/gateway/live.e2e.test.ts` probes models, chat, and the 401 / 400 / 402 / 503 cases per provider.
 
 ## Operator console
 

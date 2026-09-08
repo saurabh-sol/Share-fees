@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions, users, virtualKeys, wallets } from "@/lib/db/schema";
 import { GatewayError, authenticateVirtualKey, consumeVirtualKey, handleChatCompletion } from "@/lib/gateway/service";
+import { RESPONSE_HEADER_REMAINING } from "@/lib/brand";
 import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { processPayoutOutbox } from "@/lib/jobs/payouts";
@@ -90,7 +91,7 @@ describe("phase 3 redeem + gateway", () => {
     );
     expect(first.alreadyExists).toBe(false);
     expect(first.status).toBe("fulfilled");
-    expect(first.plaintextKey?.startsWith("t2c_")).toBe(true);
+    expect(first.plaintextKey?.startsWith("acc_")).toBe(true);
     expect(first.llmCents).toBe(0);
 
     const keys = await db.select().from(virtualKeys);
@@ -263,7 +264,7 @@ describe("phase 3 redeem + gateway", () => {
       db,
     );
 
-    await expect(authenticateVirtualKey("t2c_deadbeef", db)).rejects.toBeInstanceOf(GatewayError);
+    await expect(authenticateVirtualKey("acc_deadbeef", db)).rejects.toBeInstanceOf(GatewayError);
     await expect(
       handleChatCompletion({
         authorization: "Bearer sk-openai",
@@ -287,7 +288,7 @@ describe("phase 3 redeem + gateway", () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(response.headers.get("X-T2C-Remaining-Cents")).toBe("99");
+    expect(response.headers.get(RESPONSE_HEADER_REMAINING)).toBe("99");
 
     const [key] = await db.select().from(virtualKeys);
     expect(key?.spendUsedCents).toBe(1);
@@ -351,7 +352,7 @@ describe("phase 3 redeem + gateway", () => {
     release();
     const response = await first;
     expect(response.status).toBe(200);
-    expect(response.headers.get("X-T2C-Remaining-Cents")).toBe("99");
+    expect(response.headers.get(RESPONSE_HEADER_REMAINING)).toBe("99");
   });
 
   it("rejects a revoked key on the next gateway request", async () => {

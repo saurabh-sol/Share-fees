@@ -1,4 +1,4 @@
-# Trade2Credits — end to end
+# Accrued — end to end
 
 **You swap. We credit.**
 
@@ -19,7 +19,7 @@ $250 confirmed swap volume  →  50 bps website credit
       ↓
 Convert 1:1
       ├── USDG  →  same EVM wallet on Robinhood Chain
-      └── LLM   →  t2c_ key (shown once)
+      └── LLM   →  acc_ key (shown once)
                     ↓
               Official vendor API
               OpenAI / Anthropic / DeepSeek / Google
@@ -39,7 +39,7 @@ Worked example: **$1,842.60** notional × **50 bps** = **$9.21**.
 | Daily cap | **$2,500** credit per UTC day |
 | Minimum redeem | **$1.00** |
 | USDG destination | Signed-in EVM address only, **Robinhood Chain** |
-| LLM key | `t2c_…`, shown once, hashed after that |
+| LLM key | `acc_…`, shown once, hashed after that |
 
 Notional is the **USD value of the fill**, not the token amount. Sends, receives, and approvals do not count toward the floor. A single imported fill still has to be at or above $250 to claim on its own. Changing the rule later does not rewrite booked rows.
 
@@ -57,7 +57,7 @@ Wallet-native marketing. Canvas `#141416`, accent `#c23a3a`, Geist + Geist Mono.
 | Houses | MetaMask, Phantom, Coinbase, Robinhood |
 | How it pays | Six steps: connect → swap or scan → $250 floor → 50 bps → claim/convert → one hash |
 | Worked example | $1,842.60 → **$9.21** |
-| Rails | USDG to the same wallet on Robinhood. LLM = metered `t2c_` key |
+| Rails | USDG to the same wallet on Robinhood. LLM = metered `acc_` key |
 | The desk | Swap Studio, Activity, Redeem, Rewards |
 | Published numbers | Floor, 50 bps, $2,500 cap, $1 redeem |
 | LLM API | Official OpenAI, Anthropic, DeepSeek, Google paths |
@@ -93,8 +93,8 @@ All `/app` routes require a session. The bar is: Balances · Swap · Activity ·
 | `/app` | See website credit, USDG, and LLM balances. Convert 1:1. Open swap, claims, or redeem. |
 | `/app/swap` | Quote and execute a live fill (swap router, or a desk pay-in for Robinhood ETH / pairs the router will not quote). Below $250 the fill still runs; credit is held. |
 | `/app/claims` | Scan the last 90 days (when a Zerion key is set) or import a verified hash. Claim posts website credit. |
-| `/app/chat` | Talk through the desk. Spends LLM rail / credit the same way a `t2c_` key would. |
-| `/app/redeem` | Redeem USDG (queue to this EVM address) or mint a provider-locked `t2c_` key. Key + official SDK snippet shown **once**. |
+| `/app/chat` | Talk through the desk. Spends LLM rail / credit the same way a `acc_` key would. |
+| `/app/redeem` | Redeem USDG (queue to this EVM address) or mint a provider-locked `acc_` key. Key + official SDK snippet shown **once**. |
 | `/app/rewards` | Immutable ledger: fills and credit rows. |
 
 Paper fills exist only when `ALLOW_MOCK_SWAPS=true`. That switch is rejected in production.
@@ -110,7 +110,7 @@ Paper fills exist only when `ALLOW_MOCK_SWAPS=true`. That switch is rejected in 
 5. **Convert** 1:1 to the USDG rail or the LLM rail (redeem can auto-convert from website credit).
 6. **Redeem**
    - USDG → payout outbox → session EVM address on Robinhood Chain. Gas is Robinhood ETH. Token is Robinhood USDG.
-   - LLM → `t2c_` key for the provider and model you picked.
+   - LLM → `acc_` key for the provider and model you picked.
 
 One `(tx, chain)` never pays twice. A→B→A on the same wallet inside 60 minutes can **hold** credit for review. Release posts it. Reject does not.
 
@@ -122,16 +122,16 @@ Redeem locks **provider + model**. The client never sees the pool / Gateway cred
 
 | Provider | Official contract | Auth |
 | --- | --- | --- |
-| OpenAI | `POST {origin}/v1/chat/completions` | `Authorization: Bearer t2c_…` |
-| DeepSeek | Same chat-completions shape | `Authorization: Bearer t2c_…` |
-| Anthropic | `POST {origin}/v1/messages` | `x-api-key: t2c_…` |
-| Google | `POST {origin}/v1beta/models/{model}:generateContent` | `x-goog-api-key: t2c_…` |
+| OpenAI | `POST {origin}/v1/chat/completions` | `Authorization: Bearer acc_…` |
+| DeepSeek | Same chat-completions shape | `Authorization: Bearer acc_…` |
+| Anthropic | `POST {origin}/v1/messages` | `x-api-key: acc_…` |
+| Google | `POST {origin}/v1beta/models/{model}:generateContent` | `x-goog-api-key: acc_…` |
 
 Also: `GET {origin}/v1/models` (key-scoped). Alias: `/gateway/v1/…`.
 
 ```js
 import OpenAI from "openai";
-const client = new OpenAI({ apiKey: "t2c_…", baseURL: "{origin}/v1" });
+const client = new OpenAI({ apiKey: "acc_…", baseURL: "{origin}/v1" });
 await client.chat.completions.create({
   model: "gpt-4o-mini",
   messages: [{ role: "user", content: "Hello" }],
@@ -140,7 +140,7 @@ await client.chat.completions.create({
 
 ```js
 import Anthropic from "@anthropic-ai/sdk";
-const client = new Anthropic({ apiKey: "t2c_…", baseURL: "{origin}" });
+const client = new Anthropic({ apiKey: "acc_…", baseURL: "{origin}" });
 await client.messages.create({
   model: "claude-haiku-4-5",
   max_tokens: 16,
@@ -159,7 +159,7 @@ Upstream calls go through **Vercel AI Gateway** (`AI_GATEWAY_API_KEY`, or OIDC o
 - Pay a fill below **$250 USD**.
 - Credit the same transaction twice.
 - Send USDG anywhere except the signed-in EVM wallet.
-- Show a `t2c_` key a second time.
+- Show a `acc_` key a second time.
 - Invent a second balance. Website credit, USDG, and LLM are one ledger, three rails.
 - Treat a paper fill as a live chain swap.
 
@@ -253,7 +253,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up --build 
 2. **Connect wallet** → `/login` → sign.
 3. `/app/swap` — run a qualifying fill, **or** `/app/claims` — import / scan and claim.
 4. `/app` — website credit is there.
-5. `/app/redeem` — USDG to this wallet, **or** LLM and copy the `t2c_` key.
+5. `/app/redeem` — USDG to this wallet, **or** LLM and copy the `acc_` key.
 6. Call `{origin}/v1/chat/completions` (or `/v1/messages` for Claude). Remaining cents drop.
 7. `/app/chat` spends the same rail from the desk.
 8. `/app/rewards` shows the rows. A second claim on the same hash does nothing.

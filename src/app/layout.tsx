@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NetworkGuard } from "@/components/error/NetworkGuard";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +14,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE = "https://trade2credits.onrender.com";
+const SITE =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+  process.env.APP_ORIGIN?.replace(/\/$/, "") ??
+  "https://trade2credits.onrender.com";
 const OG_IMAGE = `${SITE}/og-preview.png`;
-const OG_TITLE = "You swap. We credit.";
+const OG_TITLE = BRAND_TAGLINE;
 const OG_DESCRIPTION =
   "Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for Claude, OpenAI, DeepSeek, Google, and Grok.";
 
@@ -28,7 +32,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: "Trade2Credits — Swap, then take USDG or LLM credits",
+  title: `${BRAND_NAME} — Swap, then take USDG or LLM credits`,
   description:
     "Connect MetaMask, Phantom, or Coinbase. Qualifying $250+ swaps convert at a published ratio into USDG or LLM credits.",
   alternates: {
@@ -38,7 +42,7 @@ export const metadata: Metadata = {
     title: OG_TITLE,
     description: OG_DESCRIPTION,
     url: SITE,
-    siteName: "Trade2Credits",
+    siteName: BRAND_NAME,
     type: "website",
     locale: "en_US",
     images: [
@@ -48,7 +52,7 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         type: "image/png",
-        alt: "Trade2Credits — You swap. We credit.",
+        alt: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
       },
     ],
   },

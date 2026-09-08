@@ -2,6 +2,12 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { virtualKeys } from "@/lib/db/schema";
 import { hashVirtualKey } from "@/lib/redeem/keys";
+import {
+  isVirtualKey,
+  RESPONSE_HEADER_PROVIDER,
+  RESPONSE_HEADER_REMAINING,
+  RESPONSE_HEADER_SPEND_CAP,
+} from "@/lib/brand";
 import { rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { anthropicMessagesSchema, chatCompletionSchema, geminiGenerateSchema } from "@/lib/validation/swap";
 import {
@@ -27,7 +33,7 @@ export const GATEWAY_MODELS = allGatewayModels().map((item) => item.id);
 /**
  * Working map — do not invert:
  * credit (50 bps) → convert 1:1 to LLM rail → redeem(provider, model)
- * → t2c_ plaintext shown once → official provider APIs
+ * → acc_ plaintext shown once → official provider APIs
  *    OpenAI / DeepSeek / Google: POST {origin}/v1/chat/completions
  *    Google OpenAI-compat: POST {origin}/v1beta/openai/chat/completions
  *    Google native: POST {origin}/v1beta/models/{model}:generateContent (x-goog-api-key)
@@ -58,7 +64,7 @@ function providerOf(row: { provider?: string | null }): LlmProvider {
 export async function authenticateVirtualKey(raw: string, db?: Db): Promise<
   typeof virtualKeys.$inferSelect & { remainingCents: number; provider: LlmProvider }
 > {
-  if (!raw.startsWith("t2c_")) {
+  if (!isVirtualKey(raw)) {
     throw new GatewayError("invalid_api_key", 401);
   }
   const client = db ?? (await getDb());
@@ -223,9 +229,9 @@ export async function handleChatCompletion(input: {
     const raw = (await result.response.json()) as unknown;
     const shaped = reshapeProviderCompletion(raw, result.model || model);
     const headers = new Headers({ "content-type": "application/json" });
-    headers.set("X-T2C-Remaining-Cents", String(remainingCents));
-    headers.set("X-T2C-Provider", provider);
-    headers.set("X-T2C-Spend-Cap-Cents", String(reservation.cap));
+    headers.set(RESPONSE_HEADER_REMAINING, String(remainingCents));
+    headers.set(RESPONSE_HEADER_PROVIDER, provider);
+    headers.set(RESPONSE_HEADER_SPEND_CAP, String(reservation.cap));
     return Response.json(shaped, {
       status: 200,
       headers,
@@ -277,9 +283,9 @@ export async function handleMessages(input: {
     );
     const payload = reshapeAnthropicMessage(await result.response.json(), result.model || model);
     const headers = new Headers({ "content-type": "application/json" });
-    headers.set("X-T2C-Remaining-Cents", String(remainingCents));
-    headers.set("X-T2C-Provider", "anthropic");
-    headers.set("X-T2C-Spend-Cap-Cents", String(reservation.cap));
+    headers.set(RESPONSE_HEADER_REMAINING, String(remainingCents));
+    headers.set(RESPONSE_HEADER_PROVIDER, "anthropic");
+    headers.set(RESPONSE_HEADER_SPEND_CAP, String(reservation.cap));
     return Response.json(payload, { status: 200, headers });
   } catch (error) {
     await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);

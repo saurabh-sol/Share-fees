@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "Activity — Docs",
-  description: "Scan wallet history or import a hash, then claim Trade2Credits website credit.",
+  description: "Scan wallet history or import a hash, then claim Accrued website credit.",
 };
 
 export default function ActivityDocsPage() {
@@ -43,7 +43,7 @@ export default function ActivityDocsPage() {
 
       <DocsH2 id="claim">Claim</DocsH2>
       <DocsP>
-        Claim writes website credit. Convert it on the desk, then redeem USDG or a t2c_ key. If the hash was
+        Claim writes website credit. Convert it on the desk, then redeem USDG or a acc_ key. If the hash was
         already on the ledger, the desk says so and does not pay again.
       </DocsP>
       <DocsP>

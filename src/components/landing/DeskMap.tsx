@@ -35,7 +35,7 @@ const PAGES: Array<{
     id: "03",
     href: "/app/redeem",
     title: "Redeem",
-    body: "Convert credit 1:1 to USDG or an LLM key. USDG queues to this EVM address. The t2c_ key is shown once.",
+    body: "Convert credit 1:1 to USDG or an LLM key. USDG queues to this EVM address. The acc_ key is shown once.",
     Icon: Key,
     wide: false,
   },

@@ -51,7 +51,7 @@ const STEPS: {
   {
     id: "05",
     title: "Claim, then convert",
-    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a t2c_ key or queue Robinhood USDG after that.",
+    body: "BPS posts website credit first. Convert 1:1 to LLM or USDG any time. Redeem a acc_ key or queue Robinhood USDG after that.",
     Icon: Coins,
     span: "md:col-span-7",
   },
@@ -139,7 +139,7 @@ export function HowItPays() {
             </div>
             <div className="px-4 py-10 md:px-8">
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">LLM rail</p>
-              <p className="mt-3 text-xl tracking-tight text-zinc-100">A metered t2c_ key.</p>
+              <p className="mt-3 text-xl tracking-tight text-zinc-100">A metered acc_ key.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                 Paste into Claude, OpenAI, DeepSeek, Google, or Grok-compatible clients. Usage burns the balance.
               </p>

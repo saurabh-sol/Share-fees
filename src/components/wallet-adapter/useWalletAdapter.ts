@@ -13,6 +13,7 @@ import {
   useSignMessage,
 } from "wagmi";
 import { getPhantomSolana, encodeSignature } from "@/lib/wallet/phantom";
+import { SIWE_STATEMENT } from "@/lib/brand";
 import { forgetWallet, rememberWallet } from "@/lib/wallet/remember";
 import type { ConnectionStatus, DiscoveredWallet } from "./wallet-config";
 import { useInstalledWallets } from "./useInstalledWallets";
@@ -87,7 +88,7 @@ export function useWalletAdapter(onClose?: () => void) {
         nonce: nonceRes.nonce ?? "",
         uri: window.location.origin,
         version: "1",
-        statement: "Trade2Credits wants you to sign in",
+        statement: SIWE_STATEMENT,
         issuedAt: nonceRes.issuedAt ? new Date(nonceRes.issuedAt) : new Date(),
         expirationTime: nonceRes.expirationTime ? new Date(nonceRes.expirationTime) : undefined,
       });

@@ -4,7 +4,7 @@ const ROWS = [
   { k: "Floor", v: "$250 USD" },
   { k: "Ratio", v: "50 bps" },
   { k: "USDG", v: "Vault claim" },
-  { k: "LLM", v: "t2c_ key" },
+  { k: "LLM", v: "acc_ key" },
 ];
 
 export function FooterTape() {

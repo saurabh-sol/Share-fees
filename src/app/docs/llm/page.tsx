@@ -5,7 +5,7 @@ import { DocsPager } from "@/components/docs/DocsPager";
 
 export const metadata: Metadata = {
   title: "LLM credits — Docs",
-  description: "Redeem a metered t2c_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
+  description: "Redeem a metered acc_ key for OpenAI, Anthropic, DeepSeek, Google, or Grok.",
 };
 
 export default function LlmDocsPage() {
@@ -14,7 +14,7 @@ export default function LlmDocsPage() {
       <DocsH1>LLM credits</DocsH1>
       <DocsLead>
         Convert website credit to the LLM rail, pick a provider and a model, then redeem. The desk mints a
-        t2c_ virtual key. That key is the official vendor contract. Usage burns remaining cents.
+        acc_ virtual key. That key is the official vendor contract. Usage burns remaining cents.
       </DocsLead>
 
       <DocsH2 id="mint-a-key">Mint a key</DocsH2>
@@ -30,7 +30,7 @@ export default function LlmDocsPage() {
 
       <DocsH2 id="shown-once">Shown once</DocsH2>
       <DocsP>
-        The full t2c_ key is shown once. After that, only a prefix and a hash are stored. Leave the page
+        The full acc_ key is shown once. After that, only a prefix and a hash are stored. Leave the page
         without copying and you mint a new key from remaining credit. The old plaintext is gone.
       </DocsP>
       <DocsCallout title="Copy it now" tone="warn">

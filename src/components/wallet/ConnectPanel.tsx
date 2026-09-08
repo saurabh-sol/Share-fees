@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useConnect, useConnectors, useDisconnect, useSignMessage } from "wagmi";
 import { useRouter } from "next/navigation";
 import { PRIMARY_WALLET_MATCHERS } from "@/lib/wallet/wagmi";
+import { SIWE_STATEMENT } from "@/lib/brand";
 import { encodeSignature, getPhantomSolana } from "@/lib/wallet/phantom";
 
 function buildClientSiwsMessage(input: {
@@ -84,7 +85,7 @@ export function ConnectPanel() {
       nonce: nonceRes.nonce ?? "",
       uri: window.location.origin,
       version: "1",
-      statement: "Trade2Credits wants you to sign in",
+        statement: SIWE_STATEMENT,
       issuedAt: nonceRes.issuedAt ? new Date(nonceRes.issuedAt) : new Date(),
       expirationTime: nonceRes.expirationTime ? new Date(nonceRes.expirationTime) : undefined,
     });

@@ -7,7 +7,7 @@ const MAP = [
   { href: "/docs/swap", title: "Swap Studio", body: "Quote and settle a live fill. The same rule engine prices it." },
   { href: "/docs/activity", title: "Activity", body: "Scan history or import a hash, then claim website credit." },
   { href: "/docs/usdg", title: "USDG", body: "On-chain vault claim to the signed-in EVM address on Robinhood." },
-  { href: "/docs/llm", title: "LLM credits", body: "Mint a t2c_ key. Usage burns remaining cents." },
+  { href: "/docs/llm", title: "LLM credits", body: "Mint a acc_ key. Usage burns remaining cents." },
   { href: "/docs/api", title: "API", body: "Point the official vendor SDK at this origin." },
 ];
 
@@ -16,7 +16,7 @@ export default function DocsHomePage() {
     <>
       <DocsH1>You swap. We credit.</DocsH1>
       <DocsLead>
-        Trade2Credits is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into
+        Accrued is a wallet-native rewards desk. Qualifying token swaps convert at a published ratio into
         website credit. That credit can be taken as USDG to the same wallet, or as LLM credits for Claude, OpenAI,
         DeepSeek, Google, and Grok-compatible clients.
       </DocsLead>
@@ -35,7 +35,7 @@ export default function DocsHomePage() {
       <DocsUl>
         <li>Anyone with an injected EVM or Solana wallet that can sign a login message.</li>
         <li>USDG redeem is EVM-only. Solana sessions still take LLM credits and can use Chat.</li>
-        <li>Developers who want a metered t2c_ key in Cursor or any OpenAI-compatible client.</li>
+        <li>Developers who want a metered acc_ key in Cursor or any OpenAI-compatible client.</li>
       </DocsUl>
 
       <DocsH2 id="the-walk">The walk</DocsH2>
