@@ -1,4 +1,4 @@
-import { ROBINHOOD_CHAIN_ID, ROBINHOOD_USDG, ROBINHOOD_USDT } from "@/lib/chains/robinhood";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
 import { isUniswapChainId, type PathKey, type PoolKey } from "@/lib/uniswap/constants";
 import { quoteUniswap, UniswapQuoteError } from "@/lib/uniswap/quote";
 
@@ -91,15 +91,15 @@ function computeUsdCents(input: {
   fromPriceUsd?: number;
   toPriceUsd?: number;
 }): number {
-  const stables = new Set([ROBINHOOD_USDG.toLowerCase(), ROBINHOOD_USDT.toLowerCase()]);
+  const usdg = ROBINHOOD_USDG.toLowerCase();
 
   const fromHuman = Number(input.fromAmount) / 10 ** input.fromDecimals;
   const toHuman = Number(input.toAmount) / 10 ** input.toDecimals;
 
-  if (stables.has(input.fromToken.toLowerCase())) {
+  if (input.fromToken.toLowerCase() === usdg) {
     return Math.round(fromHuman * 100);
   }
-  if (stables.has(input.toToken.toLowerCase())) {
+  if (input.toToken.toLowerCase() === usdg) {
     return Math.round(toHuman * 100);
   }
 

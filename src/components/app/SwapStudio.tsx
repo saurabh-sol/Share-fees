@@ -8,7 +8,7 @@ import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
-import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDT, robinhoodTxUrl } from "@/lib/chains/robinhood";
+import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDG, robinhoodTxUrl } from "@/lib/chains/robinhood";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
@@ -23,9 +23,9 @@ type QuotePayload = {
 
 const NATIVE = "0x0000000000000000000000000000000000000000";
 
-// Default pair: NVDA → USDT (users land on stock trading by default).
+// Default pair: NVDA → USDG (users land on stock trading by default).
 const DEFAULT_FROM = ROBINHOOD_STOCKS[0]?.address ?? NATIVE;
-const DEFAULT_TO = ROBINHOOD_USDT;
+const DEFAULT_TO = ROBINHOOD_USDG;
 
 const STOCK_SYMBOLS = new Set(ROBINHOOD_STOCKS.map((s) => s.symbol));
 
