@@ -21,11 +21,10 @@ import {
   resolvePlaygroundRequestOrigin,
 } from "@/lib/gateway/try-request";
 import { ProviderMark } from "@/components/llm/ProviderMark";
-import { isVirtualKey } from "@/lib/brand";
+import { isVirtualKey, PUBLIC_GATEWAY_V1_URL } from "@/lib/brand";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 
 export type ApiKeyTryPanelProps = {
-  gatewayBaseUrl: string;
   initialProvider?: LlmProvider;
   initialModel?: string;
   initialApiKey?: string;
@@ -35,7 +34,6 @@ export type ApiKeyTryPanelProps = {
 };
 
 export function ApiKeyTryPanel({
-  gatewayBaseUrl,
   initialProvider = DEFAULT_LLM_PROVIDER,
   initialModel = DEFAULT_LLM_MODEL,
   initialApiKey = "",
@@ -71,7 +69,7 @@ export function ApiKeyTryPanel({
     }
   }, [provider, model]);
 
-  const snippet = clientSnippets(provider, gatewayBaseUrl, apiKey.trim() || "acc_…", model, message);
+  const snippet = clientSnippets(provider, PUBLIC_GATEWAY_V1_URL, apiKey.trim() || "acc_…", model, message);
   const providerLabel = LLM_CATALOG.find((item) => item.id === provider)?.label ?? provider;
   const modelLabel =
     modelsForProvider(provider).find((item) => item.id === model)?.label ?? model;
@@ -101,12 +99,12 @@ export function ApiKeyTryPanel({
       const req = buildTryRequest({
         provider,
         model,
-        gatewayBaseUrl,
+        gatewayBaseUrl: PUBLIC_GATEWAY_V1_URL,
         apiKey: key,
         message,
         requestOrigin:
           typeof window !== "undefined"
-            ? resolvePlaygroundRequestOrigin(gatewayBaseUrl, window.location)
+            ? resolvePlaygroundRequestOrigin(PUBLIC_GATEWAY_V1_URL, window.location)
             : undefined,
       });
       const response = await fetch(req.url, {

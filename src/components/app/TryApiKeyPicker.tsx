@@ -13,12 +13,10 @@ export type TryApiKeyOption = {
 };
 
 export function TryApiKeyPicker({
-  gatewayBaseUrl,
   options,
   initialProvider,
   initialModel,
 }: {
-  gatewayBaseUrl: string;
   options: TryApiKeyOption[];
   initialProvider: LlmProvider;
   initialModel: string;
@@ -62,7 +60,6 @@ export function TryApiKeyPicker({
 
       <ApiKeyTryPanel
         key={selectedId || "manual"}
-        gatewayBaseUrl={gatewayBaseUrl}
         initialProvider={selected?.provider ?? initialProvider}
         initialModel={selected?.model ?? initialModel}
         lockProviderModel={Boolean(selected)}

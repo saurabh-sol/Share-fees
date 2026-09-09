@@ -1,5 +1,6 @@
 import { allGatewayModels, LLM_CATALOG, type LlmProvider } from "@/lib/gateway/catalog";
 import { toOpenAiModel } from "@/lib/gateway/openai";
+import { PRODUCTION_APP_ORIGIN } from "@/lib/brand";
 import { env } from "@/lib/env";
 import { isX402Enabled, x402OfferMeta } from "./config";
 import { quoteMaxPriceUsdg } from "./quote";
@@ -11,7 +12,10 @@ const PAYWALLED_ROUTES = [
 ] as const;
 
 export function x402DiscoveryDocument() {
-  const origin = env.publicAppUrl.replace(/\/$/, "");
+  const origin =
+    process.env.NODE_ENV === "production"
+      ? PRODUCTION_APP_ORIGIN
+      : env.publicAppUrl.replace(/\/$/, "");
   const models = allGatewayModels().map((item) => {
     const provider = item.owned_by as LlmProvider;
     const maxPriceUsdg = quoteMaxPriceUsdg(provider, item.id);

@@ -2,8 +2,9 @@
 
 import { forwardRef, useState } from "react";
 import { Check, Copy } from "@phosphor-icons/react";
+import { PRODUCTION_APP_ORIGIN, PUBLIC_GATEWAY_V1_URL } from "@/lib/brand";
 import type { LlmProvider } from "@/lib/gateway/catalog";
-import { clientSnippets, originFromGatewayBase } from "@/lib/gateway/client-snippets";
+import { clientSnippets } from "@/lib/gateway/client-snippets";
 import { SecretKeyDisplay } from "./SecretKeyField";
 
 type CopyTarget = "key" | "url" | "curl" | "sdk";
@@ -11,20 +12,16 @@ type CopyTarget = "key" | "url" | "curl" | "sdk";
 export const OpenAiKeyIssue = forwardRef<
   HTMLElement,
   {
-    gatewayBaseUrl: string;
     issuedKey: string | null;
     issuedModel: string;
     issuedProvider: LlmProvider;
   }
->(function OpenAiKeyIssue(
-  { gatewayBaseUrl, issuedKey, issuedModel, issuedProvider },
-  ref,
-) {
+>(function OpenAiKeyIssue({ issuedKey, issuedModel, issuedProvider }, ref) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const preview = clientSnippets(
     issuedProvider,
-    gatewayBaseUrl,
+    PUBLIC_GATEWAY_V1_URL,
     issuedKey ?? "acc_…",
     issuedModel,
   );
@@ -72,7 +69,7 @@ export const OpenAiKeyIssue = forwardRef<
                 <>
                   {" "}
                   The same key also works as Bearer against{" "}
-                  <span className="font-mono">{originFromGatewayBase(gatewayBaseUrl)}/v1</span>.
+                  <span className="font-mono">{PRODUCTION_APP_ORIGIN}/v1</span>.
                 </>
               ) : null}
             </p>

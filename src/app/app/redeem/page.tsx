@@ -42,7 +42,6 @@ export default async function RedeemPage() {
         usdtCents={wallet.usdtCents}
         llmCents={wallet.llmCents}
         chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}
-        gatewayBaseUrl={`${env.publicAppUrl.replace(/\/$/, "")}/v1`}
         initialRedemptions={redemptions}
         initialKeys={keys}
         rewardVaultAddress={vault}

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ProviderMark } from "@/components/llm/ProviderMark";
+import { PUBLIC_GATEWAY_V1_URL } from "@/lib/brand";
 import { OFFICIAL_API_DESK_POINTS } from "@/lib/gateway/official-apis";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -16,10 +17,16 @@ export function ApiSurface() {
             Official APIs. Desk points.
           </h2>
         </div>
-        <p className="max-w-[44ch] text-base leading-relaxed text-zinc-400">
-          Redeem locks a provider. The key is that vendor’s real contract. Usage hits the live model and burns
-          remaining cents. Upstream credentials stay on the server.
-        </p>
+        <div className="space-y-4">
+          <p className="max-w-[44ch] text-base leading-relaxed text-zinc-400">
+            Redeem locks a provider. The key is that vendor’s real contract. Usage hits the live model and burns
+            remaining cents. Upstream credentials stay on the server.
+          </p>
+          <p className="font-mono text-sm text-zinc-200">
+            Base URL:{" "}
+            <span className="text-accent">{PUBLIC_GATEWAY_V1_URL}</span>
+          </p>
+        </div>
       </div>
 
       <div className="mx-auto max-w-[1400px] border-t border-white/8">

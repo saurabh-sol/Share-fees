@@ -85,7 +85,6 @@ export function RedeemDesk({
   usdtCents,
   llmCents,
   chainNamespace,
-  gatewayBaseUrl,
   initialRedemptions,
   initialKeys,
   rewardVaultAddress,
@@ -98,7 +97,6 @@ export function RedeemDesk({
   usdtCents: number;
   llmCents: number;
   chainNamespace: "eip155" | "solana";
-  gatewayBaseUrl: string;
   initialRedemptions: Redemption[];
   initialKeys: VirtualKey[];
   rewardVaultAddress: string | null;
@@ -481,7 +479,6 @@ export function RedeemDesk({
 
       <OpenAiKeyIssue
         ref={issuedKeyRef}
-        gatewayBaseUrl={gatewayBaseUrl}
         issuedKey={issuedKey}
         issuedModel={issuedKey ? issuedModel : model}
         issuedProvider={issuedKey ? issuedProvider : provider}
@@ -489,7 +486,6 @@ export function RedeemDesk({
 
       {issuedKey ? (
         <ApiKeyTryPanel
-          gatewayBaseUrl={gatewayBaseUrl}
           initialProvider={issuedProvider}
           initialModel={issuedModel}
           initialApiKey={issuedKey}
@@ -561,7 +557,6 @@ export function RedeemDesk({
             return (
               <ApiKeyTryPanel
                 key={key.id}
-                gatewayBaseUrl={gatewayBaseUrl}
                 initialProvider={keyProvider}
                 initialModel={key.model ?? DEFAULT_LLM_MODEL}
                 initialApiKey={cachedKey ?? ""}

@@ -5,13 +5,13 @@
  * Requires @meshgateway/mpp-client and a Robinhood USDG wallet signer.
  *
  *   npm install @meshgateway/mpp-client
- *   ORIGIN=https://trade2credits.onrender.com node scripts/x402-agent-demo.mjs
+ *   AGENT_PRIVATE_KEY=0x... node scripts/x402-agent-demo.mjs
  *
- * With a local wallet private key (dev only):
+ * Local dev only:
  *   AGENT_PRIVATE_KEY=0x... ORIGIN=http://localhost:3000 node scripts/x402-agent-demo.mjs
  */
 
-const origin = (process.env.ORIGIN ?? "http://localhost:3000").replace(/\/$/, "");
+const origin = (process.env.ORIGIN ?? "https://accrued.trade").replace(/\/$/, "");
 const model = process.env.MODEL ?? "gpt-4o-mini";
 
 async function rawFetchDemo() {

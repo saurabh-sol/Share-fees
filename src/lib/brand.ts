@@ -2,6 +2,8 @@
 export const BRAND_NAME = "Accrued" as const;
 /** Canonical production origin — SIWE domain, OG metadata, and LLM gateway base URL. */
 export const PRODUCTION_APP_ORIGIN = "https://accrued.trade" as const;
+/** Public LLM gateway base for docs, copy blocks, and SDK examples (always production). */
+export const PUBLIC_GATEWAY_V1_URL = `${PRODUCTION_APP_ORIGIN}/v1` as const;
 export const BRAND_TAGLINE = "You swap. We credit." as const;
 export const BRAND_DESCRIPTION =
   "Qualifying swaps convert at a published ratio into USDG or LLM credits — same wallet, one desk." as const;
