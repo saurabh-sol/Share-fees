@@ -1,7 +1,7 @@
 "use client";
 
-import { formatUnits, parseUnits } from "viem";
-import { useAccount, useBalance, useConnect, useConnectors, useDisconnect } from "wagmi";
+import { erc20Abi, formatUnits, parseUnits } from "viem";
+import { useAccount, useBalance, useConnect, useConnectors, useDisconnect, useReadContract } from "wagmi";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LifiToken } from "@/lib/lifi/http";
@@ -85,6 +85,61 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   return Object.assign(data, { httpStatus: response.status }) as T;
 }
 
+type TokenBalanceView = {
+  value: bigint;
+  decimals: number;
+  symbol: string;
+};
+
+function useRobinhoodTokenBalance(input: {
+  wallet?: `0x${string}`;
+  tokenAddress: string;
+  isNative: boolean;
+  symbol?: string;
+  decimals?: number;
+}) {
+  const enabled = Boolean(input.wallet && input.tokenAddress);
+
+  const native = useBalance({
+    address: input.wallet,
+    chainId: ROBINHOOD_CHAIN_ID,
+    query: { enabled: enabled && input.isNative },
+  });
+
+  const erc20 = useReadContract({
+    address: input.isNative ? undefined : (input.tokenAddress as `0x${string}`),
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: input.wallet ? [input.wallet] : undefined,
+    chainId: ROBINHOOD_CHAIN_ID,
+    query: { enabled: enabled && !input.isNative },
+  });
+
+  if (input.isNative) {
+    return {
+      data: native.data as TokenBalanceView | undefined,
+      isLoading: native.isLoading,
+      isError: native.isError,
+      refetch: native.refetch,
+    };
+  }
+
+  const value = erc20.data as bigint | undefined;
+  return {
+    data:
+      value !== undefined
+        ? {
+            value,
+            decimals: input.decimals ?? 18,
+            symbol: input.symbol ?? "TOKEN",
+          }
+        : undefined,
+    isLoading: erc20.isLoading,
+    isError: erc20.isError,
+    refetch: erc20.refetch,
+  };
+}
+
 export function SwapStudio({
   sessionAddress,
   chainNamespace,
@@ -116,20 +171,22 @@ export function SwapStudio({
   const balanceAddress = (walletMatches && address ? address : sessionAddress) as `0x${string}`;
   const fromIsNative = fromToken.toLowerCase() === NATIVE.toLowerCase();
   const toIsNative = toToken.toLowerCase() === NATIVE.toLowerCase();
-  const fromBalance = useBalance({
-    address: balanceAddress,
-    chainId: ROBINHOOD_CHAIN_ID,
-    token: fromIsNative ? undefined : (fromToken as `0x${string}`),
-    query: { enabled: Boolean(balanceAddress && fromToken) },
-  });
-  const toBalance = useBalance({
-    address: balanceAddress,
-    chainId: ROBINHOOD_CHAIN_ID,
-    token: toIsNative ? undefined : (toToken as `0x${string}`),
-    query: { enabled: Boolean(balanceAddress && toToken) },
-  });
   const fromMeta = tokens.find((t) => t.address.toLowerCase() === fromToken.toLowerCase());
   const toMeta = tokens.find((t) => t.address.toLowerCase() === toToken.toLowerCase());
+  const fromBalance = useRobinhoodTokenBalance({
+    wallet: balanceAddress,
+    tokenAddress: fromToken,
+    isNative: fromIsNative,
+    symbol: fromMeta?.symbol,
+    decimals: fromMeta?.decimals,
+  });
+  const toBalance = useRobinhoodTokenBalance({
+    wallet: balanceAddress,
+    tokenAddress: toToken,
+    isNative: toIsNative,
+    symbol: toMeta?.symbol,
+    decimals: toMeta?.decimals,
+  });
   const sameChain = true; // Robinhood Chain only — always same-chain.
   const fromDecimals = fromMeta?.decimals ?? fromBalance.data?.decimals ?? 18;
   const insufficient = amountExceedsBalance(amount, fromBalance.data?.value, fromDecimals);

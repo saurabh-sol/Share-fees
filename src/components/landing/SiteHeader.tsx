@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { VaultContractLink } from "@/components/onchain/VaultContractLink";
+import { SITE_CONTRACT_ADDRESS } from "@/lib/chains/robinhood";
 import { NotchedCta } from "./NotchedCta";
 import { SocialButtons } from "./footer/SocialButtons";
 
@@ -24,8 +26,20 @@ export function SiteHeader({ isLoggedIn = false }: { isLoggedIn?: boolean } = {}
           <a href="#faq" className="hover:text-zinc-100">
             FAQ
           </a>
+          <VaultContractLink
+            compact
+            label="Contract Address"
+            address={SITE_CONTRACT_ADDRESS}
+            className="hidden xl:inline-flex"
+          />
         </nav>
         <div className="flex items-center gap-3 sm:gap-5">
+          <VaultContractLink
+            compact
+            label="Contract Address"
+            address={SITE_CONTRACT_ADDRESS}
+            className="hidden md:inline-flex xl:hidden"
+          />
           <div className="hidden sm:block">
             <SocialButtons />
           </div>
@@ -52,6 +66,12 @@ export function SiteHeader({ isLoggedIn = false }: { isLoggedIn?: boolean } = {}
         <a href="#faq" className="shrink-0 hover:text-zinc-100">
           FAQ
         </a>
+        <VaultContractLink
+          compact
+          label="Contract Address"
+          address={SITE_CONTRACT_ADDRESS}
+          className="shrink-0"
+        />
       </nav>
     </header>
   );

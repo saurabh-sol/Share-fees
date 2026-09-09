@@ -7,6 +7,7 @@ import { DeskNavLinks } from "@/components/app/DeskNavLinks";
 import { VaultContractLink } from "@/components/onchain/VaultContractLink";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { getSession } from "@/lib/auth/session";
+import { SITE_CONTRACT_ADDRESS } from "@/lib/chains/robinhood";
 import { pageTitle } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -46,6 +47,12 @@ export default async function AppShell({ children }: { children: ReactNode }) {
                   },
                   { href: "/app/rewards", label: "Ledger" },
                 ]}
+              />
+              <VaultContractLink
+                compact
+                label="Contract Address"
+                address={SITE_CONTRACT_ADDRESS}
+                className="hidden shrink-0 lg:inline-flex"
               />
               <span className="hidden font-mono text-xs text-zinc-500 md:inline">
                 {shortAddress(session.user.address)}

@@ -37,6 +37,9 @@ export const ROBINHOOD_STOCKS: RobinhoodStock[] = [
 /** Deployed UsdgRewardVault on Robinhood Chain. Public; claims and recover go through this address. */
 export const USDG_REWARD_VAULT = "0x991FA150A5Cf1680d41137a38bEAa9Eaa0eBE1db";
 
+/** Public contract address linked in the site navbar. */
+export const SITE_CONTRACT_ADDRESS = "0x85acab234fce5d5287a7c24807a317581160420b";
+
 export const robinhoodChain = defineChain({
   id: ROBINHOOD_CHAIN_ID,
   name: "Robinhood Chain",

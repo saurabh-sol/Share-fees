@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { inferDisplayNotionalCents } from "@/lib/indexer/notional-display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 import { TokenIcon } from "./TokenIcon";
@@ -58,8 +59,15 @@ function rowAmount(claim: Claim) {
     claim.kind === "receive" ? (claim.toAmount ?? claim.fromAmount) : (claim.fromAmount ?? claim.toAmount),
   );
   const tokenLabel = qty ? `${qty} ${symbol}` : null;
-  if (claim.notionalUsdCents > 0) {
-    return tokenLabel ? `${money(claim.notionalUsdCents)} · ${tokenLabel}` : money(claim.notionalUsdCents);
+  const usdCents = inferDisplayNotionalCents({
+    notionalUsdCents: claim.notionalUsdCents,
+    fromToken: claim.fromToken,
+    toToken: claim.toToken,
+    fromAmount: claim.fromAmount,
+    toAmount: claim.toAmount,
+  });
+  if (usdCents > 0) {
+    return tokenLabel ? `${money(usdCents)} · ${tokenLabel}` : money(usdCents);
   }
   return tokenLabel ?? "—";
 }

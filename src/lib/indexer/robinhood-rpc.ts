@@ -16,6 +16,7 @@ import {
   ROBINHOOD_WETH,
 } from "@/lib/chains/robinhood";
 import { resolveErc20 } from "@/lib/chains/resolve-token";
+import { stableSymbolNotionalCents } from "@/lib/indexer/notional-display";
 import { UNIVERSAL_ROUTER, V3_SWAP_ROUTER_02 } from "@/lib/uniswap/constants";
 import type { ActivityKind, HistoricalCandidate, TradeSource } from "./types";
 
@@ -174,10 +175,92 @@ function largest(transfers: RawTransfer[]): RawTransfer | null {
   );
 }
 
-/** USD cents per 1 whole token. 0 = looked up and unpriceable. */
+/** USD cents per 1 whole token. Only positive prices are cached. */
 const tokenUsdCentsCache = new Map<string, number>();
 
-/** USD notional in cents. Stables and WETH first; else live Uniswap quote. */
+const STABLE_ADDRESSES = new Set([
+  ROBINHOOD_USDG.toLowerCase(),
+  ROBINHOOD_USDT.toLowerCase(),
+]);
+
+type QuoteTarget = {
+  address: `0x${string}`;
+  decimals: number;
+  kind: "stable" | "weth";
+};
+
+const QUOTE_TARGETS: QuoteTarget[] = [
+  { address: ROBINHOOD_USDT.toLowerCase() as `0x${string}`, decimals: 6, kind: "stable" },
+  { address: ROBINHOOD_USDG.toLowerCase() as `0x${string}`, decimals: 6, kind: "stable" },
+  { address: ROBINHOOD_WETH.toLowerCase() as `0x${string}`, decimals: 18, kind: "weth" },
+];
+
+import { inferDisplayNotionalCents } from "@/lib/indexer/notional-display";
+
+async function usdCentsPerWholeToken(token: `0x${string}`, decimals: number): Promise<number> {
+  const key = token.toLowerCase();
+  if (STABLE_ADDRESSES.has(key)) return 100;
+  if (key === ROBINHOOD_WETH.toLowerCase()) return ethUsdCents();
+
+  const cached = tokenUsdCentsCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const { quoteUniswap } = await import("@/lib/uniswap/quote");
+  const unitIn = 10n ** BigInt(decimals);
+
+  for (const target of QUOTE_TARGETS) {
+    if (key === target.address.toLowerCase()) continue;
+    try {
+      const quoted = await quoteUniswap({
+        chainId: ROBINHOOD_CHAIN_ID,
+        fromToken: token,
+        toToken: target.address,
+        fromAmount: unitIn.toString(),
+      });
+      let perUnit: number;
+      if (target.kind === "weth") {
+        const wethHuman = Number(formatUnits(quoted.amountOut, 18));
+        perUnit = Math.round(wethHuman * (await ethUsdCents()));
+      } else {
+        perUnit = Math.round(Number(formatUnits(quoted.amountOut, target.decimals)) * 100);
+      }
+      if (perUnit > 0) {
+        tokenUsdCentsCache.set(key, perUnit);
+        return perUnit;
+      }
+    } catch {
+      /* try next quote target */
+    }
+  }
+
+  // Reverse: $1 stable → token, then invert to USD per whole token.
+  for (const target of QUOTE_TARGETS.filter((t) => t.kind === "stable")) {
+    if (key === target.address.toLowerCase()) continue;
+    try {
+      const oneStable = 10n ** BigInt(target.decimals);
+      const quoted = await quoteUniswap({
+        chainId: ROBINHOOD_CHAIN_ID,
+        fromToken: target.address,
+        toToken: token,
+        fromAmount: oneStable.toString(),
+      });
+      const tokensOut = Number(formatUnits(quoted.amountOut, decimals));
+      if (tokensOut > 0) {
+        const perUnit = Math.round(100 / tokensOut);
+        if (perUnit > 0) {
+          tokenUsdCentsCache.set(key, perUnit);
+          return perUnit;
+        }
+      }
+    } catch {
+      /* try next stable */
+    }
+  }
+
+  return 0;
+}
+
+/** USD notional in cents. Stables and WETH first; else live Uniswap quote (USDT → USDG → WETH). */
 async function sideUsdCents(
   token: `0x${string}` | null,
   value: bigint,
@@ -186,45 +269,10 @@ async function sideUsdCents(
   if (!token || value <= 0n) return 0;
   const human = Number(formatUnits(value, decimals));
   if (!Number.isFinite(human) || human <= 0) return 0;
-  const usdg = ROBINHOOD_USDG.toLowerCase();
-  const usdt = ROBINHOOD_USDT.toLowerCase();
-  const weth = ROBINHOOD_WETH.toLowerCase();
-  if (token === usdg || token === usdt) return Math.round(human * 100);
-  if (token === weth) return Math.round(human * (await ethUsdCents()));
 
-  const cached = tokenUsdCentsCache.get(token);
-  if (cached !== undefined) return Math.round(human * cached);
-
-  const { quoteUniswap } = await import("@/lib/uniswap/quote");
-  try {
-    const quoted = await quoteUniswap({
-      chainId: ROBINHOOD_CHAIN_ID,
-      fromToken: token,
-      toToken: ROBINHOOD_USDG,
-      fromAmount: value.toString(),
-    });
-    const cents = Math.round(Number(formatUnits(quoted.amountOut, 6)) * 100);
-    if (cents > 0) tokenUsdCentsCache.set(token, cents / human);
-    else tokenUsdCentsCache.set(token, 0);
-    return Math.max(0, cents);
-  } catch {
-    try {
-      const quoted = await quoteUniswap({
-        chainId: ROBINHOOD_CHAIN_ID,
-        fromToken: token,
-        toToken: ROBINHOOD_WETH,
-        fromAmount: value.toString(),
-      });
-      const wethHuman = Number(formatUnits(quoted.amountOut, 18));
-      const cents = Math.round(wethHuman * (await ethUsdCents()));
-      if (cents > 0) tokenUsdCentsCache.set(token, cents / human);
-      else tokenUsdCentsCache.set(token, 0);
-      return Math.max(0, cents);
-    } catch {
-      tokenUsdCentsCache.set(token, 0);
-      return 0;
-    }
-  }
+  const perUnit = await usdCentsPerWholeToken(token, decimals);
+  if (perUnit > 0) return Math.round(human * perUnit);
+  return 0;
 }
 
 export async function fetchRobinhoodTrades(
@@ -383,15 +431,22 @@ export async function fetchRobinhoodTrades(
       continue;
     }
 
-    // Notional: prefer the priceable side (USDG 1:1, WETH × ETH price,
-    // native ETH value × ETH price). Never guess for unpriced tokens.
+    // Notional: prefer the priceable side (USDG/USDT 1:1, WETH × ETH price,
+    // native ETH value × ETH price). Fall back to parsed stable/ETH amounts.
+    const ethPrice = await ethUsdCents();
     const outUsd = outT ? await sideUsdCents(outT.token, outT.value, outDecimals) : 0;
     const inUsd = inT ? await sideUsdCents(inT.token, inT.value, inDecimals) : 0;
     const ethUsd =
       ethInValue > 0n
-        ? Math.round(Number(formatUnits(ethInValue, 18)) * (await ethUsdCents()))
+        ? Math.round(Number(formatUnits(ethInValue, 18)) * ethPrice)
         : 0;
-    const notionalUsdCents = Math.max(outUsd, inUsd, ethUsd);
+    let notionalUsdCents = Math.max(outUsd, inUsd, ethUsd);
+    if (notionalUsdCents === 0) {
+      notionalUsdCents = Math.max(
+        stableSymbolNotionalCents(fromToken, fromAmount, ethPrice),
+        stableSymbolNotionalCents(toToken, toAmount, ethPrice),
+      );
+    }
 
     candidates.push({
       provider: "robinhood",
@@ -474,23 +529,35 @@ export async function fetchRobinhoodTradeByHash(
     const outDecimals = outMeta?.decimals ?? 18;
     const inDecimals = inMeta?.decimals ?? 18;
 
+    const ethPrice = await ethUsdCents();
     const outUsd = outT ? await sideUsdCents(outT.token, outT.value, outDecimals) : 0;
     const inUsd = inT ? await sideUsdCents(inT.token, inT.value, inDecimals) : 0;
     const ethUsd =
       tx.value > 0n
-        ? Math.round(Number(formatUnits(tx.value, 18)) * (await ethUsdCents()))
+        ? Math.round(Number(formatUnits(tx.value, 18)) * ethPrice)
         : 0;
+    const fromToken = outT ? (outMeta?.symbol ?? "TOKEN") : "ETH";
+    const toToken = inT ? (inMeta?.symbol ?? "TOKEN") : "ETH";
+    const fromAmount = outT ? formatUnits(outT.value, outDecimals) : formatUnits(tx.value, 18);
+    const toAmount = inT ? formatUnits(inT.value, inDecimals) : "0";
+    let notionalUsdCents = Math.max(outUsd, inUsd, ethUsd);
+    if (notionalUsdCents === 0) {
+      notionalUsdCents = Math.max(
+        stableSymbolNotionalCents(fromToken, fromAmount, ethPrice),
+        stableSymbolNotionalCents(toToken, toAmount, ethPrice),
+      );
+    }
 
     return {
       provider: "robinhood",
       txHash: txHash.toLowerCase(),
       fromChain: CHAIN_KEY,
       toChain: CHAIN_KEY,
-      fromToken: outT ? (outMeta?.symbol ?? "TOKEN") : "ETH",
-      toToken: inT ? (inMeta?.symbol ?? "TOKEN") : "ETH",
-      fromAmount: outT ? formatUnits(outT.value, outDecimals) : formatUnits(tx.value, 18),
-      toAmount: inT ? formatUnits(inT.value, inDecimals) : "0",
-      notionalUsdCents: Math.max(outUsd, inUsd, ethUsd),
+      fromToken,
+      toToken,
+      fromAmount,
+      toAmount,
+      notionalUsdCents,
       kind: "trade",
       executedAt: new Date(Number(block.timestamp) * 1000),
     };

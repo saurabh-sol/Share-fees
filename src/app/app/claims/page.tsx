@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { listWalletActivity } from "@/lib/indexer/claim";
+import { inferDisplayNotionalCents } from "@/lib/indexer/notional-display";
 import { summarizeWalletVolume } from "@/lib/indexer/summary";
 import { MIN_NOTIONAL_USD_CENTS, MIN_REWARD_CENTS, computeRewardCents, getActiveRuleOrNull } from "@/lib/rules/engine";
 import { ClaimsInbox } from "@/components/app/ClaimsInbox";
@@ -19,7 +20,17 @@ export default async function ClaimsPage() {
 
   const [rows, rule] = await Promise.all([listWalletActivity(session.user.id), getActiveRuleOrNull()]);
   const floor = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
-  const summary = summarizeWalletVolume(rows, {
+  const enrichedRows = rows.map((row) => ({
+    ...row,
+    notionalUsdCents: inferDisplayNotionalCents({
+      notionalUsdCents: row.notionalUsdCents,
+      fromToken: row.fromToken,
+      toToken: row.toToken,
+      fromAmount: row.fromAmount,
+      toAmount: row.toAmount,
+    }),
+  }));
+  const summary = summarizeWalletVolume(enrichedRows, {
     conversionBps: rule?.conversionBps,
     minNotionalUsdCents: floor,
   });
@@ -40,7 +51,7 @@ export default async function ClaimsPage() {
         minNotionalUsdCents={floor}
         conversionBps={summary.conversionBps}
         initialSummary={summary}
-        initialClaims={rows.map((row) => ({
+        initialClaims={enrichedRows.map((row) => ({
           id: row.id,
           txHash: row.txHash,
           fromChain: row.fromChain,
