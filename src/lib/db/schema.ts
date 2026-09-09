@@ -319,6 +319,54 @@ export const changenowExchanges = pgTable(
   ],
 );
 
+export const holderVerifications = pgTable(
+  "holder_verifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    walletAddress: text("wallet_address").notNull(),
+    tokenAddress: text("token_address").notNull(),
+    requiredBalanceRaw: text("required_balance_raw").notNull(),
+    startBalanceRaw: text("start_balance_raw").notNull(),
+    lastBalanceRaw: text("last_balance_raw").notNull(),
+    status: text("status").notNull(),
+    rewardCents: integer("reward_cents").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    eligibleAt: timestamp("eligible_at", { withTimezone: true }).notNull(),
+    creditedAt: timestamp("credited_at", { withTimezone: true }),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    swapId: text("swap_id"),
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("holder_verifications_user_status").on(table.userId, table.status),
+    index("holder_verifications_eligible").on(table.status, table.eligibleAt),
+  ],
+);
+
+export const holderBalanceChecks = pgTable(
+  "holder_balance_checks",
+  {
+    id: text("id").primaryKey(),
+    verificationId: text("verification_id")
+      .notNull()
+      .references(() => holderVerifications.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    balanceRaw: text("balance_raw").notNull(),
+    meetsRequirement: integer("meets_requirement").notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("holder_balance_checks_verification").on(table.verificationId, table.checkedAt),
+    index("holder_balance_checks_user").on(table.userId),
+  ],
+);
+
 export const payoutOutbox = pgTable(
   "payout_outbox",
   {
@@ -350,3 +398,5 @@ export type User = typeof users.$inferSelect;
 export type RewardRule = typeof rewardRules.$inferSelect;
 export type Swap = typeof swaps.$inferSelect;
 export type DiscoveredSwap = typeof discoveredSwaps.$inferSelect;
+export type HolderVerification = typeof holderVerifications.$inferSelect;
+export type HolderBalanceCheck = typeof holderBalanceChecks.$inferSelect;

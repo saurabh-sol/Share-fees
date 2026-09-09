@@ -3,13 +3,13 @@ import type { getDb } from "@/lib/db/client";
 import { redemptions } from "@/lib/db/schema";
 import { RedeemError } from "./errors";
 
-export const MAX_USDG_REDEEM_CENTS = 500;
+export const MAX_USDG_REDEEM_CENTS = 1500;
 export const USDG_REDEEM_COOLDOWN_MS = 30 * 60 * 1000;
 
 export function usdgRedeemErrorMessage(code: string): string {
   switch (code) {
     case "usdg_max_exceeded":
-      return "USDG redeems are capped at $5.00 per claim.";
+      return "USDG redeems are capped at $15.00 per claim.";
     case "redeem_cooldown_wallet":
       return "Wait 30 minutes before your next USDG claim.";
     default:

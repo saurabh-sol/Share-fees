@@ -6,6 +6,7 @@ const WELL_KNOWN_LOGOS: Record<string, string> = {
   eth: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
   weth: "https://assets.coingecko.com/coins/images/2518/small/weth.png",
   usdg: "https://coin-images.coingecko.com/coins/images/51281/small/GDN_USDG_Token_200x200.png",
+  accr: "https://robinhoodchain.blockscout.com/token-images/0x85acab234fce5d5287a7c24807a317581160420b.png",
   usdc: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
   dai: "https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png",
 };

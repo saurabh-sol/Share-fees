@@ -38,7 +38,14 @@ export const ROBINHOOD_STOCKS: RobinhoodStock[] = [
 export const USDG_REWARD_VAULT = "0x991FA150A5Cf1680d41137a38bEAa9Eaa0eBE1db";
 
 /** Public contract address linked in the site navbar. */
-export const SITE_CONTRACT_ADDRESS = "0x85acab234fce5d5287a7c24807a317581160420b";
+export const ROBINHOOD_ACCR = "0x85aCab234fce5d5287a7C24807A317581160420B" as const;
+export const SITE_CONTRACT_ADDRESS = ROBINHOOD_ACCR;
+
+/** $ACCR token — holder verification reads balanceOf on Robinhood Chain. */
+export const ACCR_TOKEN_ADDRESS = ROBINHOOD_ACCR;
+
+export const ACCR_TOKEN_LOGO =
+  "https://robinhoodchain.blockscout.com/token-images/0x85acab234fce5d5287a7c24807a317581160420b.png";
 
 export const robinhoodChain = defineChain({
   id: ROBINHOOD_CHAIN_ID,

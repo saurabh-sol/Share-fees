@@ -236,6 +236,36 @@ const STATEMENTS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS changenow_exchanges_exchange ON changenow_exchanges (exchange_id)`,
   `CREATE INDEX IF NOT EXISTS changenow_exchanges_user ON changenow_exchanges (user_id)`,
   `CREATE INDEX IF NOT EXISTS changenow_exchanges_status ON changenow_exchanges (status)`,
+  `CREATE TABLE IF NOT EXISTS holder_verifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    wallet_address TEXT NOT NULL,
+    token_address TEXT NOT NULL,
+    required_balance_raw TEXT NOT NULL,
+    start_balance_raw TEXT NOT NULL,
+    last_balance_raw TEXT NOT NULL,
+    status TEXT NOT NULL,
+    reward_cents INTEGER NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    eligible_at TIMESTAMPTZ NOT NULL,
+    credited_at TIMESTAMPTZ,
+    last_checked_at TIMESTAMPTZ,
+    swap_id TEXT,
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS holder_verifications_user_status ON holder_verifications (user_id, status)`,
+  `CREATE INDEX IF NOT EXISTS holder_verifications_eligible ON holder_verifications (status, eligible_at)`,
+  `CREATE TABLE IF NOT EXISTS holder_balance_checks (
+    id TEXT PRIMARY KEY,
+    verification_id TEXT NOT NULL REFERENCES holder_verifications(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    balance_raw TEXT NOT NULL,
+    meets_requirement INTEGER NOT NULL,
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS holder_balance_checks_verification ON holder_balance_checks (verification_id, checked_at)`,
+  `CREATE INDEX IF NOT EXISTS holder_balance_checks_user ON holder_balance_checks (user_id)`,
   `INSERT INTO reward_rules (
     id, version, conversion_bps, min_notional_usd_cents, daily_cap_usd_cents, enabled, active_from
   )

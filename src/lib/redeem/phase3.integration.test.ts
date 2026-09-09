@@ -429,7 +429,7 @@ describe("phase 3 redeem + gateway", () => {
     ).rejects.toMatchObject({ message: "model_not_allowed" });
   });
 
-  it("rejects USDG redeems above the $5 per-claim cap", async () => {
+  it("rejects USDG redeems above the $15 per-claim cap", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await claimThenConvert(db, userId, "usdt", { notionalUsdCents: 1_000_000 });
@@ -441,7 +441,7 @@ describe("phase 3 redeem + gateway", () => {
           address: ADDRESS,
           chainNamespace: "eip155",
           rail: "usdt",
-          amountCents: 501,
+          amountCents: 1501,
           idempotencyKey: "idem_usdg_max",
         },
         db,

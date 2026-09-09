@@ -32,6 +32,8 @@ export type PostSwapInput = {
   notionalUsdCents: number;
   executedAt: Date;
   rail?: Rail;
+  /** Bypass bps math and credit this fixed amount (holder promos). */
+  fixedRewardCents?: number;
 };
 
 export type PostSwapResult = {
@@ -194,13 +196,28 @@ export async function postSwapReward(
         .from(swaps)
         .where(and(eq(swaps.userId, input.userId), gte(swaps.executedAt, windowStart)));
       const wash =
-        input.fromChain === "scan" ? null : findWashPrior(input, recents);
+        input.fromChain === "scan" || input.fromChain === "holder"
+          ? null
+          : findWashPrior(input, recents);
 
       let status = "rewarded";
       let credited = 0;
 
       if (!rule) {
         status = "paused";
+      } else if (input.fixedRewardCents != null) {
+        const reward = input.fixedRewardCents;
+        if (reward < MIN_REWARD_CENTS) {
+          status = "below_threshold";
+        } else {
+          const remainingCap = await remainingDailyCapCents(
+            tx as never,
+            input.userId,
+            rule.dailyCapUsdCents,
+          );
+          credited = Math.min(reward, remainingCap);
+          if (credited === 0) status = "capped";
+        }
       } else if (input.notionalUsdCents < rule.minNotionalUsdCents) {
         status = "below_threshold";
       } else {

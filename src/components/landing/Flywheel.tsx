@@ -120,7 +120,11 @@ export function Flywheel() {
             </p>
             <p className="mt-6 max-w-[54ch] text-base leading-relaxed text-zinc-400">
               Swap Studio is the intake. Net protocol fees are the output. Eligible holders participate pro rata —
-              no separate claim step on the marketing page; distribution follows the published holder program.
+              or verify your wallet hold on the{" "}
+              <a href="/app/holder" className="text-accent underline underline-offset-4">
+                Verify holder
+              </a>{" "}
+              desk for a timed $15 credit.
             </p>
             <Link
               href="/app/swap"

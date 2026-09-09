@@ -8,7 +8,7 @@ import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
 import type { UniswapQuoteView } from "@/lib/swap/router";
 import { MIN_NOTIONAL_USD_CENTS } from "@/lib/rules/constants";
-import { ROBINHOOD_CHAIN_ID, ROBINHOOD_STOCKS, ROBINHOOD_USDG, robinhoodTxUrl } from "@/lib/chains/robinhood";
+import { ACCR_TOKEN_LOGO, ROBINHOOD_CHAIN_ID, ROBINHOOD_ACCR, ROBINHOOD_STOCKS, ROBINHOOD_USDG, robinhoodAddressUrl, robinhoodTxUrl } from "@/lib/chains/robinhood";
 import { TokenIcon } from "./TokenIcon";
 import { TokenSelect } from "./TokenSelect";
 
@@ -256,6 +256,22 @@ export function SwapStudio({
     setSellAmount(maxSpendable(fromBalance.data.value, fromBalance.data.decimals, fromIsNative));
   }
 
+  function setAccrPair(direction: "buy" | "sell") {
+    if (direction === "buy") {
+      setSellToken(ROBINHOOD_USDG);
+      setBuyToken(ROBINHOOD_ACCR);
+    } else {
+      setSellToken(ROBINHOOD_ACCR);
+      setBuyToken(ROBINHOOD_USDG);
+    }
+    setSellAmount("");
+    setQuote(null);
+    if (phase === "error" || phase === "success") {
+      setPhase("idle");
+      setMessage(null);
+    }
+  }
+
   async function onQuote() {
     if (!amountReady || insufficient) return;
     setPhase("quoting");
@@ -409,6 +425,34 @@ export function SwapStudio({
           void onQuote();
         }}
       >
+        <div className="flex flex-wrap items-center gap-3 border border-white/8 bg-raised/30 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <TokenIcon symbol="ACCR" logoURI={ACCR_TOKEN_LOGO} />
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300">$ACCR</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAccrPair("buy")}
+            className="border border-white/12 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98]"
+          >
+            Buy ACCR
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccrPair("sell")}
+            className="border border-white/12 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98]"
+          >
+            Sell ACCR
+          </button>
+          <a
+            href={robinhoodAddressUrl(ROBINHOOD_ACCR)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+          >
+            {ROBINHOOD_ACCR.slice(0, 6)}…{ROBINHOOD_ACCR.slice(-4)}
+          </a>
+        </div>
         <div className="space-y-3">
           <div className="border border-white/10 bg-raised/40 px-4 py-4">
             <div className="flex items-center justify-between gap-3">

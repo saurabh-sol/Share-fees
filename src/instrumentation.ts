@@ -13,7 +13,7 @@ export function register() {
   const headers = { authorization: `Bearer ${secret}` };
 
   const tick = async () => {
-    for (const path of ["/api/v1/jobs/payouts", "/api/v1/jobs/settles"]) {
+    for (const path of ["/api/v1/jobs/payouts", "/api/v1/jobs/settles", "/api/v1/jobs/holder"]) {
       try {
         await fetch(`${origin}${path}`, { headers, cache: "no-store" });
       } catch {

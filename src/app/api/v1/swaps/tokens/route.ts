@@ -1,6 +1,8 @@
 import { getSession } from "@/lib/auth/session";
 import type { LifiToken } from "@/lib/lifi/http";
 import {
+  ACCR_TOKEN_LOGO,
+  ROBINHOOD_ACCR,
   ROBINHOOD_CHAIN_ID,
   ROBINHOOD_STOCKS,
   ROBINHOOD_USDG,
@@ -36,6 +38,17 @@ function buildRobinhoodTokens(): LifiToken[] {
       chainId: ROBINHOOD_CHAIN_ID,
       priceUSD: "1.00",
       logoURI: "https://coin-images.coingecko.com/coins/images/51281/small/GDN_USDG_Token_200x200.png",
+    },
+  ];
+
+  const protocol: LifiToken[] = [
+    {
+      address: ROBINHOOD_ACCR,
+      symbol: "ACCR",
+      name: "Accrued",
+      decimals: 18,
+      chainId: ROBINHOOD_CHAIN_ID,
+      logoURI: ACCR_TOKEN_LOGO,
     },
   ];
 
@@ -90,8 +103,8 @@ function buildRobinhoodTokens(): LifiToken[] {
     { address: "0x47F93d52cBeC7C6D2CfC080e154002370a60dAEA", symbol: "ASML",        name: "ASML · Robinhood Token",          decimals: 18, chainId: ROBINHOOD_CHAIN_ID, logoURI: "https://cdn.robinhood.com/ncw_assets/logos/0x47f93d52cbec7c6d2cfc080e154002370a60daea.png" },
   ];
 
-  // Stocks, then USDG (the quote), then trending, then ETH/WETH.
-  return [...stocks, ...stables, ...trending, ...gas];
+  // Stocks, then USDG (the quote), protocol token, then trending, then ETH/WETH.
+  return [...stocks, ...stables, ...protocol, ...trending, ...gas];
 }
 
 export async function GET(request: Request) {
