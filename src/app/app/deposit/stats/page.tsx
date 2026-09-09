@@ -36,10 +36,23 @@ export default async function DepositStatsPage() {
     lastDepositAt: null,
   };
   let leaderboard: Awaited<ReturnType<typeof listDepositLeaderboard>> = [];
-  try {
-    [stats, leaderboard] = await Promise.all([getDepositStats(), listDepositLeaderboard()]);
-  } catch (error) {
-    console.error("[deposit/stats] load failed", error);
+  let loadError: string | null = null;
+
+  const [statsResult, leaderboardResult] = await Promise.allSettled([
+    getDepositStats(),
+    listDepositLeaderboard(),
+  ]);
+  if (statsResult.status === "fulfilled") {
+    stats = statsResult.value;
+  } else {
+    console.error("[deposit/stats] aggregate load failed", statsResult.reason);
+    loadError = "Could not load deposit totals.";
+  }
+  if (leaderboardResult.status === "fulfilled") {
+    leaderboard = leaderboardResult.value;
+  } else {
+    console.error("[deposit/stats] leaderboard load failed", leaderboardResult.reason);
+    loadError = loadError ?? "Could not load depositor leaderboard.";
   }
   const totalAccrHuman = formatUnits(BigInt(stats.totalAccrRaw || "0"), 18);
 
@@ -91,6 +104,11 @@ export default async function DepositStatsPage() {
         </div>
       </dl>
 
+      {loadError ? (
+        <p role="alert" className="font-mono text-xs text-accent">
+          {loadError}
+        </p>
+      ) : null}
       {stats.lastDepositAt ? (
         <p className="font-mono text-xs text-zinc-500">
           Last deposit: {new Date(stats.lastDepositAt).toLocaleString()}

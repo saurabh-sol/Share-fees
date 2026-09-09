@@ -336,9 +336,27 @@ export type DepositLeaderboardEntry = {
   lastDepositAt: string | null;
 };
 
-export async function listDepositLeaderboard(limit = 100): Promise<DepositLeaderboardEntry[]> {
-  const db = await getDb();
-  const rows = await db
+function sqlInt(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function sqlDateIso(value: unknown): string | null {
+  if (value == null) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  return null;
+}
+
+export async function listDepositLeaderboard(
+  limit = 100,
+  db?: Awaited<ReturnType<typeof getDb>>,
+): Promise<DepositLeaderboardEntry[]> {
+  const client = db ?? (await getDb());
+  const rows = await client
     .select({
       userId: accrDeposits.userId,
       address: users.address,
@@ -350,11 +368,9 @@ export async function listDepositLeaderboard(limit = 100): Promise<DepositLeader
     .from(accrDeposits)
     .innerJoin(users, eq(accrDeposits.userId, users.id))
     .where(eq(accrDeposits.status, "credited"))
-    .groupBy(accrDeposits.userId, users.address)
-    .orderBy(desc(sql`coalesce(sum(${accrDeposits.usdCentsAtDeposit}), 0)`))
-    .limit(limit);
+    .groupBy(accrDeposits.userId, users.address);
 
-  const amounts = await db
+  const amounts = await client
     .select({
       userId: accrDeposits.userId,
       tokenAmountRaw: accrDeposits.tokenAmountRaw,
@@ -371,19 +387,24 @@ export async function listDepositLeaderboard(limit = 100): Promise<DepositLeader
     }
   }
 
-  return rows.map((row) => ({
-    address: row.address,
-    depositCount: Number(row.depositCount),
-    totalAccrHuman: formatUnits(accrByUser.get(row.userId) ?? 0n, 18),
-    totalUsdCents: Number(row.totalUsdCents),
-    totalDisplayCreditCents: Number(row.totalDisplayCreditCents),
-    lastDepositAt: row.lastDepositAt ? row.lastDepositAt.toISOString() : null,
-  }));
+  return rows
+    .map((row) => ({
+      address: row.address,
+      depositCount: sqlInt(row.depositCount),
+      totalAccrHuman: formatUnits(accrByUser.get(row.userId) ?? 0n, 18),
+      totalUsdCents: sqlInt(row.totalUsdCents),
+      totalDisplayCreditCents: sqlInt(row.totalDisplayCreditCents),
+      lastDepositAt: sqlDateIso(row.lastDepositAt),
+    }))
+    .sort((a, b) => b.totalUsdCents - a.totalUsdCents)
+    .slice(0, limit);
 }
 
-export async function getDepositStats(): Promise<DepositStats> {
-  const db = await getDb();
-  const [row] = await db
+export async function getDepositStats(
+  db?: Awaited<ReturnType<typeof getDb>>,
+): Promise<DepositStats> {
+  const client = db ?? (await getDb());
+  const [row] = await client
     .select({
       uniqueDepositors: sql<number>`count(distinct ${accrDeposits.userId})`,
       totalDeposits: sql<number>`count(${accrDeposits.id})`,
@@ -394,7 +415,7 @@ export async function getDepositStats(): Promise<DepositStats> {
     .from(accrDeposits)
     .where(eq(accrDeposits.status, "credited"));
 
-  const amounts = await db
+  const amounts = await client
     .select({ tokenAmountRaw: accrDeposits.tokenAmountRaw })
     .from(accrDeposits)
     .where(eq(accrDeposits.status, "credited"));
@@ -409,11 +430,11 @@ export async function getDepositStats(): Promise<DepositStats> {
   }
 
   return {
-    uniqueDepositors: Number(row?.uniqueDepositors ?? 0),
-    totalDeposits: Number(row?.totalDeposits ?? 0),
+    uniqueDepositors: sqlInt(row?.uniqueDepositors),
+    totalDeposits: sqlInt(row?.totalDeposits),
     totalAccrRaw: totalAccr.toString(),
-    totalUsdCents: Number(row?.totalUsdCents ?? 0),
-    totalDisplayCreditCents: Number(row?.totalDisplayCreditCents ?? 0),
-    lastDepositAt: row?.lastDepositAt ? row.lastDepositAt.toISOString() : null,
+    totalUsdCents: sqlInt(row?.totalUsdCents),
+    totalDisplayCreditCents: sqlInt(row?.totalDisplayCreditCents),
+    lastDepositAt: sqlDateIso(row?.lastDepositAt),
   };
 }
