@@ -50,7 +50,7 @@ export default function UsdgDocsPage() {
       <DocsH2 id="limits">Limits</DocsH2>
       <DocsP>
         Minimum redeem is $1.00. Each USDG vault claim is capped at $5.00. A 30-minute cooldown applies per
-        wallet and per network. Split larger credit across claims.
+        wallet. Split larger credit across claims.
       </DocsP>
 
       <DocsH2 id="queued">Queued, not paid</DocsH2>

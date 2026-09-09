@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, isLlmProvider, type LlmProvider } from "@/lib/gateway/catalog";
@@ -103,19 +103,43 @@ export function RedeemDesk({
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [testingKeyId, setTestingKeyId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setBalances({ creditCents, usdtCents, llmCents });
+  }, [creditCents, usdtCents, llmCents]);
+
+  const unusedKeyCents = keys
+    .filter((key) => key.status === "active")
+    .reduce((sum, key) => sum + Math.max(0, key.remainingCents), 0);
+  const llmAvailableCents = balances.llmCents + unusedKeyCents;
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const available =
     balances.creditCents + (rail === "usdt" ? balances.usdtCents : balances.llmCents);
   const usdgClaimCap = Math.min(available, usdgMaxCents);
 
   async function refreshLists() {
-    const [redeemData, keyData] = await Promise.all([
+    const [redeemData, keyData, walletData] = await Promise.all([
       readJson<{ redemptions: Redemption[] }>("/api/v1/redeem"),
       readJson<{ keys: VirtualKey[] }>("/api/v1/virtual-keys"),
+      readJson<{ creditCents: number; usdtCents: number; llmCents: number }>("/api/v1/wallet"),
     ]);
     setRedemptions(redeemData.redemptions);
     setKeys(keyData.keys);
+    setBalances({
+      creditCents: walletData.creditCents,
+      usdtCents: walletData.usdtCents,
+      llmCents: walletData.llmCents,
+    });
   }
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void refreshLists();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   async function onRedeem(event: React.FormEvent) {
     event.preventDefault();
@@ -284,7 +308,7 @@ export function RedeemDesk({
         <div className="py-8 md:pl-8">
           <dt className="text-sm text-zinc-500">LLM credits available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
-            {money(balances.llmCents)}
+            {money(llmAvailableCents)}
           </dd>
         </div>
       </dl>
@@ -354,7 +378,7 @@ export function RedeemDesk({
           <span className="block text-xs text-zinc-500">
             Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00.
             {rail === "usdt"
-              ? ` USDG claims cap at ${money(usdgMaxCents)} per request with a 30-minute cooldown per wallet and network.`
+              ? ` USDG claims cap at ${money(usdgMaxCents)} per request with a 30-minute cooldown per wallet.`
               : null}
           </span>
         </label>

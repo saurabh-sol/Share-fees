@@ -1,8 +1,8 @@
 "use client";
 
-import { parseUnits } from "viem";
-import { useAccount, useConnect, useConnectors, useDisconnect } from "wagmi";
-import { useEffect, useState } from "react";
+import { formatUnits, parseUnits } from "viem";
+import { useAccount, useBalance, useConnect, useConnectors, useDisconnect } from "wagmi";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LifiToken } from "@/lib/lifi/http";
 import { addressesEqual } from "@/lib/lifi/notional";
@@ -34,6 +34,39 @@ function money(cents: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function sanitizeAmount(raw: string) {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned;
+  return `${cleaned.slice(0, dot + 1)}${cleaned.slice(dot + 1).replaceAll(".", "")}`;
+}
+
+function formatTokenQty(value: bigint, decimals: number) {
+  const asNumber = Number(formatUnits(value, decimals));
+  if (!Number.isFinite(asNumber) || asNumber === 0) return "0";
+  if (asNumber > 0 && asNumber < 0.0001) return "<0.0001";
+  return asNumber.toLocaleString("en-US", {
+    maximumFractionDigits: asNumber >= 1000 ? 2 : asNumber >= 1 ? 4 : 6,
+  });
+}
+
+function amountExceedsBalance(amount: string, balance: bigint | undefined, decimals: number) {
+  if (balance === undefined || !amount || amount === ".") return false;
+  try {
+    return parseUnits(amount, decimals) > balance;
+  } catch {
+    return true;
+  }
+}
+
+const NATIVE_GAS_RESERVE = parseUnits("0.00008", 18);
+
+function maxSpendable(balance: bigint, decimals: number, native: boolean) {
+  if (!native) return formatUnits(balance, decimals);
+  const spendable = balance > NATIVE_GAS_RESERVE ? balance - NATIVE_GAS_RESERVE : 0n;
+  return formatUnits(spendable, decimals);
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -80,9 +113,47 @@ export function SwapStudio({
   const [showHistory, setShowHistory] = useState(false);
 
   const walletMatches = Boolean(address && addressesEqual(address, sessionAddress));
+  const balanceAddress = (walletMatches && address ? address : sessionAddress) as `0x${string}`;
+  const fromIsNative = fromToken.toLowerCase() === NATIVE.toLowerCase();
+  const toIsNative = toToken.toLowerCase() === NATIVE.toLowerCase();
+  const fromBalance = useBalance({
+    address: balanceAddress,
+    chainId: ROBINHOOD_CHAIN_ID,
+    token: fromIsNative ? undefined : (fromToken as `0x${string}`),
+    query: { enabled: Boolean(balanceAddress && fromToken) },
+  });
+  const toBalance = useBalance({
+    address: balanceAddress,
+    chainId: ROBINHOOD_CHAIN_ID,
+    token: toIsNative ? undefined : (toToken as `0x${string}`),
+    query: { enabled: Boolean(balanceAddress && toToken) },
+  });
   const fromMeta = tokens.find((t) => t.address.toLowerCase() === fromToken.toLowerCase());
   const toMeta = tokens.find((t) => t.address.toLowerCase() === toToken.toLowerCase());
   const sameChain = true; // Robinhood Chain only — always same-chain.
+  const fromDecimals = fromMeta?.decimals ?? fromBalance.data?.decimals ?? 18;
+  const insufficient = amountExceedsBalance(amount, fromBalance.data?.value, fromDecimals);
+  const amountReady = Boolean(amount) && amount !== "." && Number(amount) > 0;
+
+  const fromBalanceLabel = useMemo(() => {
+    if (fromBalance.isLoading) return "Reading balance…";
+    if (fromBalance.data) {
+      const symbol = fromMeta?.symbol ?? fromBalance.data.symbol;
+      return `Balance ${formatTokenQty(fromBalance.data.value, fromBalance.data.decimals)} ${symbol}`;
+    }
+    if (fromBalance.isError) return "Balance unavailable";
+    return "Balance —";
+  }, [fromBalance.data, fromBalance.isError, fromBalance.isLoading, fromMeta?.symbol]);
+
+  const toBalanceLabel = useMemo(() => {
+    if (toBalance.isLoading) return "Reading balance…";
+    if (toBalance.data) {
+      const symbol = toMeta?.symbol ?? toBalance.data.symbol;
+      return `Balance ${formatTokenQty(toBalance.data.value, toBalance.data.decimals)} ${symbol}`;
+    }
+    if (toBalance.isError) return "Balance unavailable";
+    return "Balance —";
+  }, [toBalance.data, toBalance.isError, toBalance.isLoading, toMeta?.symbol]);
 
   useEffect(() => {
     if (chainNamespace !== "eip155") return;
@@ -104,12 +175,37 @@ export function SwapStudio({
     });
   }
 
+  function setSellAmount(next: string) {
+    setAmount(sanitizeAmount(next));
+    setQuote(null);
+    if (phase === "error" || phase === "success") {
+      setPhase("idle");
+      setMessage(null);
+    }
+  }
+
+  function setSellToken(next: string) {
+    setFromToken(next);
+    setQuote(null);
+  }
+
+  function setBuyToken(next: string) {
+    setToToken(next);
+    setQuote(null);
+  }
+
+  function fillMax() {
+    if (!fromBalance.data) return;
+    setSellAmount(maxSpendable(fromBalance.data.value, fromBalance.data.decimals, fromIsNative));
+  }
+
   async function onQuote() {
+    if (!amountReady || insufficient) return;
     setPhase("quoting");
     setMessage(null);
     setQuote(null);
     try {
-      const decimals = fromMeta?.decimals ?? 18;
+      const decimals = fromMeta?.decimals ?? fromBalance.data?.decimals ?? 18;
       const fromAmount = parseUnits(amount, decimals).toString();
       const data = await readJson<QuotePayload>("/api/v1/swaps/quote", {
         method: "POST",
@@ -160,6 +256,8 @@ export function SwapStudio({
       }
       setPhase("success");
       setProgress(null);
+      void fromBalance.refetch();
+      void toBalance.refetch();
       setMessage(
         data.alreadyExists
           ? "This hash was already booked. No second credit."
@@ -241,8 +339,8 @@ export function SwapStudio({
   }
 
   const receiveAmount = quote
-    ? (Number(quote.quote.estimate.toAmount) / 10 ** (toMeta?.decimals ?? 18)).toFixed(6)
-    : "—";
+    ? formatTokenQty(BigInt(quote.quote.estimate.toAmount), toMeta?.decimals ?? 18)
+    : "";
 
 
   return (
@@ -254,24 +352,81 @@ export function SwapStudio({
           void onQuote();
         }}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TokenSelect label="From token" tokens={tokens} value={fromToken} onChange={setFromToken} onImportToken={importToken} />
-          <TokenSelect label="To token" tokens={tokens} value={toToken} onChange={setToToken} onImportToken={importToken} />
+        <div className="space-y-3">
+          <div className="border border-white/10 bg-raised/40 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">Sell</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[11px] tabular-nums text-zinc-400">{fromBalanceLabel}</span>
+                <button
+                  type="button"
+                  disabled={!fromBalance.data || fromBalance.data.value === 0n}
+                  onClick={fillMax}
+                  className="font-mono text-[10px] uppercase tracking-[0.16em] text-accent transition-colors hover:text-accent-press disabled:opacity-30"
+                >
+                  Max
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                value={amount}
+                onChange={(event) => setSellAmount(event.target.value)}
+                className="min-w-0 flex-1 bg-transparent font-mono text-2xl tabular-nums text-zinc-100 outline-none placeholder:text-zinc-600"
+                inputMode="decimal"
+                placeholder="0"
+                required
+                aria-label="Sell amount"
+              />
+              <TokenSelect
+                label="From token"
+                tokens={tokens}
+                value={fromToken}
+                onChange={setSellToken}
+                onImportToken={importToken}
+                compact
+              />
+            </div>
+            {insufficient ? (
+              <p className="mt-2 font-mono text-[11px] text-accent">Amount is above the wallet balance.</p>
+            ) : null}
+          </div>
+
+          <div className="border border-white/10 bg-raised/40 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">Buy</span>
+              <span className="font-mono text-[11px] tabular-nums text-zinc-400">{toBalanceLabel}</span>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                value={quote ? receiveAmount : ""}
+                readOnly
+                tabIndex={-1}
+                className="min-w-0 flex-1 bg-transparent font-mono text-2xl tabular-nums text-zinc-100 outline-none placeholder:text-zinc-600"
+                placeholder="0"
+                aria-label="Buy amount"
+              />
+              <TokenSelect
+                label="To token"
+                tokens={tokens}
+                value={toToken}
+                onChange={setBuyToken}
+                onImportToken={importToken}
+                compact
+              />
+            </div>
+          </div>
         </div>
-        <label className="block space-y-2">
-          <span className="text-sm text-zinc-400">Amount</span>
-          <input
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
-            inputMode="decimal"
-            required
-          />
-        </label>
         <div className="flex items-center gap-4">
           <button
             type="submit"
-            disabled={phase === "quoting" || phase === "executing" || phase === "settling"}
+            disabled={
+              !amountReady ||
+              insufficient ||
+              phase === "quoting" ||
+              phase === "executing" ||
+              phase === "settling"
+            }
             className="border border-white/12 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-white/25 hover:text-zinc-50 active:scale-[0.98] disabled:opacity-40"
           >
             {phase === "quoting" ? "Quoting…" : "Get route"}
@@ -345,7 +500,7 @@ export function SwapStudio({
 
         <button
           type="button"
-          disabled={!quote || !walletMatches || phase === "executing" || phase === "settling"}
+          disabled={!quote || !walletMatches || insufficient || phase === "executing" || phase === "settling"}
           onClick={() => void onSwap()}
           className="bg-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-50 transition-colors hover:bg-accent-press active:scale-[0.98] disabled:opacity-40"
         >

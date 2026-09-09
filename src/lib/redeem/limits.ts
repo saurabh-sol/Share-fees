@@ -12,8 +12,6 @@ export function usdgRedeemErrorMessage(code: string): string {
       return "USDG redeems are capped at $5.00 per claim.";
     case "redeem_cooldown_wallet":
       return "Wait 30 minutes before your next USDG claim.";
-    case "redeem_cooldown_ip":
-      return "This network already claimed USDG recently. Wait 30 minutes.";
     default:
       return "Redeem was rejected.";
   }
@@ -25,7 +23,7 @@ function retryAfterSec(from: Date) {
 
 export async function assertUsdgRedeemLimits(
   client: Awaited<ReturnType<typeof getDb>>,
-  input: { userId: string; amountCents: number; clientIp?: string | null },
+  input: { userId: string; amountCents: number },
 ) {
   if (input.amountCents > MAX_USDG_REDEEM_CENTS) {
     throw new RedeemError("usdg_max_exceeded", 400);
@@ -48,25 +46,5 @@ export async function assertUsdgRedeemLimits(
 
   if (recentWallet) {
     throw new RedeemError("redeem_cooldown_wallet", 429, retryAfterSec(recentWallet.createdAt));
-  }
-
-  const ip = input.clientIp?.trim();
-  if (ip && ip !== "unknown") {
-    const [recentIp] = await client
-      .select({ createdAt: redemptions.createdAt })
-      .from(redemptions)
-      .where(
-        and(
-          eq(redemptions.clientIp, ip),
-          eq(redemptions.rail, "usdt"),
-          gt(redemptions.createdAt, cutoff),
-        ),
-      )
-      .orderBy(desc(redemptions.createdAt))
-      .limit(1);
-
-    if (recentIp) {
-      throw new RedeemError("redeem_cooldown_ip", 429, retryAfterSec(recentIp.createdAt));
-    }
   }
 }

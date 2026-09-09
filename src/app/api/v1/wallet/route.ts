@@ -1,7 +1,8 @@
 import { desc, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
-import { creditEvents, ledgerEntries, swaps, wallets } from "@/lib/db/schema";
+import { creditEvents, ledgerEntries, swaps } from "@/lib/db/schema";
+import { syncWalletCache } from "@/lib/ledger/balances";
 import { jsonError } from "@/lib/security/origin";
 
 export async function GET(request: Request) {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   const db = await getDb();
-  const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1);
+  const wallet = await syncWalletCache(db, session.user.id);
   const recentSwaps = await db
     .select()
     .from(swaps)
@@ -32,9 +33,9 @@ export async function GET(request: Request) {
     .limit(40);
 
   return Response.json({
-    creditCents: wallet?.creditCacheCents ?? 0,
-    usdtCents: wallet?.usdtCacheCents ?? 0,
-    llmCents: wallet?.llmCacheCents ?? 0,
+    creditCents: wallet.creditCents,
+    usdtCents: wallet.usdtCents,
+    llmCents: wallet.llmCents,
     swaps: recentSwaps,
     credits: recentCredits,
     ledger: recentLedger,

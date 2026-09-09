@@ -393,7 +393,7 @@ Each page SEO title: `{Page} — Accrued Docs`
 - **LLM credits** (all sessions)
 
 **USDG flow:**
-- Pick amount (max **$5.00** per claim, 30-min cooldown per wallet and IP)
+- Pick amount (max **$5.00** per claim, 30-min cooldown per wallet)
 - Queues `payout_outbox`
 - Optional auto wallet `claim()` with EIP-712 voucher
 - Shows queued vs on-chain fulfilled
@@ -458,7 +458,7 @@ A raw USDG `transfer` is **not** a reward claim.
 | Limit | Value |
 | --- | --- |
 | Max per claim | **$5.00** (`MAX_USDG_REDEEM_CENTS = 500`) |
-| Cooldown | **30 minutes** per wallet and per IP |
+| Cooldown | **30 minutes** per wallet |
 
 ### Production gates
 

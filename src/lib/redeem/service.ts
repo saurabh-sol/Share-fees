@@ -86,7 +86,6 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     await assertUsdgRedeemLimits(client, {
       userId: input.userId,
       amountCents: input.amountCents,
-      clientIp: input.clientIp,
     });
   }
 

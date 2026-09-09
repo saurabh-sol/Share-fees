@@ -47,6 +47,8 @@ export default async function ClaimsPage() {
           toChain: row.toChain,
           fromToken: row.fromToken,
           toToken: row.toToken,
+          fromAmount: row.fromAmount,
+          toAmount: row.toAmount,
           notionalUsdCents: row.notionalUsdCents,
           estimatedRewardCents:
             row.status === "unclaimed" && rule

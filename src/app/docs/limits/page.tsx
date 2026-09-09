@@ -36,7 +36,7 @@ export default function LimitsDocsPage() {
           [
             "USDG per claim",
             "$5.00",
-            "Each vault claim is capped at five dollars. A 30-minute cooldown applies per wallet and network.",
+            "Each vault claim is capped at five dollars. A 30-minute cooldown applies per wallet.",
           ],
         ]}
       />

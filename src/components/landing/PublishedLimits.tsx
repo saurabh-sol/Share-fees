@@ -27,7 +27,7 @@ const LIMITS = [
     id: "usdg-claim",
     label: "USDG per claim",
     value: "$5.00",
-    body: "Each USDG vault claim is capped at five dollars. A 30-minute cooldown applies per wallet and per network.",
+    body: "Each USDG vault claim is capped at five dollars. A 30-minute cooldown applies per wallet.",
   },
 ];
 

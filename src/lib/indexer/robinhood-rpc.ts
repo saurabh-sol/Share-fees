@@ -174,7 +174,10 @@ function largest(transfers: RawTransfer[]): RawTransfer | null {
   );
 }
 
-/** USD notional in cents for one side of a trade. 0 if the token is unpriceable. */
+/** USD cents per 1 whole token. 0 = looked up and unpriceable. */
+const tokenUsdCentsCache = new Map<string, number>();
+
+/** USD notional in cents. Stables and WETH first; else live Uniswap quote. */
 async function sideUsdCents(
   token: `0x${string}` | null,
   value: bigint,
@@ -188,7 +191,40 @@ async function sideUsdCents(
   const weth = ROBINHOOD_WETH.toLowerCase();
   if (token === usdg || token === usdt) return Math.round(human * 100);
   if (token === weth) return Math.round(human * (await ethUsdCents()));
-  return 0;
+
+  const cached = tokenUsdCentsCache.get(token);
+  if (cached !== undefined) return Math.round(human * cached);
+
+  const { quoteUniswap } = await import("@/lib/uniswap/quote");
+  try {
+    const quoted = await quoteUniswap({
+      chainId: ROBINHOOD_CHAIN_ID,
+      fromToken: token,
+      toToken: ROBINHOOD_USDG,
+      fromAmount: value.toString(),
+    });
+    const cents = Math.round(Number(formatUnits(quoted.amountOut, 6)) * 100);
+    if (cents > 0) tokenUsdCentsCache.set(token, cents / human);
+    else tokenUsdCentsCache.set(token, 0);
+    return Math.max(0, cents);
+  } catch {
+    try {
+      const quoted = await quoteUniswap({
+        chainId: ROBINHOOD_CHAIN_ID,
+        fromToken: token,
+        toToken: ROBINHOOD_WETH,
+        fromAmount: value.toString(),
+      });
+      const wethHuman = Number(formatUnits(quoted.amountOut, 18));
+      const cents = Math.round(wethHuman * (await ethUsdCents()));
+      if (cents > 0) tokenUsdCentsCache.set(token, cents / human);
+      else tokenUsdCentsCache.set(token, 0);
+      return Math.max(0, cents);
+    } catch {
+      tokenUsdCentsCache.set(token, 0);
+      return 0;
+    }
+  }
 }
 
 export async function fetchRobinhoodTrades(

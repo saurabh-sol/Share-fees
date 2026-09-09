@@ -13,6 +13,8 @@ type Claim = {
   toChain: string;
   fromToken: string;
   toToken: string;
+  fromAmount?: string;
+  toAmount?: string;
   notionalUsdCents: number;
   estimatedRewardCents: number;
   executedAt: string;
@@ -35,6 +37,31 @@ function money(cents: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatTokenQty(raw: string | undefined) {
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n >= 1_000_000) {
+    return n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 2 });
+  }
+  if (n >= 1) return n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 6 });
+}
+
+/** Prefer USD when we have it; otherwise show the on-chain token amount (never $0.00). */
+function rowAmount(claim: Claim) {
+  const symbol =
+    claim.kind === "receive" ? claim.toToken || claim.fromToken : claim.fromToken;
+  const qty = formatTokenQty(
+    claim.kind === "receive" ? (claim.toAmount ?? claim.fromAmount) : (claim.fromAmount ?? claim.toAmount),
+  );
+  const tokenLabel = qty ? `${qty} ${symbol}` : null;
+  if (claim.notionalUsdCents > 0) {
+    return tokenLabel ? `${money(claim.notionalUsdCents)} · ${tokenLabel}` : money(claim.notionalUsdCents);
+  }
+  return tokenLabel ?? "—";
 }
 
 function kindLabel(kind: string | undefined) {
@@ -252,7 +279,7 @@ export function ClaimsInbox({
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <p className="font-mono text-sm tabular-nums text-zinc-100">{money(claim.notionalUsdCents)}</p>
+                <p className="font-mono text-sm tabular-nums text-zinc-100">{rowAmount(claim)}</p>
                 {claim.status === "unclaimed" ? (
                   <NotchedButton
                     variant="ghost"

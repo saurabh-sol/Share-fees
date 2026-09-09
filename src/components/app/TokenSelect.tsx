@@ -13,6 +13,7 @@ export function TokenSelect({
   value,
   onChange,
   onImportToken,
+  compact = false,
 }: {
   label: string;
   tokens: LifiToken[];
@@ -20,6 +21,8 @@ export function TokenSelect({
   onChange: (address: string) => void;
   /** Called when user pastes a contract address that isn't in the list and we resolve it on-chain. */
   onImportToken?: (token: LifiToken) => void;
+  /** Sit beside an amount field instead of taking a full labeled column. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -101,25 +104,30 @@ export function TokenSelect({
     [onImportToken, onChange],
   );
 
-  return (
-    <label className="block space-y-2">
-      <span className="text-sm text-zinc-400">{label}</span>
+  const shell = (
       <div ref={rootRef} className="relative">
         <button
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
+          aria-label={label}
           onClick={() => setOpen((current) => !current)}
-          className="flex w-full items-center gap-2 border border-white/10 bg-background px-3 py-2 text-left outline-none focus:border-accent"
+          className={
+            compact
+              ? "flex shrink-0 items-center gap-2 border border-white/10 bg-raised px-2.5 py-1.5 text-left outline-none focus:border-accent"
+              : "flex w-full items-center gap-2 border border-white/10 bg-background px-3 py-2 text-left outline-none focus:border-accent"
+          }
         >
           {selected ? (
             <>
               <TokenIcon symbol={selected.symbol} logoURI={selected.logoURI} />
-              <span className="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">
+              <span className={`min-w-0 truncate font-mono text-sm text-zinc-100 ${compact ? "max-w-[5.5rem]" : "flex-1"}`}>
                 {selected.symbol}
               </span>
-              <span className="hidden truncate text-xs text-zinc-500 sm:inline">{selected.name}</span>
+              {compact ? null : (
+                <span className="hidden truncate text-xs text-zinc-500 sm:inline">{selected.name}</span>
+              )}
             </>
           ) : (
             <span className="font-mono text-sm text-zinc-500">No tokens</span>
@@ -128,7 +136,11 @@ export function TokenSelect({
         </button>
 
         {open ? (
-          <div className="absolute z-20 mt-1 w-full border border-white/10 bg-background">
+          <div
+            className={`absolute z-20 mt-1 border border-white/10 bg-background ${
+              compact ? "right-0 w-[min(20rem,calc(100vw-2rem))]" : "w-full"
+            }`}
+          >
             {/* Search input */}
             <div className="flex items-center gap-2 border-b border-white/8 px-3 py-2">
               <MagnifyingGlass size={14} className="shrink-0 text-zinc-500" />
@@ -207,6 +219,14 @@ export function TokenSelect({
           </div>
         ) : null}
       </div>
+  );
+
+  if (compact) return shell;
+
+  return (
+    <label className="block space-y-2">
+      <span className="text-sm text-zinc-400">{label}</span>
+      {shell}
     </label>
   );
 }
