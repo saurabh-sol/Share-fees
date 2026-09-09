@@ -15,6 +15,8 @@ import {
 } from "@/lib/rules/engine";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { env } from "@/lib/env";
+import { USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -82,6 +84,8 @@ export default async function DeskPage() {
         conversionBps={conversionBps}
         minNotionalUsdCents={minNotionalUsdCents}
         dailyCapUsdCents={dailyCapUsdCents}
+        usdgPaused={env.accruedV2Upgrade}
+        usdgPauseMessage={USDG_PAUSE_MESSAGE}
       />
       <p className="max-w-[65ch] text-zinc-400">
         Scan finds fills. Claim each qualifying swap to post website credit. Convert to USDG or redeem

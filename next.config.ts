@@ -13,7 +13,7 @@ const GATEWAY_CORS_HEADERS = [
   {
     key: "Access-Control-Expose-Headers",
     value:
-      "X-Accrued-Remaining-Cents, X-Accrued-Provider, X-Accrued-Spend-Cap-Cents, payment-required, payment-response, x-payment-response",
+      "X-Accrued-Remaining-Cents, X-Accrued-Provider, X-Accrued-Spend-Cap-Cents, X-Accrued-X402-Tx-Hash, X-Accrued-X402-Payer, X-Accrued-X402-Settled, payment-required, payment-response, x-payment-response",
   },
 ];
 

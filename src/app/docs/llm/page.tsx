@@ -48,6 +48,10 @@ export default function LlmDocsPage() {
         <Link href="/docs/api" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
           API
         </Link>
+        . Agents without a key can pay per request via{" "}
+        <Link href="/docs/x402" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
+          x402 / USDG
+        </Link>
         . Or stay on the desk and use{" "}
         <Link href="/docs/chat" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
           Chat

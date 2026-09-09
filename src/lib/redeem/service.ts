@@ -21,6 +21,7 @@ import {
 import { assertUsdgRedeemLimits } from "./limits";
 import { assertStockInventoryForRedeem } from "./stock-inventory";
 import { signUsdgClaimVoucher } from "./treasury";
+import { assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
 
 export { RedeemError } from "./errors";
 
@@ -84,6 +85,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
   }
 
   if (input.rail === "usdt") {
+    assertUsdgClaimsOpen();
     await assertUsdgRedeemLimits(client, {
       userId: input.userId,
       amountCents: input.amountCents,

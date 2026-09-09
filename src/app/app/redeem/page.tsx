@@ -7,6 +7,7 @@ import { syncWalletCache } from "@/lib/ledger/balances";
 import { getRewardVaultAddress, listOnChainClaims } from "@/lib/redeem/reward-vault";
 import { listStockInventory } from "@/lib/redeem/stock-inventory";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
+import { USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 export default async function RedeemPage() {
   const session = await getSession();
@@ -47,6 +48,8 @@ export default async function RedeemPage() {
         rewardVaultAddress={vault}
         initialOnChainClaims={onChainClaims}
         initialStocks={stocks}
+        usdgPaused={env.accruedV2Upgrade}
+        usdgPauseMessage={USDG_PAUSE_MESSAGE}
       />
     </div>
   );

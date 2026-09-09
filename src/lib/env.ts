@@ -55,6 +55,14 @@ const envSchema = z.object({
   NEXT_PUBLIC_PRIVY_CLIENT_ID: z.string().min(1).optional(),
   PRIVY_CLIENT_ID: z.string().min(1).optional(),
   PRIVY_APP_SECRET: z.string().min(1).optional(),
+  ACCRUED_V2_UPGRADE: z.enum(["true", "false"]).optional(),
+  ACCR_DEPOSIT_WALLET: z
+    .string()
+    .regex(/^$|^0x[0-9a-fA-F]{40}$/)
+    .optional(),
+  DEPOSIT_DISPLAY_MULTIPLIER: z.string().optional(),
+  DEPOSIT_GRANT_BPS: z.string().optional(),
+  DEPOSIT_MIN_USD_CENTS: z.string().optional(),
 });
 
 function cleanEnv(value: string | undefined) {
@@ -110,6 +118,11 @@ const parsed = envSchema.parse({
   NEXT_PUBLIC_PRIVY_CLIENT_ID: cleanEnv(process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID),
   PRIVY_CLIENT_ID: cleanEnv(process.env.PRIVY_CLIENT_ID ?? process.env.client_id),
   PRIVY_APP_SECRET: cleanEnv(process.env.PRIVY_APP_SECRET ?? process.env.privy_secret),
+  ACCRUED_V2_UPGRADE: process.env.ACCRUED_V2_UPGRADE,
+  ACCR_DEPOSIT_WALLET: process.env.ACCR_DEPOSIT_WALLET,
+  DEPOSIT_DISPLAY_MULTIPLIER: process.env.DEPOSIT_DISPLAY_MULTIPLIER,
+  DEPOSIT_GRANT_BPS: process.env.DEPOSIT_GRANT_BPS,
+  DEPOSIT_MIN_USD_CENTS: process.env.DEPOSIT_MIN_USD_CENTS,
 });
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
@@ -189,6 +202,13 @@ export const env = {
   privyAppId: parsed.NEXT_PUBLIC_PRIVY_APP_ID ?? parsed.PRIVY_APP_ID,
   privyClientId: parsed.NEXT_PUBLIC_PRIVY_CLIENT_ID ?? parsed.PRIVY_CLIENT_ID,
   privyAppSecret: parsed.PRIVY_APP_SECRET,
+  accruedV2Upgrade: parsed.ACCRUED_V2_UPGRADE === "true",
+  accrDepositWallet: parsed.ACCR_DEPOSIT_WALLET || undefined,
+  depositDisplayMultiplier: parsed.DEPOSIT_DISPLAY_MULTIPLIER
+    ? Number(parsed.DEPOSIT_DISPLAY_MULTIPLIER)
+    : 2,
+  depositGrantBps: parsed.DEPOSIT_GRANT_BPS ? Number(parsed.DEPOSIT_GRANT_BPS) : 6000,
+  depositMinUsdCents: parsed.DEPOSIT_MIN_USD_CENTS ? Number(parsed.DEPOSIT_MIN_USD_CENTS) : 500,
 };
 
 export function appDomain(): string {

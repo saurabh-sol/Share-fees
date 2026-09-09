@@ -16,6 +16,7 @@ const MAP = [
   { href: "/docs/usdg", title: "USDG", body: "On-chain vault claim to the signed-in EVM address on Robinhood." },
   { href: "/docs/llm", title: "LLM credits", body: "Mint an acc_ key. Usage burns remaining cents." },
   { href: "/docs/api", title: "API", body: "Point the official vendor SDK at this origin." },
+  { href: "/docs/x402", title: "x402 agents", body: "Autonomous agents pay per request in USDG via HTTP 402." },
 ];
 
 export default function DocsHomePage() {
@@ -47,6 +48,7 @@ export default function DocsHomePage() {
         <li>Anyone with an injected EVM or Solana wallet that can sign a login message.</li>
         <li>USDG redeem is EVM-only. Solana sessions still take LLM credits and can use Chat.</li>
         <li>Developers who want a metered acc_ key in Cursor or any OpenAI-compatible client.</li>
+        <li>Autonomous agents that pay per LLM request with USDG over x402 — no acc_ key required.</li>
       </DocsUl>
 
       <DocsH2 id="the-walk">The walk</DocsH2>

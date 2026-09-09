@@ -43,6 +43,9 @@ async function rawFetchDemo() {
   console.log(`    body: JSON.stringify({ model: "${model}", messages: [{ role: "user", content: "ok" }] }),`);
   console.log(`  });`);
   console.log(`  console.log(getSettlement(res));`);
+  console.log(`  // Or read plain headers:`);
+  console.log(`  console.log(res.headers.get("X-Accrued-X402-Tx-Hash"));`);
+  console.log(`  console.log(res.headers.get("X-Accrued-X402-Settled"));`);
 }
 
 rawFetchDemo().catch((error) => {

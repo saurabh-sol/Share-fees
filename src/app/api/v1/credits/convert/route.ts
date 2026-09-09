@@ -5,6 +5,7 @@ import { LedgerError } from "@/lib/ledger/post-swap-reward";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { convertCreditsSchema } from "@/lib/validation/swap";
+import { UpgradePausedError, USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +31,9 @@ export async function POST(request: Request) {
     }
     if (error instanceof RateLimitError) {
       return jsonError(429, "rate_limited", "Too many convert requests.");
+    }
+    if (error instanceof UpgradePausedError) {
+      return jsonError(503, "rewards_paused", USDG_PAUSE_MESSAGE);
     }
     if (error instanceof LedgerError) {
       return jsonError(error.status, error.message, "Convert was rejected.");

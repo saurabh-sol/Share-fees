@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Check, Copy } from "@phosphor-icons/react";
 import type { LlmProvider } from "@/lib/gateway/catalog";
 import { clientSnippets, originFromGatewayBase } from "@/lib/gateway/client-snippets";
+import { SecretKeyDisplay } from "./SecretKeyField";
 
 type CopyTarget = "key" | "url" | "curl" | "sdk";
 
-export function OpenAiKeyIssue({
-  gatewayBaseUrl,
-  issuedKey,
-  issuedModel,
-  issuedProvider,
-}: {
-  gatewayBaseUrl: string;
-  issuedKey: string | null;
-  issuedModel: string;
-  issuedProvider: LlmProvider;
-}) {
+export const OpenAiKeyIssue = forwardRef<
+  HTMLElement,
+  {
+    gatewayBaseUrl: string;
+    issuedKey: string | null;
+    issuedModel: string;
+    issuedProvider: LlmProvider;
+  }
+>(function OpenAiKeyIssue(
+  { gatewayBaseUrl, issuedKey, issuedModel, issuedProvider },
+  ref,
+) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const preview = clientSnippets(
@@ -55,7 +57,7 @@ export function OpenAiKeyIssue({
       </section>
 
       {issuedKey ? (
-        <section className="space-y-6 border-y border-white/8 py-8">
+        <section ref={ref} className="space-y-6 border-y border-white/8 py-8">
           <div className="space-y-3">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent">Show once</p>
             <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-400">
@@ -74,17 +76,7 @@ export function OpenAiKeyIssue({
                 </>
               ) : null}
             </p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <code className="break-all font-mono text-sm text-zinc-100">{issuedKey}</code>
-              <button
-                type="button"
-                onClick={() => void copy(issuedKey, "key")}
-                className="inline-flex items-center gap-2 text-sm text-zinc-300"
-              >
-                {copied === "key" ? <Check size={16} /> : <Copy size={16} />}
-                {copied === "key" ? "Copied" : "Copy key"}
-              </button>
-            </div>
+            <SecretKeyDisplay value={issuedKey} defaultRevealed />
           </div>
 
           <div className="space-y-3">
@@ -141,4 +133,4 @@ export function OpenAiKeyIssue({
       ) : null}
     </div>
   );
-}
+});

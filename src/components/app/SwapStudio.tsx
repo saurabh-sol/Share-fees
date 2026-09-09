@@ -415,6 +415,8 @@ export function SwapStudio({
     ? formatTokenQty(BigInt(quote.quote.estimate.toAmount), toMeta?.decimals ?? 18)
     : "";
 
+  const accrInPair =
+    addressesEqual(fromToken, ROBINHOOD_ACCR) || addressesEqual(toToken, ROBINHOOD_ACCR);
 
   return (
     <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.15fr_0.85fr]">
@@ -453,6 +455,20 @@ export function SwapStudio({
             {ROBINHOOD_ACCR.slice(0, 6)}…{ROBINHOOD_ACCR.slice(-4)}
           </a>
         </div>
+        {accrInPair ? (
+          <p className="border border-amber-500/20 bg-amber-500/5 px-4 py-3 font-mono text-[11px] leading-relaxed text-amber-200/90">
+            $ACCR swaps need an on-chain Uniswap pool with liquidity. No ACCR/USDG or ACCR/WETH pool exists yet — create one at{" "}
+            <a
+              href="https://pools.trade"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-amber-100"
+            >
+              pools.trade
+            </a>{" "}
+            and add liquidity, then quote again.
+          </p>
+        ) : null}
         <div className="space-y-3">
           <div className="border border-white/10 bg-raised/40 px-4 py-4">
             <div className="flex items-center justify-between gap-3">

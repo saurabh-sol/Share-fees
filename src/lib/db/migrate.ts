@@ -295,6 +295,39 @@ const STATEMENTS = [
   `ALTER TABLE virtual_keys ADD COLUMN IF NOT EXISTS model TEXT NOT NULL DEFAULT 'gpt-4o-mini'`,
   `CREATE INDEX IF NOT EXISTS ledger_user_account ON ledger_entries (user_id, account)`,
   `CREATE INDEX IF NOT EXISTS ledger_user_account_ref ON ledger_entries (user_id, account, reference_id)`,
+  `CREATE TABLE IF NOT EXISTS deposit_intents (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    usd_cents INTEGER NOT NULL,
+    token_amount_raw TEXT NOT NULL,
+    token_amount_human TEXT NOT NULL,
+    price_usd TEXT NOT NULL,
+    display_credit_cents INTEGER NOT NULL,
+    granted_llm_cents INTEGER NOT NULL,
+    dex_pair_address TEXT,
+    logo_uri TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS deposit_intents_user ON deposit_intents (user_id)`,
+  `CREATE INDEX IF NOT EXISTS deposit_intents_status ON deposit_intents (status)`,
+  `CREATE TABLE IF NOT EXISTS accr_deposits (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    intent_id TEXT NOT NULL UNIQUE REFERENCES deposit_intents(id),
+    tx_hash TEXT UNIQUE,
+    token_amount_raw TEXT NOT NULL,
+    usd_cents_at_deposit INTEGER NOT NULL,
+    display_credit_cents INTEGER NOT NULL,
+    granted_llm_cents INTEGER NOT NULL,
+    price_usd TEXT NOT NULL,
+    dex_pair_address TEXT,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS accr_deposits_user ON accr_deposits (user_id)`,
+  `CREATE INDEX IF NOT EXISTS accr_deposits_status ON accr_deposits (status)`,
 ];
 
 export async function applyMigrations(db: AnyDb) {

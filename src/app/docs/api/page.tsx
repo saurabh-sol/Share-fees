@@ -86,33 +86,14 @@ await client.messages.create({
   -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'`}
       />
 
-      <DocsH2 id="x402-agents">Agents (x402 / USDG)</DocsH2>
-      <DocsP>
-        Autonomous agents can call the same LLM routes without an acc_ key when x402 is enabled on the server.
-        The first request returns HTTP 402 with a machine-readable USDG offer on Robinhood Chain. Sign the
-        Permit2 witness authorization and retry with the payment-signature header (or x-payment). Desk users
-        keep the prepaid acc_ flow unchanged.
-      </DocsP>
-      <DocsCode
-        language="js"
-        code={`import { createClient, getSettlement } from "@meshgateway/mpp-client";
-
-const mpp = createClient({ signer, maxAmount: "0.05" });
-const res = await mpp.fetch("${origin}/v1/chat/completions", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "Hello" }],
-  }),
-});
-console.log(await res.json());
-console.log(getSettlement(res)); // tx hash + payer`}
-      />
-      <DocsP>
-        Discover pricing without auth: GET {origin}/v1/models (includes x402 metadata), GET{" "}
-        {origin}/.well-known/x402, or GET {origin}/v1/x402/openapi.json.
-      </DocsP>
+      <DocsCallout title="Autonomous agents (x402)">
+        Agents pay per request in USDG on Robinhood Chain — no acc_ key. Full endpoints, pricing, discovery
+        URLs, receipt headers, and code samples are on the{" "}
+        <a href="/docs/x402" className="text-zinc-100 underline decoration-white/20 underline-offset-4">
+          x402 agents
+        </a>{" "}
+        page (screenshot-friendly).
+      </DocsCallout>
 
       <DocsH2 id="errors">Errors</DocsH2>
       <DocsP>

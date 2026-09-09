@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { RedeemError, listRedemptions, redeem } from "@/lib/redeem/service";
 import { usdgRedeemErrorMessage } from "@/lib/redeem/limits";
+import { UpgradePausedError, USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { redeemRequestSchema } from "@/lib/validation/swap";
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
     }
     if (error instanceof RateLimitError) {
       return jsonError(429, "rate_limited", "Too many redeem requests.");
+    }
+    if (error instanceof UpgradePausedError) {
+      return jsonError(503, "rewards_paused", USDG_PAUSE_MESSAGE);
     }
     if (error instanceof RedeemError) {
       const headers =

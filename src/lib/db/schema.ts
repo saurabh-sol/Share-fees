@@ -417,6 +417,58 @@ export const payoutOutbox = pgTable(
   ],
 );
 
+export const depositIntents = pgTable(
+  "deposit_intents",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    usdCents: integer("usd_cents").notNull(),
+    tokenAmountRaw: text("token_amount_raw").notNull(),
+    tokenAmountHuman: text("token_amount_human").notNull(),
+    priceUsd: text("price_usd").notNull(),
+    displayCreditCents: integer("display_credit_cents").notNull(),
+    grantedLlmCents: integer("granted_llm_cents").notNull(),
+    dexPairAddress: text("dex_pair_address"),
+    logoUri: text("logo_uri"),
+    status: text("status").notNull().default("pending"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("deposit_intents_user").on(table.userId),
+    index("deposit_intents_status").on(table.status),
+  ],
+);
+
+export const accrDeposits = pgTable(
+  "accr_deposits",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    intentId: text("intent_id")
+      .notNull()
+      .references(() => depositIntents.id),
+    txHash: text("tx_hash").unique(),
+    tokenAmountRaw: text("token_amount_raw").notNull(),
+    usdCentsAtDeposit: integer("usd_cents_at_deposit").notNull(),
+    displayCreditCents: integer("display_credit_cents").notNull(),
+    grantedLlmCents: integer("granted_llm_cents").notNull(),
+    priceUsd: text("price_usd").notNull(),
+    dexPairAddress: text("dex_pair_address"),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("accr_deposits_intent").on(table.intentId),
+    index("accr_deposits_user").on(table.userId),
+    index("accr_deposits_status").on(table.status),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type RewardRule = typeof rewardRules.$inferSelect;
 export type Swap = typeof swaps.$inferSelect;

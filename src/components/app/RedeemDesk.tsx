@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, isLlmProvider, type LlmProvider } from "@/lib/gateway/catalog";
@@ -19,6 +19,8 @@ import {
 import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 import { ApiKeyTryPanel } from "./ApiKeyTryPanel";
+import { cacheVirtualKeyPlaintext } from "@/lib/redeem/virtual-key-cache";
+import { readCachedVirtualKey, VirtualKeyListItem } from "./VirtualKeyListItem";
 
 type StockInventory = {
   symbol: string;
@@ -89,6 +91,8 @@ export function RedeemDesk({
   rewardVaultAddress,
   initialOnChainClaims,
   initialStocks,
+  usdgPaused = false,
+  usdgPauseMessage = "Rewards are paused due to version upgrade.",
 }: {
   creditCents: number;
   usdtCents: number;
@@ -100,10 +104,14 @@ export function RedeemDesk({
   rewardVaultAddress: string | null;
   initialOnChainClaims: OnChainRewardClaim[];
   initialStocks: StockInventory[];
+  usdgPaused?: boolean;
+  usdgPauseMessage?: string;
 }) {
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
-  const [rail, setRail] = useState<Rail>(evmOnly ? "usdt" : "llm_credits");
+  const [rail, setRail] = useState<Rail>(
+    evmOnly && !usdgPaused ? "usdt" : "llm_credits",
+  );
   const [provider, setProvider] = useState<LlmProvider>(DEFAULT_LLM_PROVIDER);
   const [model, setModel] = useState(DEFAULT_LLM_MODEL);
   const [amount, setAmount] = useState(() =>
@@ -121,6 +129,7 @@ export function RedeemDesk({
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [testingKeyId, setTestingKeyId] = useState<string | null>(null);
+  const issuedKeyRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setBalances({ creditCents, usdtCents, llmCents });
@@ -181,6 +190,9 @@ export function RedeemDesk({
       if (!Number.isFinite(amountCents) || amountCents < 100) {
         throw new Error("Minimum redeem is $1.00.");
       }
+      if (rail === "usdt" && usdgPaused) {
+        throw new Error(usdgPauseMessage);
+      }
       if (rail === "usdt" && amountCents > usdgMaxCents) {
         throw new Error(`USDG claims are capped at ${money(usdgMaxCents)} per request.`);
       }
@@ -216,11 +228,7 @@ export function RedeemDesk({
         setIssuedModel(model);
         setIssuedProvider(provider);
         if (result.keyPrefix) {
-          try {
-            sessionStorage.setItem(`accrued_vk:${result.keyPrefix}`, result.plaintextKey);
-          } catch {
-            /* sessionStorage unavailable */
-          }
+          cacheVirtualKeyPlaintext(result.keyPrefix, result.plaintextKey);
         }
       }
       await refreshLists();
@@ -261,6 +269,11 @@ export function RedeemDesk({
         }
       }
       setStatus("idle");
+      if (result.plaintextKey) {
+        requestAnimationFrame(() => {
+          issuedKeyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
       setMessage(
         result.alreadyExists
           ? "That idempotency key already posted. The plaintext key is not shown again."
@@ -366,7 +379,7 @@ export function RedeemDesk({
                 type="radio"
                 name="redeem-rail"
                 checked={rail === "usdt"}
-                disabled={!evmOnly}
+                disabled={!evmOnly || usdgPaused}
                 onChange={() => {
                   setRail("usdt");
                   const cap = Math.min(usdtLikeAvailable, usdgMaxCents);
@@ -413,6 +426,11 @@ export function RedeemDesk({
           {!evmOnly ? (
             <p className="text-sm text-zinc-500">
               USDG and stock withdraws are EVM-only. This session is Solana.
+            </p>
+          ) : null}
+          {usdgPaused ? (
+            <p role="status" className="border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
+              {usdgPauseMessage}
             </p>
           ) : null}
         </fieldset>
@@ -462,6 +480,7 @@ export function RedeemDesk({
       </form>
 
       <OpenAiKeyIssue
+        ref={issuedKeyRef}
         gatewayBaseUrl={gatewayBaseUrl}
         issuedKey={issuedKey}
         issuedModel={issuedKey ? issuedModel : model}
@@ -515,45 +534,20 @@ export function RedeemDesk({
         ) : (
           <ul className="divide-y divide-white/8 border-y border-white/8">
             {keys.map((key) => (
-              <li key={key.id} className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3">
-                  <ProviderMark
-                    provider={
-                      key.provider && isLlmProvider(key.provider)
-                        ? key.provider
-                        : DEFAULT_LLM_PROVIDER
-                    }
-                    size={28}
-                  />
-                  <div>
-                    <p className="font-mono text-sm text-zinc-100">{key.prefix}…</p>
-                    <p className="font-mono text-xs text-zinc-500">
-                      {money(key.remainingCents)} left of {money(key.spendCapCents)} · {key.provider ?? "openai"} ·{" "}
-                      {key.model ?? "gpt-4o-mini"} · {key.status}
-                    </p>
-                  </div>
-                </div>
-                {key.status === "active" ? (
-                  <div className="flex flex-wrap gap-2">
-                    <NotchedButton
-                      variant="ghost"
-                      disabled={status === "working"}
-                      onClick={() =>
-                        setTestingKeyId((current) => (current === key.id ? null : key.id))
-                      }
-                    >
-                      {testingKeyId === key.id ? "Close test" : "Test"}
-                    </NotchedButton>
-                    <NotchedButton
-                      variant="ghost"
-                      disabled={status === "working"}
-                      onClick={() => void onRevoke(key.id)}
-                    >
-                      Revoke
-                    </NotchedButton>
-                  </div>
-                ) : null}
-              </li>
+              <VirtualKeyListItem
+                key={key.id}
+                keyRow={key}
+                money={money}
+                testing={testingKeyId === key.id}
+                working={status === "working"}
+                plaintextOverride={
+                  issuedKey && issuedKey.startsWith(key.prefix) ? issuedKey : null
+                }
+                onToggleTest={() =>
+                  setTestingKeyId((current) => (current === key.id ? null : key.id))
+                }
+                onRevoke={() => void onRevoke(key.id)}
+              />
             ))}
           </ul>
         )}
@@ -563,10 +557,7 @@ export function RedeemDesk({
             if (!key) return null;
             const keyProvider =
               key.provider && isLlmProvider(key.provider) ? key.provider : DEFAULT_LLM_PROVIDER;
-            const cachedKey =
-              typeof window !== "undefined"
-                ? sessionStorage.getItem(`accrued_vk:${key.prefix}`)
-                : null;
+            const cachedKey = readCachedVirtualKey(key.prefix);
             return (
               <ApiKeyTryPanel
                 key={key.id}

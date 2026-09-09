@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { UpgradeBanner } from "@/components/app/UpgradeBanner";
 import { SignOutButton } from "@/components/app/SignOutButton";
 import { DeskNavLinks } from "@/components/app/DeskNavLinks";
 import { VaultContractLink } from "@/components/onchain/VaultContractLink";
@@ -28,6 +29,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
   return (
     <WalletProvider>
       <div className="min-h-[100dvh]">
+        <UpgradeBanner />
         <header className="sticky top-0 z-20 border-b border-white/8 bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex min-h-14 max-w-[1400px] items-center justify-between gap-3 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-8">
             <BrandMark href="/" tone="accent" suffix="Desk" suffixHref="/app" className="shrink-0" />
@@ -39,6 +41,8 @@ export default async function AppShell({ children }: { children: ReactNode }) {
                   { href: "/app/claims", label: "Activity" },
                   { href: "/app/holder", label: "Verify holder" },
                   { href: "/app/chat", label: "Chat" },
+                  { href: "/app/deposit", label: "Deposit" },
+                  { href: "/app/deposit/stats", label: "Deposit stats" },
                   { href: "/app/redeem", label: "Redeem" },
                   {
                     href: "/app/try-api",

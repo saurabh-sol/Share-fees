@@ -1,6 +1,6 @@
 import { createPublicClient, http, type Chain } from "viem";
 import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche } from "viem/chains";
-import { robinhoodChain, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
+import { robinhoodChain, ROBINHOOD_ACCR, ROBINHOOD_USDG } from "@/lib/chains/robinhood";
 import {
   V4_POOL_CONFIGS,
   V4_QUOTER,
@@ -603,10 +603,20 @@ export async function quoteUniswap(input: {
 
   console.error("[quote] NO LIQUIDITY for %s → %s (chain %d, amount %s). Tried %d candidates.",
     userIn, userOut, input.chainId, amountIn.toString(), candidates.length);
-  throw new UniswapQuoteError(
+  throw new UniswapQuoteError(noLiquidityMessage(userIn, userOut), 404);
+}
+
+function noLiquidityMessage(userIn: string, userOut: string): string {
+  const accr = ROBINHOOD_ACCR.toLowerCase();
+  if (userIn.toLowerCase() === accr || userOut.toLowerCase() === accr) {
+    return (
+      "No Uniswap pool exists yet for $ACCR on Robinhood Chain. " +
+      "Create an ACCR/USDG pool at pools.trade, add liquidity, then retry."
+    );
+  }
+  return (
     "No Uniswap liquidity found for this pair. Checked V4 and V3 pools across all fee tiers, " +
-      "including multi-hop routes through USDG and WETH.",
-    404,
+    "including multi-hop routes through USDG and WETH."
   );
 }
 

@@ -3,6 +3,7 @@ import { isUniqueViolation } from "@/lib/db/errors";
 import { getDb } from "@/lib/db/client";
 import { creditConversions, ledgerEntries } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
+import { assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
 import { isUsdtLikeRail, LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
 
 export type ConvertInput = {
@@ -24,6 +25,10 @@ export async function convertCredits(
 
   if (input.rail === "llm_credits") {
     throw new LedgerError("llm_redeem_required", 400);
+  }
+
+  if (isUsdtLikeRail(input.rail)) {
+    assertUsdgClaimsOpen();
   }
 
   const [existing] = await client

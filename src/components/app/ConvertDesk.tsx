@@ -37,11 +37,15 @@ export function ConvertDesk({
   conversionBps,
   minNotionalUsdCents,
   dailyCapUsdCents,
+  usdgPaused = false,
+  usdgPauseMessage = "Rewards are paused due to version upgrade.",
 }: {
   creditCents: number;
   conversionBps: number;
   minNotionalUsdCents: number;
   dailyCapUsdCents: number;
+  usdgPaused?: boolean;
+  usdgPauseMessage?: string;
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState((creditCents / 100).toFixed(2));
@@ -124,8 +128,13 @@ export function ConvertDesk({
               {formError}
             </p>
           ) : null}
+          {usdgPaused ? (
+            <p role="status" className="max-w-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
+              {usdgPauseMessage}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-3">
-            <NotchedButton disabled={creditCents <= 0} onClick={() => review("usdt")}>
+            <NotchedButton disabled={creditCents <= 0 || usdgPaused} onClick={() => review("usdt")}>
               To USDG rail
             </NotchedButton>
             <Link href="/app/redeem" className="self-center text-sm text-zinc-400 hover:text-zinc-200">

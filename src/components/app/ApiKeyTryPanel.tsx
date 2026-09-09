@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CaretDown, Check, Copy, Eye, EyeSlash } from "@phosphor-icons/react";
+import { CaretDown, Check, Copy } from "@phosphor-icons/react";
+import { SecretKeyField } from "./SecretKeyField";
 import {
   DEFAULT_LLM_MODEL,
   DEFAULT_LLM_PROVIDER,
@@ -46,7 +47,6 @@ export function ApiKeyTryPanel({
   const [model, setModel] = useState(initialModel);
   const [message, setMessage] = useState(DEFAULT_TRY_MESSAGE);
   const [apiKey, setApiKey] = useState(initialApiKey);
-  const [showKey, setShowKey] = useState(false);
   const [running, setRunning] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
   const [remainingLabel, setRemainingLabel] = useState<string | null>(null);
@@ -248,25 +248,12 @@ export function ApiKeyTryPanel({
 
         <label className="block space-y-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">API key</span>
-          <div className="flex gap-2">
-            <input
-              type={showKey ? "text" : "password"}
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="acc_…"
-              className="min-w-0 flex-1 border border-white/10 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey((value) => !value)}
-              className="inline-flex size-10 shrink-0 items-center justify-center border border-white/10 text-zinc-400 hover:text-zinc-200"
-              aria-label={showKey ? "Hide API key" : "Show API key"}
-            >
-              {showKey ? <EyeSlash size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <SecretKeyField value={apiKey} onChange={setApiKey} placeholder="acc_…" />
+          {initialApiKey && apiKey === initialApiKey ? (
+            <p className="text-xs text-zinc-500">
+              Key loaded for this session. Use the eye to reveal it, or copy without showing.
+            </p>
+          ) : null}
         </label>
 
         <NotchedButton type="button" disabled={running} onClick={() => void onRun()}>

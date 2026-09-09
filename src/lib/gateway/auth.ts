@@ -2,7 +2,8 @@ import { isVirtualKey } from "@/lib/brand";
 import { buildPaymentChallenge } from "@/lib/x402/challenge";
 import { isX402Enabled, x402Configured } from "@/lib/x402/config";
 import { quotePaymentRequirements, resolveQuoteModel } from "@/lib/x402/quote";
-import { verifyX402Payment } from "@/lib/x402/verify";
+import { x402ReceiptHeaders } from "@/lib/x402/receipt";
+import { readPaymentHeader, verifyX402Payment } from "@/lib/x402/verify";
 import type { GatewayAuthContext, X402RouteKind } from "@/lib/x402/types";
 import {
   DEFAULT_LLM_MODEL,
@@ -80,11 +81,24 @@ export async function resolveGatewayAuth(input: {
     description: `${provider}/${model}`,
   });
 
-  const payment = await verifyX402Payment({
-    request: input.request,
-    requirements,
-    priceUsdg,
-  });
+  let payment: Awaited<ReturnType<typeof verifyX402Payment>>;
+  try {
+    payment = await verifyX402Payment({
+      request: input.request,
+      requirements,
+      priceUsdg,
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "payment_verification_failed";
+    throw new PaymentRequiredError(
+      buildPaymentChallenge({
+        resourceUrl,
+        provider,
+        model,
+        error: `Payment could not be verified: ${reason}`,
+      }),
+    );
+  }
 
   if (payment) {
     return {
@@ -94,17 +108,23 @@ export async function resolveGatewayAuth(input: {
       maxPriceUsdg: priceUsdg,
       provider,
       model,
-      responseHeaders: {
-        "payment-response": payment.responseHeader,
-      },
+      responseHeaders: x402ReceiptHeaders({
+        txHash: payment.txHash,
+        payer: payment.payer,
+        paymentResponseHeader: payment.responseHeader,
+      }),
     };
   }
 
+  const hint = readPaymentHeader(input.request)
+    ? "Payment header present but incomplete."
+    : "Payment is required for this LLM request.";
   throw new PaymentRequiredError(
     buildPaymentChallenge({
       resourceUrl,
       provider,
       model,
+      error: hint,
     }),
   );
 }
