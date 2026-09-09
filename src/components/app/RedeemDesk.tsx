@@ -144,8 +144,7 @@ export function RedeemDesk({
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const selectedStock = initialStocks.find((row) => row.rail === rail) ?? null;
   const usdtLikeAvailable = balances.creditCents + balances.usdtCents;
-  const available =
-    rail === "llm_credits" ? balances.creditCents + balances.llmCents : usdtLikeAvailable;
+  const llmRedeemCap = balances.llmCents;
   const usdgClaimCap = Math.min(usdtLikeAvailable, usdgMaxCents);
   const stockClaimCap = selectedStock
     ? Math.min(usdtLikeAvailable, selectedStock.balanceUsdCents)
@@ -154,7 +153,7 @@ export function RedeemDesk({
     ? stockClaimCap
     : rail === "usdt"
       ? usdgClaimCap
-      : available;
+      : llmRedeemCap;
 
   async function refreshLists() {
     const [redeemData, keyData, walletData] = await Promise.all([
@@ -206,6 +205,9 @@ export function RedeemDesk({
       }
       if (isStockRail(rail) && amountCents > stockClaimCap) {
         throw new Error(`Treasury only has ${money(stockClaimCap)} of ${railLabel(rail)} available.`);
+      }
+      if (rail === "llm_credits" && amountCents > llmRedeemCap) {
+        throw new Error(`You can redeem up to ${money(llmRedeemCap)} on the LLM rail right now.`);
       }
       const result = await readJson<{
         alreadyExists: boolean;
@@ -469,14 +471,6 @@ export function RedeemDesk({
             onChange={(event) => setAmount(event.target.value)}
             className="w-full border border-white/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-accent"
           />
-          <span className="block text-xs text-zinc-500">
-            Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00.
-            {rail === "usdt"
-              ? ` USDG claims cap at ${money(usdgMaxCents)} per request with a 30-minute cooldown per wallet.`
-              : isStockRail(rail) && selectedStock
-                ? ` Treasury holds ~${Number(selectedStock.balanceHuman).toFixed(2)} ${selectedStock.symbol} (${money(selectedStock.balanceUsdCents)} at ~${money(selectedStock.usdCentsPerShare)}/share${selectedStock.demoListed ? ", estimated until on-chain balance syncs" : ""}).`
-                : null}
-          </span>
         </label>
 
         <NotchedButton

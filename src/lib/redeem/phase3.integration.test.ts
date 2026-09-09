@@ -54,7 +54,7 @@ async function claimThenConvert(
   overrides: Partial<typeof fill> = {},
 ) {
   const posted = await postSwapReward({ ...fill, ...overrides, userId }, db);
-  if (posted.creditedCents > 0 && rail === "usdt") {
+  if (posted.creditedCents > 0) {
     await convertCredits(
       {
         userId,
@@ -93,7 +93,7 @@ describe("phase 3 redeem + gateway", () => {
     expect(first.alreadyExists).toBe(false);
     expect(first.status).toBe("fulfilled");
     expect(first.plaintextKey?.startsWith("acc_")).toBe(true);
-    expect(first.llmCents).toBe(0);
+    expect(first.llmCents).toBe(282);
 
     const keys = await db.select().from(virtualKeys);
     expect(keys).toHaveLength(1);

@@ -124,11 +124,13 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     await lockWalletRow(tx as never, input.userId);
     const railAvailable = await sumAccountCents(tx as never, input.userId, account);
     const creditAvailable = await sumAccountCents(tx as never, input.userId, "user_credits");
-    if (railAvailable + creditAvailable < input.amountCents) {
+    const llmRailOnly = input.rail === "llm_credits";
+    const spendable = railAvailable + (llmRailOnly ? 0 : creditAvailable);
+    if (spendable < input.amountCents) {
       throw new RedeemError("insufficient_balance", 400);
     }
 
-    const fromCredit = Math.min(creditAvailable, input.amountCents);
+    const fromCredit = llmRailOnly ? 0 : Math.min(creditAvailable, input.amountCents);
     if (fromCredit > 0) {
       const conversionId = newLedgerId("cnv");
       await tx.insert(creditConversions).values({
