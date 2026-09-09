@@ -5,6 +5,14 @@ const DEXSCREENER_BASE = "https://api.dexscreener.com";
 const ROBINHOOD_CHAIN_SLUG = "robinhood";
 const CACHE_TTL_MS = 45_000;
 const FETCH_TIMEOUT_MS = 12_000;
+const MAX_FETCH_ATTEMPTS = 3;
+
+/** Highest-liquidity ACCR/ETH v4 pool on Robinhood Chain (DexScreener). */
+export const KNOWN_ACCR_PAIR =
+  "0xa2d632f7fbdc12b11faa64a0c779f4aa11a5a46e2e21bab3ecb1ec8b73b6e9ed";
+
+/** Last-resort spot when DexScreener and env are both unavailable. */
+const DEFAULT_ACCR_PRICE_USD = 0.00009;
 
 export type AccrPriceQuote = {
   priceUsd: number;
@@ -12,7 +20,7 @@ export type AccrPriceQuote = {
   pairAddress: string | null;
   liquidityUsd: number;
   asOf: string;
-  source: "dexscreener" | "env_fallback";
+  source: "dexscreener" | "env_fallback" | "stale_cache" | "default_fallback";
 };
 
 type DexPair = {
@@ -31,7 +39,7 @@ function normalizeAddress(value: string) {
   return value.toLowerCase();
 }
 
-function accrPriceFromPair(pair: DexPair, tokenAddress: string): number | null {
+export function accrPriceFromPair(pair: DexPair, tokenAddress: string): number | null {
   const price = Number(pair.priceUsd);
   if (!Number.isFinite(price) || price <= 0) return null;
 
@@ -44,7 +52,7 @@ function accrPriceFromPair(pair: DexPair, tokenAddress: string): number | null {
   return null;
 }
 
-function pickBestPair(pairs: DexPair[], tokenAddress: string): DexPair | null {
+export function pickBestPair(pairs: DexPair[], tokenAddress: string): DexPair | null {
   const onChain = pairs.filter(
     (pair) => (pair.chainId ?? "").toLowerCase() === ROBINHOOD_CHAIN_SLUG,
   );
@@ -66,6 +74,19 @@ function pickBestPair(pairs: DexPair[], tokenAddress: string): DexPair | null {
   return best;
 }
 
+function quoteFromPair(pair: DexPair, tokenAddress: string): AccrPriceQuote | null {
+  const priceUsd = accrPriceFromPair(pair, tokenAddress);
+  if (priceUsd == null || priceUsd <= 0) return null;
+  return {
+    priceUsd,
+    logoURI: pair.info?.imageUrl ?? ACCR_TOKEN_LOGO,
+    pairAddress: pair.pairAddress ?? null,
+    liquidityUsd: Number(pair.liquidity?.usd ?? 0),
+    asOf: new Date().toISOString(),
+    source: "dexscreener",
+  };
+}
+
 async function fetchDexscreener(url: string): Promise<DexPair[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -78,9 +99,15 @@ async function fetchDexscreener(url: string): Promise<DexPair[]> {
         "User-Agent": "AccruedDesk/1.0 (+https://accrued.trade)",
       },
     });
-    if (!response.ok) return [];
-    const body = (await response.json()) as DexPair[] | { pairs?: DexPair[] };
+    if (!response.ok) {
+      console.warn("[dexscreener] non-200", url, response.status);
+      return [];
+    }
+    const body = (await response.json()) as
+      | DexPair[]
+      | { pairs?: DexPair[] | null; pair?: DexPair | null };
     if (Array.isArray(body)) return body;
+    if (body.pair && typeof body.pair === "object") return [body.pair];
     if (Array.isArray(body.pairs)) return body.pairs;
     return [];
   } catch (error) {
@@ -91,20 +118,33 @@ async function fetchDexscreener(url: string): Promise<DexPair[]> {
   }
 }
 
+async function fetchWithRetries(url: string): Promise<DexPair[]> {
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
+    const pairs = await fetchDexscreener(url);
+    if (pairs.length > 0) return pairs;
+    if (attempt < MAX_FETCH_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+  }
+  return [];
+}
+
 async function fetchPairs(tokenAddress: string): Promise<DexPair[]> {
   const normalized = normalizeAddress(tokenAddress);
-  const primaryUrl = `${DEXSCREENER_BASE}/token-pairs/v1/${ROBINHOOD_CHAIN_SLUG}/${normalized}`;
-  const fallbackUrl = `${DEXSCREENER_BASE}/latest/dex/tokens/${normalized}`;
-
-  const [primary, fallback] = await Promise.all([
-    fetchDexscreener(primaryUrl),
-    fetchDexscreener(fallbackUrl),
-  ]);
+  const urls = [
+    `${DEXSCREENER_BASE}/token-pairs/v1/${ROBINHOOD_CHAIN_SLUG}/${normalized}`,
+    `${DEXSCREENER_BASE}/latest/dex/tokens/${normalized}`,
+    `${DEXSCREENER_BASE}/latest/dex/pairs/${ROBINHOOD_CHAIN_SLUG}/${KNOWN_ACCR_PAIR}`,
+  ];
 
   const merged = new Map<string, DexPair>();
-  for (const pair of [...primary, ...fallback]) {
-    const key = pair.pairAddress ?? JSON.stringify(pair);
-    merged.set(key, pair);
+  for (const url of urls) {
+    const pairs = await fetchWithRetries(url);
+    for (const pair of pairs) {
+      const key = pair.pairAddress ?? JSON.stringify(pair);
+      merged.set(key, pair);
+    }
+    if (merged.size > 0) break;
   }
   return [...merged.values()];
 }
@@ -115,11 +155,27 @@ function envFallbackQuote(): AccrPriceQuote | null {
   return {
     priceUsd: price,
     logoURI: ACCR_TOKEN_LOGO,
-    pairAddress: null,
+    pairAddress: KNOWN_ACCR_PAIR,
     liquidityUsd: 0,
     asOf: new Date().toISOString(),
     source: "env_fallback",
   };
+}
+
+function defaultFallbackQuote(): AccrPriceQuote {
+  return {
+    priceUsd: DEFAULT_ACCR_PRICE_USD,
+    logoURI: ACCR_TOKEN_LOGO,
+    pairAddress: KNOWN_ACCR_PAIR,
+    liquidityUsd: 0,
+    asOf: new Date().toISOString(),
+    source: "default_fallback",
+  };
+}
+
+function staleCacheQuote(): AccrPriceQuote | null {
+  if (!cache) return null;
+  return { ...cache.value, source: "stale_cache", asOf: new Date().toISOString() };
 }
 
 export class AccrPriceUnavailableError extends Error {
@@ -146,28 +202,28 @@ export async function getAccrPriceQuote(options?: {
 
   const pairs = await fetchPairs(tokenAddress);
   const best = pickBestPair(pairs, tokenAddress);
-
   if (best) {
-    const priceUsd = accrPriceFromPair(best, tokenAddress);
-    if (priceUsd != null && priceUsd > 0) {
-      const quote: AccrPriceQuote = {
-        priceUsd,
-        logoURI: best.info?.imageUrl ?? ACCR_TOKEN_LOGO,
-        pairAddress: best.pairAddress ?? null,
-        liquidityUsd: Number(best.liquidity?.usd ?? 0),
-        asOf: new Date().toISOString(),
-        source: "dexscreener",
-      };
+    const quote = quoteFromPair(best, tokenAddress);
+    if (quote) {
       cache = { value: quote, expiresAt: Date.now() + CACHE_TTL_MS };
       return quote;
     }
   }
 
-  const fallback = envFallbackQuote();
-  if (fallback) {
-    cache = { value: fallback, expiresAt: Date.now() + CACHE_TTL_MS };
-    return fallback;
+  const stale = staleCacheQuote();
+  if (stale) {
+    console.warn("[dexscreener] using stale cached ACCR price");
+    return stale;
   }
 
-  throw new AccrPriceUnavailableError();
+  const envFallback = envFallbackQuote();
+  if (envFallback) {
+    cache = { value: envFallback, expiresAt: Date.now() + CACHE_TTL_MS };
+    return envFallback;
+  }
+
+  const fallback = defaultFallbackQuote();
+  console.warn("[dexscreener] using default ACCR price fallback", fallback.priceUsd);
+  cache = { value: fallback, expiresAt: Date.now() + CACHE_TTL_MS };
+  return fallback;
 }
