@@ -12,6 +12,8 @@ export function usdgRedeemErrorMessage(code: string): string {
       return "USDG redeems are capped at $15.00 per claim.";
     case "redeem_cooldown_wallet":
       return "Wait 30 minutes before your next USDG claim.";
+    case "stock_inventory_insufficient":
+      return "Treasury stock inventory is too low for this redeem.";
     default:
       return "Redeem was rejected.";
   }

@@ -3,7 +3,7 @@ import { isUniqueViolation } from "@/lib/db/errors";
 import { getDb } from "@/lib/db/client";
 import { creditConversions, ledgerEntries } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
-import { LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
+import { isUsdtLikeRail, LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
 
 export type ConvertInput = {
   userId: string;
@@ -75,7 +75,7 @@ export async function convertCredits(
       }
 
       const conversionId = newLedgerId("cnv");
-      const dest = input.rail === "usdt" ? "user_usdt" : "user_llm";
+      const dest = isUsdtLikeRail(input.rail) ? "user_usdt" : "user_llm";
 
       await tx.insert(creditConversions).values({
         id: conversionId,

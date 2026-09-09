@@ -20,6 +20,9 @@ function newIdempotencyKey() {
 const RAIL_LABELS: Record<Rail, string> = {
   llm_credits: "LLM credits",
   usdt: "USDG",
+  stock_nvda: "NVDA",
+  stock_aapl: "AAPL",
+  stock_msft: "MSFT",
 };
 
 type Step =

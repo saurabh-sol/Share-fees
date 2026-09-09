@@ -32,6 +32,15 @@ const envSchema = z.object({
     .string()
     .regex(/^$|^0x[0-9a-fA-F]{40}$/)
     .optional(),
+  STOCK_INVENTORY_WALLET: z
+    .string()
+    .regex(/^$|^0x[0-9a-fA-F]{40}$/)
+    .optional(),
+  STOCK_TREASURY_PRIVATE_KEY: z.string().optional(),
+  NVDA_USD_CENTS: z.string().optional(),
+  AAPL_USD_CENTS: z.string().optional(),
+  MSFT_USD_CENTS: z.string().optional(),
+  STOCK_DEMO_INVENTORY: z.enum(["true", "false"]).optional(),
   REDIS_URL: z.string().optional(),
   REDIS_HOST: z.string().optional(),
   REDIS_PORT: z.string().optional(),
@@ -81,6 +90,12 @@ const parsed = envSchema.parse({
   TREASURY_LIVE: process.env.TREASURY_LIVE,
   TREASURY_PRIVATE_KEY: process.env.TREASURY_PRIVATE_KEY,
   REWARD_VAULT_ADDRESS: process.env.REWARD_VAULT_ADDRESS,
+  STOCK_INVENTORY_WALLET: process.env.STOCK_INVENTORY_WALLET,
+  STOCK_TREASURY_PRIVATE_KEY: process.env.STOCK_TREASURY_PRIVATE_KEY,
+  NVDA_USD_CENTS: process.env.NVDA_USD_CENTS,
+  AAPL_USD_CENTS: process.env.AAPL_USD_CENTS,
+  MSFT_USD_CENTS: process.env.MSFT_USD_CENTS,
+  STOCK_DEMO_INVENTORY: process.env.STOCK_DEMO_INVENTORY,
   REDIS_URL: process.env.REDIS_URL,
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: process.env.REDIS_PORT,
@@ -151,6 +166,12 @@ export const env = {
   treasuryLive: parsed.TREASURY_LIVE === "true",
   treasuryPrivateKey: parsed.TREASURY_PRIVATE_KEY,
   rewardVaultAddress: parsed.REWARD_VAULT_ADDRESS || undefined,
+  stockInventoryWallet: parsed.STOCK_INVENTORY_WALLET || undefined,
+  stockTreasuryPrivateKey: parsed.STOCK_TREASURY_PRIVATE_KEY,
+  nvdaUsdCents: parsed.NVDA_USD_CENTS ? Number(parsed.NVDA_USD_CENTS) : undefined,
+  aaplUsdCents: parsed.AAPL_USD_CENTS ? Number(parsed.AAPL_USD_CENTS) : undefined,
+  msftUsdCents: parsed.MSFT_USD_CENTS ? Number(parsed.MSFT_USD_CENTS) : undefined,
+  stockDemoInventory: parsed.STOCK_DEMO_INVENTORY !== "false",
   redisUrl: parsed.REDIS_URL,
   redisHost: parsed.REDIS_HOST,
   redisPort: parsed.REDIS_PORT ? Number(parsed.REDIS_PORT) : 6379,

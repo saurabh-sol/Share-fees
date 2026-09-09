@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
+import { STOCK_RAILS } from "@/lib/redeem/stock-catalog";
 import { llmProviderSchema } from "@/lib/validation/llm";
 
-export const railSchema = z.enum(["usdt", "llm_credits"]);
+export const railSchema = z.enum(["usdt", "llm_credits", ...STOCK_RAILS]);
 export const namespaceSchema = z.enum(["eip155", "solana"]);
 
 export const nonceRequestSchema = z.object({

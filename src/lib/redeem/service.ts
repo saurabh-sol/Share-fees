@@ -9,7 +9,7 @@ import {
 } from "@/lib/gateway/catalog";
 import { creditConversions, ledgerEntries, payoutOutbox, redemptions, virtualKeys } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/balances";
-import type { Rail } from "@/lib/ledger/post-swap-reward";
+import { isStockRail, isUsdtLikeRail, type Rail } from "@/lib/ledger/post-swap-reward";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { issueVirtualKeyMaterial } from "./keys";
 import { RedeemError } from "./errors";
@@ -19,6 +19,7 @@ import {
   type OnChainClaimVoucher,
 } from "./reward-vault";
 import { assertUsdgRedeemLimits } from "./limits";
+import { assertStockInventoryForRedeem } from "./stock-inventory";
 import { signUsdgClaimVoucher } from "./treasury";
 
 export { RedeemError } from "./errors";
@@ -78,7 +79,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     };
   }
 
-  if (input.rail === "usdt" && input.chainNamespace !== "eip155") {
+  if (isUsdtLikeRail(input.rail) && input.chainNamespace !== "eip155") {
     throw new RedeemError("usdt_evm_only", 400);
   }
 
@@ -87,6 +88,17 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       userId: input.userId,
       amountCents: input.amountCents,
     });
+  }
+
+  if (isStockRail(input.rail)) {
+    try {
+      await assertStockInventoryForRedeem(input.rail, input.amountCents);
+    } catch (error) {
+      if (error instanceof Error && error.message === "stock_inventory_insufficient") {
+        throw new RedeemError("stock_inventory_insufficient", 400);
+      }
+      throw error;
+    }
   }
 
   let llm: ReturnType<typeof assertProviderModel> | null = null;
@@ -101,9 +113,10 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     }
   }
 
-  const account = input.rail === "usdt" ? "user_usdt" : "user_llm";
-  const destination =
-    input.rail === "usdt" ? normalizeAddress("eip155", input.address) : "gateway";
+  const account = isUsdtLikeRail(input.rail) ? "user_usdt" : "user_llm";
+  const destination = isUsdtLikeRail(input.rail)
+    ? normalizeAddress("eip155", input.address)
+    : "gateway";
 
   return client.transaction(async (tx) => {
     await lockWalletRow(tx as never, input.userId);
@@ -145,7 +158,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       ]);
     }
     const redemptionId = newId("rdm");
-    const initialStatus = input.rail === "usdt" ? "queued" : "fulfilled";
+    const initialStatus = input.rail === "llm_credits" ? "fulfilled" : "queued";
 
     await tx.insert(redemptions).values({
       id: redemptionId,
@@ -155,7 +168,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       status: initialStatus,
       destination,
       idempotencyKey: input.idempotencyKey,
-      clientIp: input.rail === "usdt" ? input.clientIp?.trim() || null : null,
+      clientIp: isUsdtLikeRail(input.rail) ? input.clientIp?.trim() || null : null,
       fulfilledAt: input.rail === "llm_credits" ? new Date() : null,
     });
 
@@ -172,7 +185,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       {
         id: newId("led"),
         userId: input.userId,
-        account: input.rail === "usdt" ? "payout_pool" : "redemption_pool",
+        account: isUsdtLikeRail(input.rail) ? "payout_pool" : "redemption_pool",
         type: "credit",
         amountCents: input.amountCents,
         referenceType: "redemption",
@@ -222,7 +235,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       ...balances,
     };
   }).then(async (result) => {
-    if (input.rail !== "usdt") return result;
+    if (input.rail !== "usdt" || !destination) return result;
     return {
       ...result,
       onChainClaim: await signUsdgClaimVoucher({

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, isLlmProvider, type LlmProvider } from "@/lib/gateway/catalog";
+import { isStockRail, type Rail } from "@/lib/ledger/post-swap-reward";
 import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
+import { STOCK_PAYOUT_OPTIONS } from "@/lib/redeem/stock-catalog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 import { robinhoodAddressUrl, robinhoodTxUrl } from "@/lib/chains/robinhood";
@@ -18,7 +20,16 @@ import { LlmModelPicker, ProviderMark } from "./LlmModelPicker";
 import { OpenAiKeyIssue } from "./OpenAiKeyIssue";
 import { ApiKeyTryPanel } from "./ApiKeyTryPanel";
 
-type Rail = "usdt" | "llm_credits";
+type StockInventory = {
+  symbol: string;
+  rail: string;
+  name: string;
+  logoURI: string;
+  balanceHuman: string;
+  balanceUsdCents: number;
+  usdCentsPerShare: number;
+  demoListed?: boolean;
+};
 
 type Redemption = {
   id: string;
@@ -48,6 +59,12 @@ function money(cents: number) {
   })}`;
 }
 
+function railLabel(rail: string) {
+  if (rail === "usdt") return "USDG";
+  if (rail === "llm_credits") return "LLM";
+  return STOCK_PAYOUT_OPTIONS.find((row) => row.rail === rail)?.symbol ?? rail;
+}
+
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     credentials: "same-origin",
@@ -71,6 +88,7 @@ export function RedeemDesk({
   initialKeys,
   rewardVaultAddress,
   initialOnChainClaims,
+  initialStocks,
 }: {
   creditCents: number;
   usdtCents: number;
@@ -81,6 +99,7 @@ export function RedeemDesk({
   initialKeys: VirtualKey[];
   rewardVaultAddress: string | null;
   initialOnChainClaims: OnChainRewardClaim[];
+  initialStocks: StockInventory[];
 }) {
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
@@ -112,9 +131,19 @@ export function RedeemDesk({
     .reduce((sum, key) => sum + Math.max(0, key.remainingCents), 0);
   const llmAvailableCents = balances.llmCents + unusedKeyCents;
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
+  const selectedStock = initialStocks.find((row) => row.rail === rail) ?? null;
+  const usdtLikeAvailable = balances.creditCents + balances.usdtCents;
   const available =
-    balances.creditCents + (rail === "usdt" ? balances.usdtCents : balances.llmCents);
-  const usdgClaimCap = Math.min(available, usdgMaxCents);
+    rail === "llm_credits" ? balances.creditCents + balances.llmCents : usdtLikeAvailable;
+  const usdgClaimCap = Math.min(usdtLikeAvailable, usdgMaxCents);
+  const stockClaimCap = selectedStock
+    ? Math.min(usdtLikeAvailable, selectedStock.balanceUsdCents)
+    : 0;
+  const redeemCap = isStockRail(rail)
+    ? stockClaimCap
+    : rail === "usdt"
+      ? usdgClaimCap
+      : available;
 
   async function refreshLists() {
     const [redeemData, keyData, walletData] = await Promise.all([
@@ -153,7 +182,10 @@ export function RedeemDesk({
         throw new Error("Minimum redeem is $1.00.");
       }
       if (rail === "usdt" && amountCents > usdgMaxCents) {
-        throw new Error("USDG claims are capped at $5.00 per request.");
+        throw new Error(`USDG claims are capped at ${money(usdgMaxCents)} per request.`);
+      }
+      if (isStockRail(rail) && amountCents > stockClaimCap) {
+        throw new Error(`Treasury only has ${money(stockClaimCap)} of ${railLabel(rail)} available.`);
       }
       const result = await readJson<{
         alreadyExists: boolean;
@@ -186,7 +218,9 @@ export function RedeemDesk({
       await refreshLists();
       router.refresh();
       let onChainNote = "";
-      if (rail === "usdt" && result.onChainClaim) {
+      if (isStockRail(rail)) {
+        onChainNote = " Treasury will transfer stock tokens to this wallet on Robinhood.";
+      } else if (rail === "usdt" && result.onChainClaim) {
         try {
           setClaimingId(result.redemptionId);
           const txHash = await submitUsdgRewardClaim(result.onChainClaim);
@@ -222,9 +256,11 @@ export function RedeemDesk({
       setMessage(
         result.alreadyExists
           ? "That idempotency key already posted. The plaintext key is not shown again."
-          : rail === "usdt"
-            ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood.${onChainNote || " It stays queued until the vault claim is submitted."}`
-            : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
+          : isStockRail(rail)
+            ? `Queued ${money(amountCents)} ${railLabel(rail)} to this wallet on Robinhood.${onChainNote}`
+            : rail === "usdt"
+              ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood.${onChainNote || " It stays queued until the vault claim is submitted."}`
+              : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
       setStatus("error");
@@ -314,9 +350,9 @@ export function RedeemDesk({
       </dl>
 
       <form onSubmit={(event) => void onRedeem(event)} className="max-w-2xl space-y-6">
-        <fieldset className="space-y-2">
+        <fieldset className="space-y-3">
           <legend className="text-sm text-zinc-400">Rail</legend>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
             <label className="flex items-center gap-2 text-sm text-zinc-200">
               <input
                 type="radio"
@@ -325,15 +361,37 @@ export function RedeemDesk({
                 disabled={!evmOnly}
                 onChange={() => {
                   setRail("usdt");
-                  const cap = Math.min(
-                    balances.creditCents + balances.usdtCents,
-                    usdgMaxCents,
-                  );
+                  const cap = Math.min(usdtLikeAvailable, usdgMaxCents);
                   setAmount((Math.max(100, cap) / 100).toFixed(2));
                 }}
               />
               USDG on Robinhood
             </label>
+            {initialStocks.map((stock) => (
+              <label
+                key={stock.rail}
+                className="flex items-center gap-2 text-sm text-zinc-200"
+              >
+                <input
+                  type="radio"
+                  name="redeem-rail"
+                  checked={rail === stock.rail}
+                  disabled={!evmOnly || stock.balanceUsdCents < 100}
+                  onChange={() => {
+                    setRail(stock.rail as Rail);
+                    const cap = Math.min(usdtLikeAvailable, stock.balanceUsdCents);
+                    setAmount((Math.max(100, cap) / 100).toFixed(2));
+                  }}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={stock.logoURI} alt="" className="h-4 w-4 rounded-full" />
+                {stock.symbol}
+                <span className="font-mono text-xs text-zinc-500">
+                  ~{Number(stock.balanceHuman).toFixed(2)} · {money(stock.balanceUsdCents)}
+                  {stock.demoListed ? " · est." : ""}
+                </span>
+              </label>
+            ))}
             <label className="flex items-center gap-2 text-sm text-zinc-200">
               <input
                 type="radio"
@@ -345,7 +403,9 @@ export function RedeemDesk({
             </label>
           </div>
           {!evmOnly ? (
-            <p className="text-sm text-zinc-500">USDG withdraw is EVM-only. This session is Solana.</p>
+            <p className="text-sm text-zinc-500">
+              USDG and stock withdraws are EVM-only. This session is Solana.
+            </p>
           ) : null}
         </fieldset>
 
@@ -379,13 +439,15 @@ export function RedeemDesk({
             Redeemable now: {money(available)} (total reward + this rail). Minimum $1.00.
             {rail === "usdt"
               ? ` USDG claims cap at ${money(usdgMaxCents)} per request with a 30-minute cooldown per wallet.`
-              : null}
+              : isStockRail(rail) && selectedStock
+                ? ` Treasury holds ~${Number(selectedStock.balanceHuman).toFixed(2)} ${selectedStock.symbol} (${money(selectedStock.balanceUsdCents)} at ~${money(selectedStock.usdCentsPerShare)}/share${selectedStock.demoListed ? ", estimated until on-chain balance syncs" : ""}).`
+                : null}
           </span>
         </label>
 
         <NotchedButton
           type="submit"
-          disabled={status === "working" || available < 100 || (rail === "usdt" && usdgClaimCap < 100)}
+          disabled={status === "working" || redeemCap < 100}
         >
           {status === "working" ? "Working…" : "Redeem"}
         </NotchedButton>
@@ -525,7 +587,7 @@ export function RedeemDesk({
               >
                 <div>
                   <p className="font-mono text-sm text-zinc-100">
-                    {row.rail === "usdt" ? "USDG" : "LLM"} · {money(row.amountCents)}
+                    {railLabel(row.rail)} · {money(row.amountCents)}
                   </p>
                   <p className="font-mono text-xs text-zinc-500">{row.id.slice(0, 18)}…</p>
                   {row.txHash ? (

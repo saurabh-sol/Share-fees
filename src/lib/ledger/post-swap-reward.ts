@@ -16,8 +16,18 @@ import {
   getActiveRuleOrNull,
 } from "@/lib/rules/engine";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
+import { STOCK_RAILS } from "@/lib/redeem/stock-catalog";
 
-export type Rail = "usdt" | "llm_credits";
+export type StockRail = (typeof STOCK_RAILS)[number];
+export type Rail = "usdt" | "llm_credits" | StockRail;
+
+export function isStockRail(rail: string): rail is StockRail {
+  return (STOCK_RAILS as readonly string[]).includes(rail);
+}
+
+export function isUsdtLikeRail(rail: Rail) {
+  return rail === "usdt" || isStockRail(rail);
+}
 
 export type PostSwapInput = {
   userId: string;

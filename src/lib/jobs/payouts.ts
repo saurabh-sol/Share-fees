@@ -5,7 +5,9 @@ import { getDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions } from "@/lib/db/schema";
 import { syncWalletCache } from "@/lib/ledger/balances";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
+import { isStockRail } from "@/lib/ledger/post-swap-reward";
 import { isRedemptionClaimedOnChain } from "@/lib/redeem/reward-vault";
+import { broadcastStockPayout, stockTreasuryCanBroadcast } from "@/lib/redeem/stock-payout";
 import { broadcastRobinhoodUsdg, treasuryCanPayOnChain, type BroadcastUsdt } from "@/lib/redeem/treasury";
 
 const MAX_ATTEMPTS = 8;
@@ -75,8 +77,11 @@ export async function processPayoutOutbox(input?: {
 
   const results: Array<{ id: string; status: string; txHash?: string }> = [];
 
+  const canPayUsdg = treasuryCanPayOnChain() || Boolean(input?.broadcast);
+  const canPayStock = stockTreasuryCanBroadcast() || Boolean(input?.broadcast);
+
   for (;;) {
-    if (!treasuryCanPayOnChain() && !input?.broadcast) {
+    if (!canPayUsdg && !canPayStock && !input?.broadcast) {
       const idle = await client.select().from(payoutOutbox).where(due);
       for (const row of idle) results.push({ id: row.id, status: "queued" });
       break;
@@ -110,7 +115,36 @@ export async function processPayoutOutbox(input?: {
     const row = claimed;
 
     try {
-      if (!input?.broadcast && (await isRedemptionClaimedOnChain(row.redemptionId))) {
+      const [redemption] = await client
+        .select({ rail: redemptions.rail })
+        .from(redemptions)
+        .where(eq(redemptions.id, row.redemptionId))
+        .limit(1);
+      const rail = redemption?.rail ?? "usdt";
+      const stockPayout = isStockRail(rail);
+
+      if (stockPayout && !canPayStock && !input?.broadcast) {
+        await client
+          .update(payoutOutbox)
+          .set({ status: "queued", updatedAt: new Date() })
+          .where(eq(payoutOutbox.id, row.id));
+        results.push({ id: row.id, status: "queued" });
+        continue;
+      }
+      if (!stockPayout && !canPayUsdg && !input?.broadcast) {
+        await client
+          .update(payoutOutbox)
+          .set({ status: "queued", updatedAt: new Date() })
+          .where(eq(payoutOutbox.id, row.id));
+        results.push({ id: row.id, status: "queued" });
+        continue;
+      }
+
+      if (
+        !stockPayout &&
+        !input?.broadcast &&
+        (await isRedemptionClaimedOnChain(row.redemptionId))
+      ) {
         await client
           .update(payoutOutbox)
           .set({
@@ -128,11 +162,18 @@ export async function processPayoutOutbox(input?: {
         continue;
       }
 
-      const txHash = await send({
-        destination: row.destination,
-        amountCents: row.amountCents,
-        redemptionId: row.redemptionId,
-      });
+      const txHash = stockPayout
+        ? await broadcastStockPayout({
+            rail,
+            destination: row.destination,
+            amountCents: row.amountCents,
+            redemptionId: row.redemptionId,
+          })
+        : await send({
+            destination: row.destination,
+            amountCents: row.amountCents,
+            redemptionId: row.redemptionId,
+          });
       await waitReceipt(txHash);
       await client
         .update(payoutOutbox)
