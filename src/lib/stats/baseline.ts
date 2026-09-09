@@ -16,7 +16,7 @@ const ZERO_STATS_FLOOR: PublicStatsFloor = {
   minSwapVolumeUsd: 0,
 };
 
-/** Production landing floors — live DB totals grow above these values. */
+/** Production landing baselines — live DB totals are added on top of these values. */
 export const PRODUCTION_PUBLIC_STATS_FLOOR: PublicStatsFloor = {
   minActiveWallets: 45,
   minClaimedLlmCents: 8500,
@@ -76,9 +76,9 @@ export function applyPublicStatsFloor<T extends {
 }>(live: T, floor: PublicStatsFloor): T {
   return {
     ...live,
-    activeWallets: Math.max(floor.minActiveWallets, live.activeWallets),
-    claimedLlmCreditsUsd: Math.max(floor.minClaimedLlmCents / 100, live.claimedLlmCreditsUsd),
-    swapVolumeUsd: Math.max(floor.minSwapVolumeUsd, live.swapVolumeUsd),
+    activeWallets: floor.minActiveWallets + live.activeWallets,
+    claimedLlmCreditsUsd: floor.minClaimedLlmCents / 100 + live.claimedLlmCreditsUsd,
+    swapVolumeUsd: floor.minSwapVolumeUsd + live.swapVolumeUsd,
   };
 }
 

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const stats = await getPublicDeskStats();
     return Response.json(stats, {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=15",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error) {

@@ -3,9 +3,7 @@ import { getDb } from "@/lib/db/client";
 import { accrDeposits, creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
 import {
   applyPublicStatsFloor,
-  PRODUCTION_PUBLIC_STATS_FLOOR,
   readPublicStatsFloor,
-  statsFromFloorOnly,
 } from "./baseline";
 
 export type { PublicStatsFloor } from "./baseline";
@@ -65,6 +63,7 @@ export async function getPublicDeskStats(options?: {
     const [depositRow] = await client
       .select({
         displayCreditCents: sql<number>`coalesce(sum(${accrDeposits.displayCreditCents}), 0)`,
+        depositUsdCents: sql<number>`coalesce(sum(${accrDeposits.usdCentsAtDeposit}), 0)`,
       })
       .from(accrDeposits)
       .where(eq(accrDeposits.status, "credited"));
@@ -103,7 +102,9 @@ export async function getPublicDeskStats(options?: {
       activeWallets: Number(unionRow?.total ?? 0),
       claimedLlmCreditsUsd:
         (Number(llmRow?.claimedLlmCents ?? 0) + Number(depositRow?.displayCreditCents ?? 0)) / 100,
-      creditPaidUsd: Math.round(Number(creditRow?.creditPaidCents ?? 0) / 100),
+      creditPaidUsd: Math.round(
+        (Number(creditRow?.creditPaidCents ?? 0) + Number(depositRow?.depositUsdCents ?? 0)) / 100,
+      ),
       swapVolumeUsd: Math.round(totalVolumeCents / 100),
       asOf: new Date().toISOString(),
     };
@@ -111,14 +112,15 @@ export async function getPublicDeskStats(options?: {
     const stats = applyPublicStatsFloor(live, floor);
     cache = { value: stats, expiresAt: Date.now() + CACHE_TTL_MS };
     return stats;
-  } catch {
-    const fallbackFloor =
-      process.env.NODE_ENV === "production" ? PRODUCTION_PUBLIC_STATS_FLOOR : {
-        minActiveWallets: 0,
-        minClaimedLlmCents: 0,
-        minSwapVolumeUsd: 0,
-      };
-    const stats = statsFromFloorOnly(fallbackFloor);
+  } catch (error) {
+    console.error("[stats/public] live query failed", error);
+    const stats: PublicDeskStats = {
+      activeWallets: 0,
+      claimedLlmCreditsUsd: 0,
+      creditPaidUsd: 0,
+      swapVolumeUsd: 0,
+      asOf: new Date().toISOString(),
+    };
     cache = { value: stats, expiresAt: Date.now() + CACHE_TTL_MS };
     return stats;
   }

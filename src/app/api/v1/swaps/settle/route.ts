@@ -10,6 +10,7 @@ import { isUniswapChainId, type UniswapChainId } from "@/lib/uniswap/constants";
 import { verifyUniswapFill, UniswapSettleError } from "@/lib/uniswap/settle";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
+import { clearPublicDeskStatsCache } from "@/lib/stats/public";
 import { settleSwapSchema } from "@/lib/validation/swap";
 
 /**
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
 
     // Ensure the swap is visible in the wallet activity list + volume total.
     if (!result.alreadyExists) {
+      clearPublicDeskStatsCache();
       await recordAsActivity({
         userId: session.user.id,
         txHash,

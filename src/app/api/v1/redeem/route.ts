@@ -5,6 +5,7 @@ import { usdgRedeemErrorMessage } from "@/lib/redeem/limits";
 import { UpgradePausedError, USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
+import { clearPublicDeskStatsCache } from "@/lib/stats/public";
 import { redeemRequestSchema } from "@/lib/validation/swap";
 
 export async function GET(request: Request) {
@@ -38,6 +39,10 @@ export async function POST(request: Request) {
       model: body.model,
       clientIp: clientIp(request),
     });
+
+    if (!result.alreadyExists) {
+      clearPublicDeskStatsCache();
+    }
 
     return Response.json({
       ...result,

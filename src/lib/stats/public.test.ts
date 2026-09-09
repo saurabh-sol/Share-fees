@@ -115,7 +115,7 @@ describe("public desk stats", () => {
     expect(stats.swapVolumeUsd).toBe(350_000);
   });
 
-  it("grows above the floor when live LLM redemptions exceed it", async () => {
+  it("adds live LLM redemptions on top of the baseline floor", async () => {
     const db = await createTestDb();
     await db.insert(publicDeskStatsBaseline).values({
       id: "default",
@@ -135,8 +135,49 @@ describe("public desk stats", () => {
       idempotencyKey: "idem_big",
     });
     const stats = await getPublicDeskStats({ fresh: true, db });
-    expect(stats.claimedLlmCreditsUsd).toBe(100);
+    expect(stats.claimedLlmCreditsUsd).toBe(185);
     expect(stats.activeWallets).toBe(45);
+  });
+
+  it("adds live ACCR deposit bonuses on top of the baseline floor", async () => {
+    const db = await createTestDb();
+    await db.insert(publicDeskStatsBaseline).values({
+      id: "default",
+      minActiveWallets: 45,
+      minClaimedLlmCents: 8500,
+      minSwapVolumeUsd: 350_000,
+    });
+    const userId = "user_stats_dep_floor";
+    await seedUser(db, userId, "0x1313131313131313131313131313131313131313");
+    await db.insert(depositIntents).values({
+      id: "dep_intent_floor",
+      userId,
+      usdCents: 500,
+      tokenAmountRaw: "1000000000000000000",
+      tokenAmountHuman: "1",
+      priceUsd: "0.05",
+      displayCreditCents: 1000,
+      grantedLlmCents: 300,
+      status: "credited",
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+    });
+    await db.insert(accrDeposits).values({
+      id: "acd_floor_1",
+      userId,
+      intentId: "dep_intent_floor",
+      txHash: "0x" + "44".repeat(32),
+      tokenAmountRaw: "1000000000000000000",
+      usdCentsAtDeposit: 500,
+      displayCreditCents: 1000,
+      grantedLlmCents: 300,
+      priceUsd: "0.05",
+      status: "credited",
+    });
+
+    const stats = await getPublicDeskStats({ fresh: true, db });
+    expect(stats.claimedLlmCreditsUsd).toBe(95);
+    expect(stats.creditPaidUsd).toBe(5);
+    expect(stats.activeWallets).toBe(46);
   });
 
   it("sums claimed LLM credits from llm_credits redemptions", async () => {

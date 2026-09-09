@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth/session";
 import { getDepositStats, listDepositLeaderboard } from "@/lib/deposit/service";
 import { pageTitle } from "@/lib/brand";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: pageTitle("Deposit stats"),
   description: "Aggregate ACCR deposit statistics for Accrued desk users.",

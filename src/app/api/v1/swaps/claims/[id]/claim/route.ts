@@ -4,6 +4,7 @@ import { ClaimError, claimDiscoveredSwap } from "@/lib/indexer/claim";
 import { LedgerError } from "@/lib/ledger/post-swap-reward";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
+import { clearPublicDeskStatsCache } from "@/lib/stats/public";
 import { claimRequestSchema } from "@/lib/validation/swap";
 
 export async function POST(
@@ -32,6 +33,9 @@ export async function POST(
       address: session.user.address,
       claimId: id,
     });
+    if (!result.alreadyExists) {
+      clearPublicDeskStatsCache();
+    }
     return Response.json(result);
   } catch (error) {
     if (error instanceof OriginError) {
