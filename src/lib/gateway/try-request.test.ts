@@ -4,6 +4,7 @@ import {
   extractTryReply,
   humanizeTryError,
   readTryResultHeaders,
+  resolvePlaygroundRequestOrigin,
 } from "./try-request";
 import {
   RESPONSE_HEADER_PROVIDER,
@@ -72,6 +73,26 @@ describe("buildTryRequest", () => {
       message: "Hi",
     });
     expect(req.url).toBe("http://localhost:3001/v1/chat/completions");
+  });
+});
+
+describe("resolvePlaygroundRequestOrigin", () => {
+  it("uses the live tab origin on localhost", () => {
+    expect(
+      resolvePlaygroundRequestOrigin("http://localhost:3000/v1", {
+        origin: "http://localhost:3001",
+        hostname: "localhost",
+      }),
+    ).toBe("http://localhost:3001");
+  });
+
+  it("uses the configured gateway URL on production", () => {
+    expect(
+      resolvePlaygroundRequestOrigin("https://accrued.trade/v1", {
+        origin: "https://accrued.trade",
+        hostname: "accrued.trade",
+      }),
+    ).toBe("https://accrued.trade");
   });
 });
 

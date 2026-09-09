@@ -17,6 +17,7 @@ import {
   humanizeTryError,
   moneyFromCents,
   readTryResultHeaders,
+  resolvePlaygroundRequestOrigin,
 } from "@/lib/gateway/try-request";
 import { ProviderMark } from "@/components/llm/ProviderMark";
 import { isVirtualKey } from "@/lib/brand";
@@ -103,7 +104,10 @@ export function ApiKeyTryPanel({
         gatewayBaseUrl,
         apiKey: key,
         message,
-        requestOrigin: typeof window !== "undefined" ? window.location.origin : undefined,
+        requestOrigin:
+          typeof window !== "undefined"
+            ? resolvePlaygroundRequestOrigin(gatewayBaseUrl, window.location)
+            : undefined,
       });
       const response = await fetch(req.url, {
         method: req.method,

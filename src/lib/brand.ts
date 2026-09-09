@@ -1,5 +1,7 @@
 /** Public product identity — import instead of hard-coding Accrued in UI and copy. */
 export const BRAND_NAME = "Accrued" as const;
+/** Canonical production origin — SIWE domain, OG metadata, and LLM gateway base URL. */
+export const PRODUCTION_APP_ORIGIN = "https://accrued.trade" as const;
 export const BRAND_TAGLINE = "You swap. We credit." as const;
 export const BRAND_DESCRIPTION =
   "Qualifying swaps convert at a published ratio into USDG or LLM credits — same wallet, one desk." as const;
@@ -20,6 +22,12 @@ export function isVirtualKey(raw: string): boolean {
 export const RESPONSE_HEADER_REMAINING = "X-Accrued-Remaining-Cents";
 export const RESPONSE_HEADER_PROVIDER = "X-Accrued-Provider";
 export const RESPONSE_HEADER_SPEND_CAP = "X-Accrued-Spend-Cap-Cents";
+/** Plain Robinhood Chain tx hash after a settled x402 payment. */
+export const RESPONSE_HEADER_X402_TX = "X-Accrued-X402-Tx-Hash";
+/** Payer wallet that signed the Permit2 authorization. */
+export const RESPONSE_HEADER_X402_PAYER = "X-Accrued-X402-Payer";
+/** "true" when x402 verify + settle succeeded for this request. */
+export const RESPONSE_HEADER_X402_SETTLED = "X-Accrued-X402-Settled";
 
 export function pageTitle(section: string) {
   return section;

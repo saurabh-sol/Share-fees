@@ -6,6 +6,7 @@ import {
   BRAND_LOGO_PATH,
   BRAND_NAME,
   BRAND_TITLE,
+  PRODUCTION_APP_ORIGIN,
 } from "@/lib/brand";
 import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
 import "./globals.css";
@@ -23,7 +24,7 @@ const geistMono = Geist_Mono({
 const SITE =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
   process.env.APP_ORIGIN?.replace(/\/$/, "") ??
-  "https://trade2credits.onrender.com";
+  PRODUCTION_APP_ORIGIN;
 const OG_IMAGE = `${SITE}/og-preview.png`;
 const OG_DESCRIPTION =
   `Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for ${LLM_PROVIDER_SUMMARY}.`;

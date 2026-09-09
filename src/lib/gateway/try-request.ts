@@ -32,6 +32,20 @@ export function resolveTryRequestOrigin(gatewayBaseUrl: string, requestOrigin?: 
   return originFromGatewayBase(gatewayBaseUrl);
 }
 
+/** Local dev keeps the live tab origin; production uses the configured public gateway URL. */
+export function resolvePlaygroundRequestOrigin(
+  gatewayBaseUrl: string,
+  windowLocation?: Pick<Location, "origin" | "hostname">,
+) {
+  if (windowLocation) {
+    const host = windowLocation.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return windowLocation.origin.replace(/\/$/, "");
+    }
+  }
+  return resolveTryRequestOrigin(gatewayBaseUrl);
+}
+
 export function buildTryRequest(input: {
   provider: LlmProvider;
   model: string;

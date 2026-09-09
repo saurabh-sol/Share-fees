@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRODUCTION_APP_ORIGIN } from "@/lib/brand";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -139,13 +140,18 @@ export const env = {
   sessionSecret:
     parsed.SESSION_SECRET ??
     "dev-only-session-secret-do-not-use-in-prod-32",
-  appOrigin: parsed.APP_ORIGIN ?? "http://localhost:3000",
+  appOrigin:
+    parsed.APP_ORIGIN ??
+    (parsed.NODE_ENV === "production" ? PRODUCTION_APP_ORIGIN : "http://localhost:3000"),
   allowMockSwaps:
     parsed.ALLOW_MOCK_SWAPS === "true" && parsed.NODE_ENV !== "production",
   adminSecret: parsed.ADMIN_SECRET,
   databaseUrl: parsed.DATABASE_URL,
   walletConnectProjectId: parsed.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-  publicAppUrl: parsed.NEXT_PUBLIC_APP_URL ?? parsed.APP_ORIGIN ?? "http://localhost:3000",
+  publicAppUrl:
+    parsed.NEXT_PUBLIC_APP_URL ??
+    parsed.APP_ORIGIN ??
+    (parsed.NODE_ENV === "production" ? PRODUCTION_APP_ORIGIN : "http://localhost:3000"),
   lifiApiKey: parsed.LIFI_API_KEY,
   changeNowApiKey: parsed.CHANGENOW_API_KEY,
   zerionApiKey: parsed.ZERION_API_KEY,
