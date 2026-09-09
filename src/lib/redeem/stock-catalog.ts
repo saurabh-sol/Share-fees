@@ -52,8 +52,4 @@ export function stockOptionForRail(rail: string) {
   return STOCK_PAYOUT_OPTIONS.find((item) => item.rail === rail) ?? null;
 }
 
-export function isStockRail(rail: string): rail is StockPayoutOption["rail"] {
-  return stockOptionForRail(rail) != null;
-}
-
 export const STOCK_RAILS = STOCK_PAYOUT_OPTIONS.map((item) => item.rail);

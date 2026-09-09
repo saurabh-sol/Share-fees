@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Rail } from "@/lib/ledger/post-swap-reward";
+import type { Rail } from "@/lib/redeem/rails";
 import { NotchedButton } from "@/components/ui/NotchedButton";
 
 function money(cents: number) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { DEFAULT_LLM_MODEL, DEFAULT_LLM_PROVIDER, isLlmProvider, type LlmProvider } from "@/lib/gateway/catalog";
-import { isStockRail, type Rail } from "@/lib/ledger/post-swap-reward";
+import { isStockRail, type Rail } from "@/lib/redeem/rails";
 import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
 import { STOCK_PAYOUT_OPTIONS } from "@/lib/redeem/stock-catalog";
 import { EmptyState } from "@/components/ui/EmptyState";
