@@ -191,6 +191,7 @@ export function RedeemDesk({
         alreadyExists: boolean;
         status: string;
         plaintextKey: string | null;
+        keyPrefix: string | null;
         creditCents: number;
         usdtCents: number;
         llmCents: number;
@@ -214,6 +215,13 @@ export function RedeemDesk({
         setIssuedKey(result.plaintextKey);
         setIssuedModel(model);
         setIssuedProvider(provider);
+        if (result.keyPrefix) {
+          try {
+            sessionStorage.setItem(`accrued_vk:${result.keyPrefix}`, result.plaintextKey);
+          } catch {
+            /* sessionStorage unavailable */
+          }
+        }
       }
       await refreshLists();
       router.refresh();
@@ -555,12 +563,17 @@ export function RedeemDesk({
             if (!key) return null;
             const keyProvider =
               key.provider && isLlmProvider(key.provider) ? key.provider : DEFAULT_LLM_PROVIDER;
+            const cachedKey =
+              typeof window !== "undefined"
+                ? sessionStorage.getItem(`accrued_vk:${key.prefix}`)
+                : null;
             return (
               <ApiKeyTryPanel
                 key={key.id}
                 gatewayBaseUrl={gatewayBaseUrl}
                 initialProvider={keyProvider}
                 initialModel={key.model ?? DEFAULT_LLM_MODEL}
+                initialApiKey={cachedKey ?? ""}
                 lockProviderModel
                 title={`Test ${key.prefix}…`}
                 onSuccess={() => void refreshLists()}

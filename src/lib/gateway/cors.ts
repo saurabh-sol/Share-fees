@@ -4,15 +4,29 @@ import {
   RESPONSE_HEADER_SPEND_CAP,
 } from "@/lib/brand";
 
+const X402_HEADERS =
+  "payment-required, payment-signature, payment-response, x-payment, X-Payment, X-Payment-Response";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta",
+  "Access-Control-Allow-Headers": [
+    "Authorization",
+    "Content-Type",
+    "api-key",
+    "x-api-key",
+    "x-goog-api-key",
+    "anthropic-version",
+    "anthropic-beta",
+    X402_HEADERS,
+  ].join(", "),
   "Access-Control-Expose-Headers": [
     RESPONSE_HEADER_REMAINING,
     RESPONSE_HEADER_PROVIDER,
     RESPONSE_HEADER_SPEND_CAP,
+    "payment-required",
+    "payment-response",
+    "x-payment-response",
   ].join(", "),
   "Access-Control-Max-Age": "86400",
 };

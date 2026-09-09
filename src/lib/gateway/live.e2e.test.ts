@@ -6,6 +6,7 @@ import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { redeem } from "@/lib/redeem/service";
 import type { LlmProvider } from "./catalog";
+import { resolveGatewayAuth } from "./auth";
 import {
   GatewayError,
   handleChatCompletion,
@@ -13,6 +14,7 @@ import {
   handleListModels,
   handleMessages,
 } from "./service";
+import { virtualKeyAuthContext } from "./test-auth";
 import { RESPONSE_HEADER_PROVIDER, RESPONSE_HEADER_REMAINING } from "@/lib/brand";
 import { providerReady } from "./providers";
 
@@ -113,9 +115,9 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
       expect(issued.alreadyExists).toBe(false);
       expect(issued.plaintextKey?.startsWith("acc_")).toBe(true);
       const key = issued.plaintextKey!;
-      const auth = `Bearer ${key}`;
+      const authCtx = await virtualKeyAuthContext(key, db);
 
-      const listed = await handleListModels({ authorization: auth, db });
+      const listed = await handleListModels({ auth: authCtx, db });
       expect(listed.object).toBe("list");
       expect(listed.data.length).toBeGreaterThan(0);
       expect(listed.data.every((item) => item.object === "model" && item.owned_by === probe.provider)).toBe(
@@ -127,32 +129,34 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
 
       await expect(
         handleChatCompletion({
-          authorization: auth,
+          auth: authCtx,
           body: chatBody(probe.wrongModel),
           db,
         }),
       ).rejects.toMatchObject({ message: "model_not_allowed", status: 400 } satisfies Partial<GatewayError>);
 
       await expect(
-        handleChatCompletion({
-          authorization: "Bearer sk-not-a-desk-key",
+        resolveGatewayAuth({
+          request: new Request("https://example.com/v1/chat/completions", {
+            headers: { Authorization: "Bearer sk-not-a-desk-key" },
+          }),
           body: chatBody(probe.model),
-          db,
+          route: "chat",
         }),
       ).rejects.toMatchObject({ message: "invalid_api_key", status: 401 } satisfies Partial<GatewayError>);
 
       await expect(
-        handleChatCompletion({
-          authorization: null,
+        resolveGatewayAuth({
+          request: new Request("https://example.com/v1/chat/completions"),
           body: chatBody(probe.model),
-          db,
+          route: "chat",
         }),
       ).rejects.toMatchObject({ message: "invalid_api_key", status: 401 } satisfies Partial<GatewayError>);
 
       if (!providerReady(probe.provider)) {
         await expect(
           handleChatCompletion({
-            authorization: auth,
+            auth: authCtx,
             body: chatBody(probe.model),
             db,
           }),
@@ -164,7 +168,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
       }
 
       const live = await handleChatCompletion({
-        authorization: auth,
+        auth: authCtx,
         body: chatBody(probe.model),
         db,
       });
@@ -183,7 +187,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
       if (remaining === 0) {
         await expect(
           handleChatCompletion({
-            authorization: auth,
+            auth: await virtualKeyAuthContext(key, db),
             body: chatBody(probe.model),
             db,
           }),
@@ -214,7 +218,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
     );
 
     const first = await handleChatCompletion({
-      authorization: `Bearer ${issued.plaintextKey}`,
+      auth: await virtualKeyAuthContext(issued.plaintextKey!, db),
       body: chatBody("gpt-4o-mini"),
       db,
       forward: async () => ({
@@ -236,7 +240,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
 
     await expect(
       handleChatCompletion({
-        authorization: `Bearer ${issued.plaintextKey}`,
+        auth: await virtualKeyAuthContext(issued.plaintextKey!, db),
         body: chatBody("gpt-4o-mini"),
         db,
         forward: async () => {
@@ -279,7 +283,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
 
     await expect(
       handleMessages({
-        authorization: `Bearer ${openai.plaintextKey}`,
+        auth: await virtualKeyAuthContext(openai.plaintextKey!, db),
         body: {
           model: "claude-haiku-4-5",
           max_tokens: 16,
@@ -290,7 +294,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
     ).rejects.toMatchObject({ message: "provider_api_mismatch", status: 400 } satisfies Partial<GatewayError>);
 
     const response = await handleMessages({
-      authorization: `Bearer ${claude.plaintextKey}`,
+      auth: await virtualKeyAuthContext(claude.plaintextKey!, db),
       body: {
         model: "claude-haiku-4-5",
         max_tokens: 16,
@@ -352,7 +356,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
 
     await expect(
       handleGenerateContent({
-        authorization: `Bearer ${openai.plaintextKey}`,
+        auth: await virtualKeyAuthContext(openai.plaintextKey!, db),
         model: "gemini-2.5-flash",
         body: { contents: [{ role: "user", parts: [{ text: "Hello" }] }] },
         db,
@@ -363,7 +367,7 @@ describe("LLM gateway E2E — credit → redeem(provider) → acc_ → AI Gatewa
     } satisfies Partial<GatewayError>);
 
     const response = await handleGenerateContent({
-      authorization: `Bearer ${google.plaintextKey}`,
+      auth: await virtualKeyAuthContext(google.plaintextKey!, db),
       model: "models/gemini-2.5-flash",
       body: { contents: [{ role: "user", parts: [{ text: "Hello" }] }] },
       db,

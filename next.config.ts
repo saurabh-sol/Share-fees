@@ -1,12 +1,19 @@
 import type { NextConfig } from "next";
 
+const GATEWAY_ALLOW_HEADERS =
+  "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta, payment-required, payment-signature, payment-response, x-payment, X-Payment, X-Payment-Response";
+
 const GATEWAY_CORS_HEADERS = [
   { key: "Access-Control-Allow-Origin", value: "*" },
   { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
   {
     key: "Access-Control-Allow-Headers",
+    value: GATEWAY_ALLOW_HEADERS,
+  },
+  {
+    key: "Access-Control-Expose-Headers",
     value:
-      "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta",
+      "X-Accrued-Remaining-Cents, X-Accrued-Provider, X-Accrued-Spend-Cap-Cents, payment-required, payment-response, x-payment-response",
   },
 ];
 
@@ -32,7 +39,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -40,7 +47,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -48,7 +55,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -56,7 +63,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -64,7 +71,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -72,7 +79,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -80,7 +87,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -88,7 +95,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -96,7 +103,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -104,7 +111,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       {
@@ -112,7 +119,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, api-key, x-api-key, x-goog-api-key, anthropic-version, anthropic-beta" },
+          { key: "Access-Control-Allow-Headers", value: GATEWAY_ALLOW_HEADERS },
         ],
       },
       { source: "/v1beta/:path*", headers: GATEWAY_CORS_HEADERS },

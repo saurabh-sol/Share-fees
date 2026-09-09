@@ -86,11 +86,40 @@ await client.messages.create({
   -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'`}
       />
 
+      <DocsH2 id="x402-agents">Agents (x402 / USDG)</DocsH2>
+      <DocsP>
+        Autonomous agents can call the same LLM routes without an acc_ key when x402 is enabled on the server.
+        The first request returns HTTP 402 with a machine-readable USDG offer on Robinhood Chain. Sign the
+        Permit2 witness authorization and retry with the payment-signature header (or x-payment). Desk users
+        keep the prepaid acc_ flow unchanged.
+      </DocsP>
+      <DocsCode
+        language="js"
+        code={`import { createClient, getSettlement } from "@meshgateway/mpp-client";
+
+const mpp = createClient({ signer, maxAmount: "0.05" });
+const res = await mpp.fetch("${origin}/v1/chat/completions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: "Hello" }],
+  }),
+});
+console.log(await res.json());
+console.log(getSettlement(res)); // tx hash + payer`}
+      />
+      <DocsP>
+        Discover pricing without auth: GET {origin}/v1/models (includes x402 metadata), GET{" "}
+        {origin}/.well-known/x402, or GET {origin}/v1/x402/openapi.json.
+      </DocsP>
+
       <DocsH2 id="errors">Errors</DocsH2>
       <DocsP>
-        401 means the key is missing, revoked, or unknown. 400 means the body failed validation. 402 means the
-        cap is spent. 503 means the upstream gateway is unset for that vendor. Desk credit still caps the key
-        even when Gateway is healthy.
+        401 means the key is missing, revoked, or unknown (when x402 is off). 402 with payment_required means
+        an agent must pay via x402; 402 with insufficient_credits means a spent acc_ key. 400 means the body
+        failed validation. 503 means the upstream gateway is unset for that vendor. Desk credit still caps the
+        key even when Gateway is healthy.
       </DocsP>
       <DocsCallout title="Do not put vendor keys in the client">
         acc_ is the only key you paste into Cursor or a local SDK. {LLM_PROVIDER_SUMMARY} keys never leave the

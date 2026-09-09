@@ -103,14 +103,31 @@ export function ApiKeyTryPanel({
         gatewayBaseUrl,
         apiKey: key,
         message,
+        requestOrigin: typeof window !== "undefined" ? window.location.origin : undefined,
       });
       const response = await fetch(req.url, {
         method: req.method,
         headers: req.headers,
         body: JSON.stringify(req.body),
       });
-      const json = (await response.json()) as unknown;
-      setRawJson(JSON.stringify(json, null, 2));
+      const rawText = await response.text();
+      let json: unknown = null;
+      if (rawText) {
+        try {
+          json = JSON.parse(rawText) as unknown;
+          setRawJson(JSON.stringify(json, null, 2));
+        } catch {
+          setRawJson(rawText);
+          setAdvancedOpen(true);
+          setError(`The API returned a non-JSON response (${response.status}).`);
+          return;
+        }
+      } else {
+        setRawJson("(empty response body)");
+        setAdvancedOpen(true);
+        setError(`The API returned an empty body (${response.status}).`);
+        return;
+      }
 
       const headers = readTryResultHeaders(response);
       if (headers.remainingCents !== null) {
@@ -118,14 +135,20 @@ export function ApiKeyTryPanel({
       }
 
       if (!response.ok) {
+        setAdvancedOpen(true);
         setError(humanizeTryError(response.status, json, model));
         return;
       }
 
-      setReply(extractTryReply(provider, json));
+      const text = extractTryReply(provider, json);
+      setReply(text);
+      if (text === "No reply text in the response.") {
+        setAdvancedOpen(true);
+      }
       onSuccess?.();
     } catch {
-      setError("Could not reach the API. Try again.");
+      setAdvancedOpen(true);
+      setError("Could not reach the API on this page. Check your connection and try again.");
     } finally {
       setRunning(false);
     }
@@ -144,7 +167,8 @@ export function ApiKeyTryPanel({
         <h2 className="mt-2 text-xl tracking-tight text-zinc-100">{title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-zinc-400">
           Type a short message, paste your key, and run a real test call. Each run uses a small amount of
-          credit from that key.
+          credit from that key. The full acc_ key is shown once at redeem — paste that exact string, not the
+          prefix from the list below.
         </p>
       </div>
 

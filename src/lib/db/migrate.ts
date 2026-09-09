@@ -266,6 +266,23 @@ const STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS holder_balance_checks_verification ON holder_balance_checks (verification_id, checked_at)`,
   `CREATE INDEX IF NOT EXISTS holder_balance_checks_user ON holder_balance_checks (user_id)`,
+  `CREATE TABLE IF NOT EXISTS x402_settlements (
+    id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL,
+    payer TEXT NOT NULL,
+    tx_hash TEXT NOT NULL,
+    amount_usdg TEXT NOT NULL,
+    model TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    actual_cents INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'settled',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS x402_settlements_tx_hash ON x402_settlements (tx_hash)`,
+  `CREATE INDEX IF NOT EXISTS x402_settlements_payer ON x402_settlements (payer)`,
+  `CREATE INDEX IF NOT EXISTS x402_settlements_created ON x402_settlements (created_at)`,
   `INSERT INTO reward_rules (
     id, version, conversion_bps, min_notional_usd_cents, daily_cap_usd_cents, enabled, active_from
   )

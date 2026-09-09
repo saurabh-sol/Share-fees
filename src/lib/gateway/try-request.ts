@@ -25,14 +25,23 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+/** Browser fetches should use the current page origin, not NEXT_PUBLIC_APP_URL (port/domain drift). */
+export function resolveTryRequestOrigin(gatewayBaseUrl: string, requestOrigin?: string) {
+  const trimmed = requestOrigin?.trim().replace(/\/$/, "");
+  if (trimmed) return trimmed;
+  return originFromGatewayBase(gatewayBaseUrl);
+}
+
 export function buildTryRequest(input: {
   provider: LlmProvider;
   model: string;
   gatewayBaseUrl: string;
   apiKey: string;
   message: string;
+  /** When set (browser), overrides gatewayBaseUrl for the live fetch URL only. */
+  requestOrigin?: string;
 }): TryRequest {
-  const origin = originFromGatewayBase(input.gatewayBaseUrl);
+  const origin = resolveTryRequestOrigin(input.gatewayBaseUrl, input.requestOrigin);
   const text = input.message.trim() || DEFAULT_TRY_MESSAGE;
 
   if (input.provider === "anthropic") {
@@ -158,14 +167,25 @@ function errorMessage(json: unknown): string | null {
 export function humanizeTryError(status: number, json: unknown, lockedModel?: string): string {
   const raw = errorMessage(json)?.toLowerCase() ?? "";
 
+  if (status === 0 || raw.includes("failed to fetch") || raw.includes("networkerror")) {
+    return "Could not reach the API on this site. Refresh and try again, or check that the desk URL matches your session.";
+  }
   if (status === 401 || raw.includes("invalid_api_key")) {
     return "This key was not recognized. Paste the full acc_ key or redeem a new one.";
   }
   if (status === 402 || raw.includes("insufficient_credits")) {
     return "This key is out of credit. Redeem more LLM credits on the desk.";
   }
-  if (status === 503 || raw.includes("not configured") || raw.includes("provider")) {
-    return "That provider is unavailable right now. Try again later.";
+  if (
+    status === 503 ||
+    raw.includes("not configured") ||
+    raw.includes("provider_pool_empty") ||
+    raw.includes("provider")
+  ) {
+    return "That provider is unavailable right now. The server may be missing AI_GATEWAY_API_KEY.";
+  }
+  if (raw.includes("gateway_failed") || raw.includes("failed query")) {
+    return "The API could not reach the database. Try again in a minute or contact support.";
   }
   if (status === 429 || raw.includes("rate_limit")) {
     return "Too many requests. Wait a minute and try again.";

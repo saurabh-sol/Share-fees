@@ -2,7 +2,8 @@ import { z } from "zod";
 import { gatewayJson, gatewayPreflight, withGatewayCors } from "./cors";
 import { anthropicErrorBody } from "./anthropic";
 import { geminiErrorBody, parseGeminiPath } from "./gemini";
-import { openaiErrorBody, readGatewayApiKey } from "./openai";
+import { openaiErrorBody } from "./openai";
+import { PaymentRequiredError, resolveGatewayAuth, resolveModelsAuth } from "./auth";
 import {
   GatewayError,
   handleChatCompletion,
@@ -14,12 +15,33 @@ import {
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/origin";
 
+function paymentRequiredResponse(challenge: Response) {
+  const headers = new Headers(challenge.headers);
+  headers.set("content-type", "application/json");
+  return withGatewayCors(
+    new Response(challenge.body, {
+      status: 402,
+      statusText: challenge.statusText,
+      headers,
+    }),
+  );
+}
+
 function gatewayErrorResponse(error: unknown) {
+  if (error instanceof PaymentRequiredError) {
+    return paymentRequiredResponse(error.challenge);
+  }
   if (error instanceof RateLimitError) {
     return gatewayJson(429, openaiErrorBody("rate_limit_exceeded", 429, "rate_limited"));
   }
   if (error instanceof GatewayError) {
-    return gatewayJson(error.status, openaiErrorBody(error.message, error.status));
+    const code =
+      error.message === "insufficient_credits"
+        ? "insufficient_credits"
+        : error.message === "payment_required"
+          ? "payment_required"
+          : error.message;
+    return gatewayJson(error.status, openaiErrorBody(code, error.status));
   }
   if (error instanceof z.ZodError) {
     return gatewayJson(400, openaiErrorBody("invalid_body", 400));
@@ -38,9 +60,15 @@ export async function postChatCompletions(request: Request) {
   try {
     await rateLimitOrThrow(`gateway-ip:${clientIp(request)}`, 60, 60 * 1000);
     const body = await request.json();
-    const response = await handleChatCompletion({
-      authorization: readGatewayApiKey(request),
+    const auth = await resolveGatewayAuth({
+      request,
       body,
+      route: "chat",
+    });
+    const response = await handleChatCompletion({
+      auth,
+      body,
+      requestId: crypto.randomUUID(),
     });
     return withGatewayCors(response);
   } catch (error) {
@@ -52,12 +80,21 @@ export async function postMessages(request: Request) {
   try {
     await rateLimitOrThrow(`gateway-ip:${clientIp(request)}`, 60, 60 * 1000);
     const body = await request.json();
-    const response = await handleMessages({
-      authorization: readGatewayApiKey(request),
+    const auth = await resolveGatewayAuth({
+      request,
       body,
+      route: "messages",
+    });
+    const response = await handleMessages({
+      auth,
+      body,
+      requestId: crypto.randomUUID(),
     });
     return withGatewayCors(response);
   } catch (error) {
+    if (error instanceof PaymentRequiredError) {
+      return paymentRequiredResponse(error.challenge);
+    }
     if (error instanceof RateLimitError) {
       return gatewayJson(429, anthropicErrorBody("rate_limit_exceeded", 429, "rate_limited"));
     }
@@ -77,9 +114,8 @@ export async function postMessages(request: Request) {
 export async function getModels(request: Request) {
   try {
     await rateLimitOrThrow(`gateway-models:${clientIp(request)}`, 60, 60 * 1000);
-    const body = await handleListModels({
-      authorization: readGatewayApiKey(request),
-    });
+    const auth = await resolveModelsAuth({ request });
+    const body = await handleListModels({ auth });
     return gatewayJson(200, body);
   } catch (error) {
     return gatewayErrorResponse(error);
@@ -89,10 +125,8 @@ export async function getModels(request: Request) {
 export async function getModel(request: Request, modelId: string) {
   try {
     await rateLimitOrThrow(`gateway-models:${clientIp(request)}`, 60, 60 * 1000);
-    const body = await handleRetrieveModel({
-      authorization: readGatewayApiKey(request),
-      modelId,
-    });
+    const auth = await resolveModelsAuth({ request });
+    const body = await handleRetrieveModel({ auth, modelId });
     return gatewayJson(200, body);
   } catch (error) {
     return gatewayErrorResponse(error);
@@ -100,6 +134,9 @@ export async function getModel(request: Request, modelId: string) {
 }
 
 function geminiErrorResponse(error: unknown) {
+  if (error instanceof PaymentRequiredError) {
+    return paymentRequiredResponse(error.challenge);
+  }
   if (error instanceof RateLimitError) {
     return gatewayJson(429, geminiErrorBody("rate_limit_exceeded", 429, "rate_limited"));
   }
@@ -119,10 +156,17 @@ export async function postGenerateContent(request: Request, model: string) {
   try {
     await rateLimitOrThrow(`gateway-ip:${clientIp(request)}`, 60, 60 * 1000);
     const body = await request.json();
+    const auth = await resolveGatewayAuth({
+      request,
+      body,
+      route: "generate",
+      modelOverride: model,
+    });
     const response = await handleGenerateContent({
-      authorization: readGatewayApiKey(request),
+      auth,
       model,
       body,
+      requestId: crypto.randomUUID(),
     });
     return withGatewayCors(response);
   } catch (error) {

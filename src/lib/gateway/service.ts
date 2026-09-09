@@ -9,6 +9,8 @@ import {
   RESPONSE_HEADER_SPEND_CAP,
 } from "@/lib/brand";
 import { rateLimitOrThrow } from "@/lib/security/rate-limit";
+import { recordX402Settlement } from "@/lib/x402/settle";
+import { x402ModelsList } from "@/lib/x402/discovery";
 import { anthropicMessagesSchema, chatCompletionSchema, geminiGenerateSchema } from "@/lib/validation/swap";
 import {
   DEFAULT_LLM_MODEL,
@@ -20,6 +22,7 @@ import {
   modelsForProvider,
   type LlmProvider,
 } from "./catalog";
+import type { GatewayAuthContext } from "@/lib/x402/types";
 import { GatewayError } from "./errors";
 import { reshapeAnthropicMessage } from "./anthropic";
 import { geminiToChatBody, reshapeGeminiContent } from "./gemini";
@@ -41,6 +44,8 @@ export const GATEWAY_MODELS = allGatewayModels().map((item) => item.id);
  *    Models: GET {origin}/v1/models
  * → hash lookup + spend cap → Vercel AI Gateway (or a leftover provider pool
  *    key) → settle cents. The client never sees upstream credentials.
+ *
+ * Dual rail: acc_ keys OR x402 USDG pay-per-request when X402_ENABLED.
  */
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -165,17 +170,29 @@ function resolveRequestModel(provider: LlmProvider, keyModel: string, requested:
   }
 }
 
-export async function handleListModels(input: { authorization: string | null; db?: Db }) {
-  const raw = readBearerToken(input.authorization);
-  const key = await authenticateVirtualKey(raw, input.db);
+function rateLimitKey(auth: GatewayAuthContext) {
+  if (auth.mode === "virtualKey") {
+    return `gateway:${auth.key.keyHash}`;
+  }
+  return `gateway:x402:${auth.payer.toLowerCase()}`;
+}
+
+export async function handleListModels(input: {
+  auth: GatewayAuthContext | null;
+  db?: Db;
+}) {
+  if (!input.auth || input.auth.mode === "x402") {
+    return x402ModelsList();
+  }
+  const provider = input.auth.key.provider;
   return {
     object: "list" as const,
-    data: modelsForProvider(key.provider).map((item) => toOpenAiModel(item.id, key.provider)),
+    data: modelsForProvider(provider).map((item) => toOpenAiModel(item.id, provider)),
   };
 }
 
 export async function handleRetrieveModel(input: {
-  authorization: string | null;
+  auth: GatewayAuthContext | null;
   modelId: string;
   db?: Db;
 }) {
@@ -188,27 +205,64 @@ export async function handleRetrieveModel(input: {
 }
 
 export async function handleChatCompletion(input: {
-  authorization: string | null;
+  auth: GatewayAuthContext;
   body: unknown;
   forward?: ChatForwarder;
   db?: Db;
+  requestId?: string;
 }) {
-  const raw = readBearerToken(input.authorization);
-  const key = await authenticateVirtualKey(raw, input.db);
-  await rateLimitOrThrow(`gateway:${key.keyHash}`, 30, 60_000);
-  await rateLimitOrThrow(`gateway:${key.provider}:${key.keyHash}`, 20, 60_000);
+  const auth = input.auth;
+  await rateLimitOrThrow(rateLimitKey(auth), 30, 60_000);
+  if (auth.mode === "virtualKey") {
+    await rateLimitOrThrow(`gateway:${auth.key.provider}:${auth.key.keyHash}`, 20, 60_000);
+  }
 
   const parsed = chatCompletionSchema.parse(input.body);
   if (parsed.stream) {
     throw new GatewayError("stream_not_supported", 400);
   }
 
-  const provider = key.provider;
-  const model = resolveRequestModel(provider, key.model ?? DEFAULT_LLM_MODEL, parsed.model);
+  const provider = auth.mode === "virtualKey" ? auth.key.provider : auth.provider;
+  const keyModel =
+    auth.mode === "virtualKey" ? (auth.key.model ?? DEFAULT_LLM_MODEL) : auth.model;
+  const model = resolveRequestModel(provider, keyModel, parsed.model);
   const routedBody = { ...parsed, model };
 
   const client = input.db ?? (await getDb());
-  const reservation = await reserveVirtualKey(key.id, client);
+
+  if (auth.mode === "x402") {
+    const forward = input.forward ?? forwarderFor(provider);
+    const result = await forward({ body: routedBody });
+    const used = estimateUsageCents({
+      provider,
+      model: result.model || model,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+    });
+    await recordX402Settlement(
+      {
+        requestId: input.requestId ?? crypto.randomUUID(),
+        payer: auth.payer,
+        txHash: auth.txHash,
+        amountUsdg: auth.maxPriceUsdg,
+        model: result.model || model,
+        provider,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        actualCents: used,
+      },
+      client,
+    );
+    const shaped = reshapeProviderCompletion(await result.response.json(), result.model || model);
+    const headers = new Headers({ "content-type": "application/json" });
+    for (const [key, value] of Object.entries(auth.responseHeaders)) {
+      headers.set(key, value);
+    }
+    headers.set(RESPONSE_HEADER_PROVIDER, provider);
+    return Response.json(shaped, { status: 200, headers });
+  }
+
+  const reservation = await reserveVirtualKey(auth.key.id, client);
   try {
     const forward = input.forward ?? forwarderFor(provider);
     const result = await forward({ body: routedBody });
@@ -219,7 +273,7 @@ export async function handleChatCompletion(input: {
       completionTokens: result.completionTokens,
     });
     const remainingCents = await settleVirtualKeyReservation(
-      key.id,
+      auth.key.id,
       reservation.usedBefore,
       reservation.cap,
       used,
@@ -237,34 +291,72 @@ export async function handleChatCompletion(input: {
       headers,
     });
   } catch (error) {
-    await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);
+    await releaseVirtualKeyReservation(auth.key.id, reservation.usedBefore, client);
     throw error;
   }
 }
 
 export async function handleMessages(input: {
-  authorization: string | null;
+  auth: GatewayAuthContext;
   body: unknown;
   forward?: ChatForwarder;
   db?: Db;
+  requestId?: string;
 }) {
-  const raw = readBearerToken(input.authorization);
-  const key = await authenticateVirtualKey(raw, input.db);
-  if (key.provider !== "anthropic") {
+  const auth = input.auth;
+  const provider = auth.mode === "virtualKey" ? auth.key.provider : auth.provider;
+  if (provider !== "anthropic") {
     throw new GatewayError("provider_api_mismatch", 400);
   }
-  await rateLimitOrThrow(`gateway:${key.keyHash}`, 30, 60_000);
-  await rateLimitOrThrow(`gateway:${key.provider}:${key.keyHash}`, 20, 60_000);
+  await rateLimitOrThrow(rateLimitKey(auth), 30, 60_000);
+  if (auth.mode === "virtualKey") {
+    await rateLimitOrThrow(`gateway:anthropic:${auth.key.keyHash}`, 20, 60_000);
+  }
 
   const parsed = anthropicMessagesSchema.parse(input.body);
   if (parsed.stream) {
     throw new GatewayError("stream_not_supported", 400);
   }
 
-  const model = resolveRequestModel("anthropic", key.model ?? "claude-haiku-4-5", parsed.model);
+  const keyModel =
+    auth.mode === "virtualKey" ? (auth.key.model ?? "claude-haiku-4-5") : auth.model;
+  const model = resolveRequestModel("anthropic", keyModel, parsed.model);
   const routedBody = { ...parsed, model };
   const client = input.db ?? (await getDb());
-  const reservation = await reserveVirtualKey(key.id, client);
+
+  if (auth.mode === "x402") {
+    const forward = input.forward ?? forwardAnthropicMessages;
+    const result = await forward({ body: routedBody });
+    const used = estimateUsageCents({
+      provider: "anthropic",
+      model: result.model || model,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+    });
+    await recordX402Settlement(
+      {
+        requestId: input.requestId ?? crypto.randomUUID(),
+        payer: auth.payer,
+        txHash: auth.txHash,
+        amountUsdg: auth.maxPriceUsdg,
+        model: result.model || model,
+        provider: "anthropic",
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        actualCents: used,
+      },
+      client,
+    );
+    const payload = reshapeAnthropicMessage(await result.response.json(), result.model || model);
+    const headers = new Headers({ "content-type": "application/json" });
+    for (const [key, value] of Object.entries(auth.responseHeaders)) {
+      headers.set(key, value);
+    }
+    headers.set(RESPONSE_HEADER_PROVIDER, "anthropic");
+    return Response.json(payload, { status: 200, headers });
+  }
+
+  const reservation = await reserveVirtualKey(auth.key.id, client);
   try {
     const forward = input.forward ?? forwardAnthropicMessages;
     const result = await forward({ body: routedBody });
@@ -275,7 +367,7 @@ export async function handleMessages(input: {
       completionTokens: result.completionTokens,
     });
     const remainingCents = await settleVirtualKeyReservation(
-      key.id,
+      auth.key.id,
       reservation.usedBefore,
       reservation.cap,
       used,
@@ -288,34 +380,37 @@ export async function handleMessages(input: {
     headers.set(RESPONSE_HEADER_SPEND_CAP, String(reservation.cap));
     return Response.json(payload, { status: 200, headers });
   } catch (error) {
-    await releaseVirtualKeyReservation(key.id, reservation.usedBefore, client);
+    await releaseVirtualKeyReservation(auth.key.id, reservation.usedBefore, client);
     throw error;
   }
 }
 
 export async function handleGenerateContent(input: {
-  authorization: string | null;
+  auth: GatewayAuthContext;
   model: string;
   body: unknown;
   forward?: ChatForwarder;
   db?: Db;
+  requestId?: string;
 }) {
-  const raw = readBearerToken(input.authorization);
-  const key = await authenticateVirtualKey(raw, input.db);
-  if (key.provider !== "google") {
+  const auth = input.auth;
+  const provider = auth.mode === "virtualKey" ? auth.key.provider : auth.provider;
+  if (provider !== "google") {
     throw new GatewayError("provider_api_mismatch", 400);
   }
   const parsed = geminiGenerateSchema.parse(input.body);
-  const model = resolveRequestModel("google", key.model ?? DEFAULT_LLM_MODEL, input.model);
+  const keyModel = auth.mode === "virtualKey" ? (auth.key.model ?? DEFAULT_LLM_MODEL) : auth.model;
+  const model = resolveRequestModel("google", keyModel, input.model);
   const routed = geminiToChatBody(model, parsed);
   if (routed.messages.length === 0) {
     throw new GatewayError("invalid_body", 400);
   }
   const response = await handleChatCompletion({
-    authorization: input.authorization,
+    auth,
     body: routed,
     forward: input.forward,
     db: input.db,
+    requestId: input.requestId,
   });
   const headers = new Headers(response.headers);
   const payload = reshapeGeminiContent(await response.json(), model);

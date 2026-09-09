@@ -61,6 +61,18 @@ describe("buildTryRequest", () => {
     expect(req.url).toBe("https://accrued.example/v1beta/models/gemini-2.0-flash:generateContent");
     expect(req.headers["x-goog-api-key"]).toBe("acc_test");
   });
+
+  it("prefers requestOrigin over gatewayBaseUrl for live browser fetches", () => {
+    const req = buildTryRequest({
+      provider: "openai",
+      model: "gpt-4o-mini",
+      gatewayBaseUrl: "http://localhost:3000/v1",
+      requestOrigin: "http://localhost:3001",
+      apiKey: "acc_test",
+      message: "Hi",
+    });
+    expect(req.url).toBe("http://localhost:3001/v1/chat/completions");
+  });
 });
 
 describe("extractTryReply", () => {

@@ -367,6 +367,29 @@ export const holderBalanceChecks = pgTable(
   ],
 );
 
+export const x402Settlements = pgTable(
+  "x402_settlements",
+  {
+    id: text("id").primaryKey(),
+    requestId: text("request_id").notNull(),
+    payer: text("payer").notNull(),
+    txHash: text("tx_hash").notNull(),
+    amountUsdg: text("amount_usdg").notNull(),
+    model: text("model").notNull(),
+    provider: text("provider").notNull(),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    actualCents: integer("actual_cents").notNull().default(0),
+    status: text("status").notNull().default("settled"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("x402_settlements_tx_hash").on(table.txHash),
+    index("x402_settlements_payer").on(table.payer),
+    index("x402_settlements_created").on(table.createdAt),
+  ],
+);
+
 export const payoutOutbox = pgTable(
   "payout_outbox",
   {

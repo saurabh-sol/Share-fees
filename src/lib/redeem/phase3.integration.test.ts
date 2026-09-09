@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { ledgerEntries, payoutOutbox, redemptions, users, virtualKeys, wallets } from "@/lib/db/schema";
+import { resolveGatewayAuth } from "@/lib/gateway/auth";
 import { GatewayError, authenticateVirtualKey, consumeVirtualKey, handleChatCompletion } from "@/lib/gateway/service";
+import { virtualKeyAuthContext } from "@/lib/gateway/test-auth";
 import { RESPONSE_HEADER_REMAINING } from "@/lib/brand";
 import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
@@ -264,18 +266,17 @@ describe("phase 3 redeem + gateway", () => {
 
     await expect(authenticateVirtualKey("acc_deadbeef", db)).rejects.toBeInstanceOf(GatewayError);
     await expect(
-      handleChatCompletion({
-        authorization: "Bearer sk-openai",
+      resolveGatewayAuth({
+        request: new Request("https://example.com/v1/chat/completions", {
+          headers: { Authorization: "Bearer sk-openai" },
+        }),
         body: chatBody,
-        db,
-        forward: async () => {
-          throw new Error("should_not_forward");
-        },
+        route: "chat",
       }),
     ).rejects.toMatchObject({ message: "invalid_api_key" });
 
     const response = await handleChatCompletion({
-      authorization: `Bearer ${issued.plaintextKey}`,
+      auth: await virtualKeyAuthContext(issued.plaintextKey!, db),
       body: chatBody,
       db,
       forward: async () => ({
@@ -319,8 +320,9 @@ describe("phase 3 redeem + gateway", () => {
       release = resolve;
     });
 
+    const authCtx = await virtualKeyAuthContext(issued.plaintextKey!, db);
     const first = handleChatCompletion({
-      authorization: `Bearer ${issued.plaintextKey}`,
+      auth: authCtx,
       body: chatBody,
       db,
       forward: async () => {
@@ -336,7 +338,7 @@ describe("phase 3 redeem + gateway", () => {
     await new Promise((resolve) => setTimeout(resolve, 40));
     await expect(
       handleChatCompletion({
-        authorization: `Bearer ${issued.plaintextKey}`,
+        auth: authCtx,
         body: chatBody,
         db,
         forward: async () => ({
@@ -418,7 +420,7 @@ describe("phase 3 redeem + gateway", () => {
 
     await expect(
       handleChatCompletion({
-        authorization: `Bearer ${issued.plaintextKey}`,
+        auth: await virtualKeyAuthContext(issued.plaintextKey!, db),
         body: { ...chatBody, model: "gpt-4o" },
         db,
         forward: async () => {

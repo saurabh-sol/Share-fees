@@ -145,7 +145,10 @@ export function reshapeProviderCompletion(
   };
 }
 
-export function readGatewayApiKey(request: Request) {
+function readAuthorizationHeader(request: Request | string | null) {
+  if (typeof request === "string" || request === null) {
+    return request;
+  }
   const authorization = request.headers.get("authorization");
   if (authorization) {
     return authorization.startsWith("Bearer ") ? authorization : `Bearer ${authorization}`;
@@ -157,7 +160,22 @@ export function readGatewayApiKey(request: Request) {
   if (apiKey) return `Bearer ${apiKey}`;
   const queryKey = new URL(request.url).searchParams.get("key")?.trim();
   if (queryKey) return `Bearer ${queryKey}`;
-  throw new GatewayError("invalid_api_key", 401);
+  return null;
+}
+
+export function readOptionalGatewayApiKey(request: Request | string | null) {
+  const header = readAuthorizationHeader(request);
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
+  return token || null;
+}
+
+export function readGatewayApiKey(request: Request) {
+  const token = readOptionalGatewayApiKey(request);
+  if (!token) {
+    throw new GatewayError("invalid_api_key", 401);
+  }
+  return `Bearer ${token}`;
 }
 
 export const readOpenAiApiKey = readGatewayApiKey;
