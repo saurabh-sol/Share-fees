@@ -1,16 +1,16 @@
 import { eq, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { creditEvents, discoveredSwaps, swaps } from "@/lib/db/schema";
+import { creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
 
 export type PublicDeskStats = {
   activeWallets: number;
-  fillsCredited: number;
+  claimedLlmCreditsUsd: number;
   creditPaidUsd: number;
   swapVolumeUsd: number;
   asOf: string;
 };
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 1000;
 let cache: { value: PublicDeskStats; expiresAt: number } | null = null;
 
 export function clearPublicDeskStatsCacheForTest() {
@@ -32,13 +32,19 @@ export async function getPublicDeskStats(options?: {
     const [creditRow] = await client
       .select({
         creditWallets: sql<number>`count(distinct ${creditEvents.userId})`,
-        fillsCredited: sql<number>`count(${creditEvents.id})`,
         creditPaidCents: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
         creditVolumeCents: sql<number>`coalesce(sum(${swaps.notionalUsdCents}), 0)`,
       })
       .from(creditEvents)
       .innerJoin(swaps, eq(creditEvents.swapId, swaps.id))
       .where(ne(swaps.source, "mock"));
+
+    const [llmRow] = await client
+      .select({
+        claimedLlmCents: sql<number>`coalesce(sum(${redemptions.amountCents}), 0)`,
+      })
+      .from(redemptions)
+      .where(eq(redemptions.rail, "llm_credits"));
 
     // 2. Scanned wallet stats (any wallet that scanned — regardless of credit).
     const [scanRow] = await client
@@ -71,7 +77,7 @@ export async function getPublicDeskStats(options?: {
 
     const stats: PublicDeskStats = {
       activeWallets,
-      fillsCredited: Number(creditRow?.fillsCredited ?? 0),
+      claimedLlmCreditsUsd: Number(llmRow?.claimedLlmCents ?? 0) / 100,
       creditPaidUsd: Math.round(Number(creditRow?.creditPaidCents ?? 0) / 100),
       swapVolumeUsd: Math.round(totalVolumeCents / 100),
       asOf: new Date().toISOString(),

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { docsPageTitle } from "@/lib/brand";
+import { docsPageTitle, PRODUCTION_APP_ORIGIN } from "@/lib/brand";
 import { DocsCode } from "@/components/docs/DocsCode";
 import {
   DocsA,
@@ -13,7 +13,6 @@ import {
   DocsTable,
 } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
-import { env } from "@/lib/env";
 
 const MESH_SLUG = "accrued-llm";
 const FACILITATOR_URL = "https://facilitator.meshgateway.co";
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default function X402DocsPage() {
-  const origin = env.publicAppUrl.replace(/\/$/, "");
+  const origin = PRODUCTION_APP_ORIGIN;
   const meshBase = `https://api.meshgateway.co/m/${MESH_SLUG}`;
   const discoveryAccrued = `${origin}/.well-known/x402`;
   const discoveryMesh = `${meshBase}/openapi.json`;

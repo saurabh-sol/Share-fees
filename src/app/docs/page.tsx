@@ -39,7 +39,7 @@ export default function DocsHomePage() {
         Changing the published rule later does not rewrite rows that already posted.
       </DocsP>
       <DocsP>
-        The landing page shows aggregate desk stats (active wallets, fills credited, credit posted). Those numbers
+        The landing page shows aggregate desk stats (active wallets, claimed LLM credits, credit posted). Those numbers
         are totals only — no wallet addresses or transaction hashes are published.
       </DocsP>
 

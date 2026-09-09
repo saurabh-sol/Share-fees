@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { createTestDb } from "@/lib/db/client";
-import { users, wallets } from "@/lib/db/schema";
+import { redemptions, users, wallets } from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { clearPublicDeskStatsCacheForTest, getPublicDeskStats } from "./public";
 
@@ -43,7 +43,7 @@ describe("public desk stats", () => {
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats).toMatchObject({
       activeWallets: 0,
-      fillsCredited: 0,
+      claimedLlmCreditsUsd: 0,
       creditPaidUsd: 0,
       swapVolumeUsd: 0,
     });
@@ -66,7 +66,7 @@ describe("public desk stats", () => {
 
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats?.activeWallets).toBe(1);
-    expect(stats?.fillsCredited).toBe(1);
+    expect(stats?.claimedLlmCreditsUsd).toBe(0);
     expect(stats?.creditPaidUsd).toBe(4);
     expect(stats?.swapVolumeUsd).toBe(764);
   });
@@ -88,7 +88,36 @@ describe("public desk stats", () => {
 
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats?.activeWallets).toBe(0);
-    expect(stats?.fillsCredited).toBe(0);
+    expect(stats?.claimedLlmCreditsUsd).toBe(0);
+  });
+
+  it("sums claimed LLM credits from llm_credits redemptions", async () => {
+    const db = await createTestDb();
+    const userId = "user_stats_llm";
+    await seedUser(db, userId, "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+    await db.insert(redemptions).values([
+      {
+        id: "red_llm_1",
+        userId,
+        rail: "llm_credits",
+        amountCents: 122,
+        status: "fulfilled",
+        destination: userId,
+        idempotencyKey: "idem_1",
+      },
+      {
+        id: "red_llm_2",
+        userId,
+        rail: "llm_credits",
+        amountCents: 500,
+        status: "fulfilled",
+        destination: userId,
+        idempotencyKey: "idem_2",
+      },
+    ]);
+
+    const stats = await getPublicDeskStats({ fresh: true, db });
+    expect(stats?.claimedLlmCreditsUsd).toBe(6.22);
   });
 
   it("counts distinct wallets across multiple credited fills", async () => {
@@ -117,7 +146,7 @@ describe("public desk stats", () => {
 
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats?.activeWallets).toBe(2);
-    expect(stats?.fillsCredited).toBe(2);
+    expect(stats?.claimedLlmCreditsUsd).toBe(0);
     expect(stats?.creditPaidUsd).toBe(8);
     expect(stats?.swapVolumeUsd).toBe(1528);
   });

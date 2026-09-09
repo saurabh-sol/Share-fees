@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { docsPageTitle } from "@/lib/brand";
+import { docsPageTitle, PRODUCTION_APP_ORIGIN } from "@/lib/brand";
 import { DocsCode } from "@/components/docs/DocsCode";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
-import { env } from "@/lib/env";
 import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
 import { OFFICIAL_API_DESK_POINTS } from "@/lib/gateway/official-apis";
 
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function ApiDocsPage() {
-  const origin = env.publicAppUrl.replace(/\/$/, "");
+  const origin = PRODUCTION_APP_ORIGIN;
 
   return (
     <>

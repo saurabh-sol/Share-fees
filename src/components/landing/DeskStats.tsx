@@ -8,14 +8,19 @@ function formatCount(value: number | null) {
   return value.toLocaleString("en-US");
 }
 
-function formatUsd(value: number | null) {
+function formatUsd(value: number | null, precise = false) {
   if (value == null) return "—";
-  return `$${value.toLocaleString("en-US")}`;
+  return `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: precise ? 2 : 0,
+    maximumFractionDigits: precise ? 2 : 0,
+  })}`;
 }
+
+const POLL_MS = 30_000;
 
 const LIVE_METRICS = [
   { key: "activeWallets" as const, label: "Active wallets" },
-  { key: "fillsCredited" as const, label: "Fills credited" },
+  { key: "claimedLlmCreditsUsd" as const, label: "Claimed LLM credits" },
   { key: "creditPaidUsd" as const, label: "Credit posted" },
   { key: "swapVolumeUsd" as const, label: "Swap volume" },
 ] as const;
@@ -26,19 +31,26 @@ export function DeskStats() {
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/v1/stats/public")
-      .then(async (response) => {
+
+    async function load() {
+      try {
+        const response = await fetch("/api/v1/stats/public", { cache: "no-store" });
         if (!response.ok) throw new Error("stats_unavailable");
-        return (await response.json()) as PublicDeskStats;
-      })
-      .then((data) => {
-        if (!cancelled) setStats(data);
-      })
-      .catch(() => {
+        const data = (await response.json()) as PublicDeskStats;
+        if (!cancelled) {
+          setStats(data);
+          setFailed(false);
+        }
+      } catch {
         if (!cancelled) setFailed(true);
-      });
+      }
+    }
+
+    void load();
+    const timer = window.setInterval(() => void load(), POLL_MS);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -51,7 +63,9 @@ export function DeskStats() {
         const display =
           item.key === "creditPaidUsd" || item.key === "swapVolumeUsd"
             ? formatUsd(raw)
-            : formatCount(raw);
+            : item.key === "claimedLlmCreditsUsd"
+              ? formatUsd(raw, true)
+              : formatCount(raw);
         return (
           <div key={item.key} className="flex flex-col px-3 py-4 text-center md:py-5">
             <dt className="flex min-h-[2em] items-start justify-center font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
