@@ -41,8 +41,8 @@ export default async function AppShell({ children }: { children: ReactNode }) {
                   { href: "/app/claims", label: "Activity" },
                   { href: "/app/holder", label: "Verify holder" },
                   { href: "/app/chat", label: "Chat" },
-                  { href: "/app/deposit", label: "Deposit" },
-                  { href: "/app/deposit/stats", label: "Deposit stats" },
+                  { href: "/app/deposit", label: "Deposit", exact: true },
+                  { href: "/app/deposit/stats", label: "Deposit stats", exact: true },
                   { href: "/app/redeem", label: "Redeem" },
                   {
                     href: "/app/try-api",

@@ -328,6 +328,13 @@ const STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS accr_deposits_user ON accr_deposits (user_id)`,
   `CREATE INDEX IF NOT EXISTS accr_deposits_status ON accr_deposits (status)`,
+  `CREATE TABLE IF NOT EXISTS public_desk_stats_baseline (
+    id TEXT PRIMARY KEY,
+    min_active_wallets INTEGER NOT NULL DEFAULT 0,
+    min_claimed_llm_cents INTEGER NOT NULL DEFAULT 0,
+    min_swap_volume_usd INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
 ];
 
 export async function applyMigrations(db: AnyDb) {

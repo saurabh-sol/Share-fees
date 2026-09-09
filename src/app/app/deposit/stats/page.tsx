@@ -21,7 +21,19 @@ export default async function DepositStatsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const stats = await getDepositStats();
+  let stats: Awaited<ReturnType<typeof getDepositStats>> = {
+    uniqueDepositors: 0,
+    totalDeposits: 0,
+    totalAccrRaw: "0",
+    totalUsdCents: 0,
+    totalDisplayCreditCents: 0,
+    lastDepositAt: null,
+  };
+  try {
+    stats = await getDepositStats();
+  } catch (error) {
+    console.error("[deposit/stats] load failed", error);
+  }
   const totalAccrHuman = formatUnits(BigInt(stats.totalAccrRaw || "0"), 18);
 
   return (

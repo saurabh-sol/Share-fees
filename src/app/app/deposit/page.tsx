@@ -14,7 +14,12 @@ export default async function DepositPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const history = await listDepositHistory(session.user.id);
+  let history: Awaited<ReturnType<typeof listDepositHistory>> = [];
+  try {
+    history = await listDepositHistory(session.user.id);
+  } catch (error) {
+    console.error("[deposit] history load failed", error);
+  }
 
   return (
     <div className="space-y-8">

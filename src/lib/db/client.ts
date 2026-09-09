@@ -10,6 +10,7 @@ import ws from "ws";
 import { env } from "@/lib/env";
 import * as schema from "./schema";
 import { applyMigrations } from "./migrate";
+import { ensurePublicStatsBaseline } from "@/lib/stats/baseline";
 
 // Node's global WebSocket (undici) fails against Neon with an empty error.
 // The `ws` client is what @neondatabase/serverless documents for Node.
@@ -63,14 +64,19 @@ function localDataDir(): string {
   return path.join(base, ".data", "t2c");
 }
 
+async function prepareDb(db: AppDb) {
+  await applyMigrations(db);
+  await ensurePublicStatsBaseline(db as never);
+  return db;
+}
+
 async function createDb(): Promise<AppDb> {
   const url = databaseUrl();
   if (url) {
     if (isNeonDatabaseUrl(url)) {
       const pool = new Pool({ connectionString: url });
       const db = drizzleNeon({ client: pool, schema });
-      await applyMigrations(db);
-      return db;
+      return prepareDb(db);
     }
     const [{ default: postgres }, { drizzle: drizzlePostgres }] = await Promise.all([
       import("postgres"),
@@ -78,8 +84,7 @@ async function createDb(): Promise<AppDb> {
     ]);
     const client = postgres(url, { max: 8 });
     const db = drizzlePostgres(client, { schema });
-    await applyMigrations(db);
-    return db;
+    return prepareDb(db);
   }
 
   const dataDir = localDataDir();
@@ -87,8 +92,7 @@ async function createDb(): Promise<AppDb> {
   const pglite = new PGlite(dataDir);
   await pglite.waitReady;
   const db = drizzlePglite(pglite, { schema });
-  await applyMigrations(db);
-  return db;
+  return prepareDb(db);
 }
 
 export async function getDb(): Promise<AppDb> {

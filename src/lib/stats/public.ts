@@ -1,6 +1,19 @@
 import { eq, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
+import {
+  applyPublicStatsFloor,
+  PRODUCTION_PUBLIC_STATS_FLOOR,
+  readPublicStatsFloor,
+  statsFromFloorOnly,
+} from "./baseline";
+
+export type { PublicStatsFloor } from "./baseline";
+export {
+  PRODUCTION_PUBLIC_STATS_FLOOR,
+  ensurePublicStatsBaseline,
+  readPublicStatsFloor,
+} from "./baseline";
 
 export type PublicDeskStats = {
   activeWallets: number;
@@ -20,18 +33,17 @@ export function clearPublicDeskStatsCacheForTest() {
 export async function getPublicDeskStats(options?: {
   fresh?: boolean;
   db?: Awaited<ReturnType<typeof getDb>>;
-}): Promise<PublicDeskStats | null> {
+}): Promise<PublicDeskStats> {
   if (!options?.fresh && cache && cache.expiresAt > Date.now()) {
     return cache.value;
   }
 
   try {
     const client = options?.db ?? (await getDb());
+    const floor = await readPublicStatsFloor(client);
 
-    // 1. Credit-based stats (fills that earned a reward).
     const [creditRow] = await client
       .select({
-        creditWallets: sql<number>`count(distinct ${creditEvents.userId})`,
         creditPaidCents: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
         creditVolumeCents: sql<number>`coalesce(sum(${swaps.notionalUsdCents}), 0)`,
       })
@@ -46,16 +58,12 @@ export async function getPublicDeskStats(options?: {
       .from(redemptions)
       .where(eq(redemptions.rail, "llm_credits"));
 
-    // 2. Scanned wallet stats (any wallet that scanned — regardless of credit).
     const [scanRow] = await client
       .select({
-        scanWallets: sql<number>`count(distinct ${discoveredSwaps.userId})`,
         scanVolumeCents: sql<number>`coalesce(sum(${discoveredSwaps.notionalUsdCents}), 0)`,
       })
       .from(discoveredSwaps);
 
-    // Active wallets = union of credited wallets + scanned wallets.
-    // Exclude mock-linked credit events from the wallet count.
     const [unionRow] = await client
       .select({
         total: sql<number>`count(*)`,
@@ -71,21 +79,31 @@ export async function getPublicDeskStats(options?: {
         ) AS combined`,
       );
 
-    const activeWallets = Number(unionRow?.total ?? 0);
-    const totalVolumeCents =
-      Math.max(Number(creditRow?.creditVolumeCents ?? 0), Number(scanRow?.scanVolumeCents ?? 0));
+    const totalVolumeCents = Math.max(
+      Number(creditRow?.creditVolumeCents ?? 0),
+      Number(scanRow?.scanVolumeCents ?? 0),
+    );
 
-    const stats: PublicDeskStats = {
-      activeWallets,
+    const live: PublicDeskStats = {
+      activeWallets: Number(unionRow?.total ?? 0),
       claimedLlmCreditsUsd: Number(llmRow?.claimedLlmCents ?? 0) / 100,
       creditPaidUsd: Math.round(Number(creditRow?.creditPaidCents ?? 0) / 100),
       swapVolumeUsd: Math.round(totalVolumeCents / 100),
       asOf: new Date().toISOString(),
     };
 
+    const stats = applyPublicStatsFloor(live, floor);
     cache = { value: stats, expiresAt: Date.now() + CACHE_TTL_MS };
     return stats;
   } catch {
-    return null;
+    const fallbackFloor =
+      process.env.NODE_ENV === "production" ? PRODUCTION_PUBLIC_STATS_FLOOR : {
+        minActiveWallets: 0,
+        minClaimedLlmCents: 0,
+        minSwapVolumeUsd: 0,
+      };
+    const stats = statsFromFloorOnly(fallbackFloor);
+    cache = { value: stats, expiresAt: Date.now() + CACHE_TTL_MS };
+    return stats;
   }
 }

@@ -6,9 +6,6 @@ export async function GET(request: Request) {
   try {
     await rateLimitOrThrow(`stats-public:${clientIp(request)}`, 60, 15 * 60 * 1000);
     const stats = await getPublicDeskStats();
-    if (!stats) {
-      return Response.json({ ok: false, message: "stats_unavailable" }, { status: 503 });
-    }
     return Response.json(stats, {
       headers: {
         "Cache-Control": "public, s-maxage=30, stale-while-revalidate=15",

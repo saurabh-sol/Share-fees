@@ -15,11 +15,12 @@ import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { getSession } from "@/lib/auth/session";
 import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
+import { getPublicDeskStats } from "@/lib/stats/public";
 
 const HOUSES = ["MetaMask", "Phantom", "Coinbase", "Robinhood"];
 
 export default async function HomePage() {
-  const session = await getSession();
+  const [session, initialStats] = await Promise.all([getSession(), getPublicDeskStats()]);
   const isLoggedIn = Boolean(session);
   return (
     <div className="min-h-[100dvh]">
@@ -47,7 +48,7 @@ export default async function HomePage() {
                 for {LLM_PROVIDER_SUMMARY}-compatible clients.
               </p>
               <HeroMetrics />
-              <DeskStats />
+              <DeskStats initialStats={initialStats} />
               <HeroCtaRow />
               <div className="mt-10">
                 <CreditCalculator />

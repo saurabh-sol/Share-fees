@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { createTestDb } from "@/lib/db/client";
-import { redemptions, users, wallets } from "@/lib/db/schema";
+import { publicDeskStatsBaseline, redemptions, users, wallets } from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
-import { clearPublicDeskStatsCacheForTest, getPublicDeskStats } from "./public";
+import {
+  clearPublicDeskStatsCacheForTest,
+  getPublicDeskStats,
+} from "./public";
 
 async function seedUser(
   db: Awaited<ReturnType<typeof createTestDb>>,
@@ -89,6 +92,44 @@ describe("public desk stats", () => {
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats?.activeWallets).toBe(0);
     expect(stats?.claimedLlmCreditsUsd).toBe(0);
+  });
+
+  it("applies DB floors when live totals are lower", async () => {
+    const db = await createTestDb();
+    await db.insert(publicDeskStatsBaseline).values({
+      id: "default",
+      minActiveWallets: 45,
+      minClaimedLlmCents: 8500,
+      minSwapVolumeUsd: 350_000,
+    });
+    const stats = await getPublicDeskStats({ fresh: true, db });
+    expect(stats.activeWallets).toBe(45);
+    expect(stats.claimedLlmCreditsUsd).toBe(85);
+    expect(stats.swapVolumeUsd).toBe(350_000);
+  });
+
+  it("grows above the floor when live LLM redemptions exceed it", async () => {
+    const db = await createTestDb();
+    await db.insert(publicDeskStatsBaseline).values({
+      id: "default",
+      minActiveWallets: 45,
+      minClaimedLlmCents: 8500,
+      minSwapVolumeUsd: 350_000,
+    });
+    const userId = "user_stats_llm_high";
+    await seedUser(db, userId, "0xffffffffffffffffffffffffffffffffffffffff");
+    await db.insert(redemptions).values({
+      id: "red_llm_big",
+      userId,
+      rail: "llm_credits",
+      amountCents: 10_000,
+      status: "fulfilled",
+      destination: userId,
+      idempotencyKey: "idem_big",
+    });
+    const stats = await getPublicDeskStats({ fresh: true, db });
+    expect(stats.claimedLlmCreditsUsd).toBe(100);
+    expect(stats.activeWallets).toBe(45);
   });
 
   it("sums claimed LLM credits from llm_credits redemptions", async () => {

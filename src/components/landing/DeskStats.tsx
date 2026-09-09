@@ -25,9 +25,8 @@ const LIVE_METRICS = [
   { key: "swapVolumeUsd" as const, label: "Swap volume" },
 ] as const;
 
-export function DeskStats() {
-  const [stats, setStats] = useState<PublicDeskStats | null>(null);
-  const [failed, setFailed] = useState(false);
+export function DeskStats({ initialStats }: { initialStats?: PublicDeskStats | null }) {
+  const [stats, setStats] = useState<PublicDeskStats | null>(initialStats ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,12 +36,9 @@ export function DeskStats() {
         const response = await fetch("/api/v1/stats/public", { cache: "no-store" });
         if (!response.ok) throw new Error("stats_unavailable");
         const data = (await response.json()) as PublicDeskStats;
-        if (!cancelled) {
-          setStats(data);
-          setFailed(false);
-        }
+        if (!cancelled) setStats(data);
       } catch {
-        if (!cancelled) setFailed(true);
+        /* keep last stats or server-provided initialStats */
       }
     }
 
@@ -53,8 +49,6 @@ export function DeskStats() {
       window.clearInterval(timer);
     };
   }, []);
-
-  if (failed) return null;
 
   return (
     <dl className="mt-4 grid grid-cols-2 divide-x divide-white/8 border-y border-white/8 sm:grid-cols-4">

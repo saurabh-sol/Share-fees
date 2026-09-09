@@ -469,6 +469,15 @@ export const accrDeposits = pgTable(
   ],
 );
 
+/** Display floors for landing hero stats — live counts grow above these values. */
+export const publicDeskStatsBaseline = pgTable("public_desk_stats_baseline", {
+  id: text("id").primaryKey(),
+  minActiveWallets: integer("min_active_wallets").notNull().default(0),
+  minClaimedLlmCents: integer("min_claimed_llm_cents").notNull().default(0),
+  minSwapVolumeUsd: integer("min_swap_volume_usd").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type RewardRule = typeof rewardRules.$inferSelect;
 export type Swap = typeof swaps.$inferSelect;

@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ROBINHOOD_ACCR, ROBINHOOD_CHAIN_ID, robinhoodTxUrl } from "@/lib/chains/robinhood";
-import { depositMinUsdCents } from "@/lib/deposit/credit";
 import { sendAccrDeposit } from "@/lib/deposit/browser";
 import { TokenIcon } from "./TokenIcon";
 import { NotchedButton } from "@/components/ui/NotchedButton";
@@ -63,10 +62,10 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function DepositDesk({
   initialHistory,
-  minUsdCents = depositMinUsdCents(),
+  minUsdCents,
 }: {
   initialHistory: HistoryRow[];
-  minUsdCents?: number;
+  minUsdCents: number;
 }) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
