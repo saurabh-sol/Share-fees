@@ -1,11 +1,12 @@
 import { getSession } from "@/lib/auth/session";
+import { HOLDER_MIN_TOKENS } from "@/lib/holder/constants";
 import { HolderError, startHolderVerification } from "@/lib/holder/service";
 import { OriginError, assertSameOrigin, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 
 function humanize(code: string) {
   if (code === "insufficient_accr_balance") {
-    return "Hold at least 1,000,000 $ACCR in this wallet on Robinhood Chain.";
+    return `Hold at least ${HOLDER_MIN_TOKENS.toLocaleString()} $ACCR in this wallet on Robinhood Chain.`;
   }
   if (code === "holder_reward_already_claimed") {
     return "This wallet already received the holder reward.";

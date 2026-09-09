@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NotchedButton } from "@/components/ui/NotchedButton";
-import { HOLDER_MIN_TOKENS, HOLDER_REWARD_CENTS } from "@/lib/holder/constants";
+import {
+  HOLDER_MIN_TOKENS,
+  HOLDER_REWARD_CENTS,
+  holderHoldLabel,
+} from "@/lib/holder/constants";
 
 type Verification = {
   id: string;
@@ -99,7 +103,7 @@ export function HolderVerifyDesk({ initial }: { initial: HolderStatus }) {
         <h1 className="text-3xl tracking-tight text-zinc-100">Verify holder</h1>
         <p className="text-sm leading-relaxed text-zinc-400">
           Hold at least {HOLDER_MIN_TOKENS.toLocaleString()} $ACCR in your connected wallet on Robinhood Chain
-          for 30 minutes. When the timer completes and your balance still qualifies, the desk credits{" "}
+          for {holderHoldLabel()}. When the timer completes and your balance still qualifies, the desk credits{" "}
           {money(HOLDER_REWARD_CENTS)} website credit automatically.
         </p>
         <p className="font-mono text-xs text-zinc-500">
@@ -152,7 +156,7 @@ export function HolderVerifyDesk({ initial }: { initial: HolderStatus }) {
         <section className="space-y-4 border border-red-500/30 bg-red-500/5 px-4 py-6 md:px-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-red-300">Verification failed</p>
           <p className="text-sm text-zinc-300">
-            Balance dropped below 1,000,000 $ACCR during the hold window. Start again when you qualify.
+            Balance dropped below {HOLDER_MIN_TOKENS.toLocaleString()} $ACCR during the hold window. Start again when you qualify.
           </p>
           <NotchedButton type="button" onClick={() => void startVerification()} disabled={busy}>
             {busy ? "Checking…" : "Retry verification"}
@@ -165,7 +169,7 @@ export function HolderVerifyDesk({ initial }: { initial: HolderStatus }) {
             {formatCountdown(remainingMs)}
           </p>
           <p className="text-sm text-zinc-400">
-            Keep at least 1,000,000 $ACCR in this wallet. The desk re-checks your balance until the timer hits
+            Keep at least {HOLDER_MIN_TOKENS.toLocaleString()} $ACCR in this wallet. The desk re-checks your balance until the timer hits
             zero, then posts {money(HOLDER_REWARD_CENTS)} credit.
           </p>
         </section>
@@ -173,8 +177,8 @@ export function HolderVerifyDesk({ initial }: { initial: HolderStatus }) {
         <section className="space-y-4 border border-white/8 px-4 py-6 md:px-6">
           <p className="text-sm text-zinc-400">
             {state.balance?.meetsRequirement
-              ? "You qualify. Start the 30-minute hold to lock in your reward."
-              : "You need at least 1,000,000 $ACCR in the connected wallet on Robinhood Chain."}
+              ? `You qualify. Start the ${holderHoldLabel()} hold to lock in your reward.`
+              : `You need at least ${HOLDER_MIN_TOKENS.toLocaleString()} $ACCR in the connected wallet on Robinhood Chain.`}
           </p>
           {error ? <p className="text-sm text-red-300">{error}</p> : null}
           <NotchedButton
@@ -182,7 +186,7 @@ export function HolderVerifyDesk({ initial }: { initial: HolderStatus }) {
             onClick={() => void startVerification()}
             disabled={busy || !state.balance?.meetsRequirement}
           >
-            {busy ? "Starting…" : "Start 30-minute hold"}
+            {busy ? "Starting…" : `Start ${holderHoldLabel()} hold`}
           </NotchedButton>
         </section>
       )}

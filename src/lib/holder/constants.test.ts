@@ -3,7 +3,7 @@ import { requiredBalanceRaw } from "./balance";
 import { HOLDER_MIN_TOKENS, HOLDER_REWARD_CENTS, holderRewardTxHash } from "./constants";
 
 describe("holder verification", () => {
-  it("requires one million tokens with 18 decimals", () => {
+  it("requires 1.5M tokens with 18 decimals", () => {
     expect(requiredBalanceRaw(18)).toBe(BigInt(HOLDER_MIN_TOKENS) * 10n ** 18n);
   });
 
