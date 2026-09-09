@@ -121,7 +121,6 @@ describe("phase 3 redeem + gateway", () => {
   it("rejects a redeem above the available rail balance", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward({ ...fill, userId }, db);
 
     await expect(
       redeem(
@@ -130,7 +129,7 @@ describe("phase 3 redeem + gateway", () => {
           address: ADDRESS,
           chainNamespace: "eip155",
           rail: "usdt",
-          amountCents: 500,
+          amountCents: 100,
           idempotencyKey: "idem_short",
         },
         db,
@@ -149,19 +148,19 @@ describe("phase 3 redeem + gateway", () => {
         address: ADDRESS,
         chainNamespace: "eip155",
         rail: "usdt",
-        amountCents: 150,
+        amountCents: 100,
         idempotencyKey: "idem_usdt_1",
       },
       db,
     );
     expect(result.status).toBe("queued");
-    expect(result.usdtCents).toBe(232);
+    expect(result.usdtCents).toBe(282);
     if (!treasuryCanBroadcast()) {
       expect(result.onChainClaim).toBeNull();
     }
 
     const entries = await db.select().from(ledgerEntries);
-    expect(entries.some((row) => row.account === "user_usdt" && row.type === "debit" && row.amountCents === 150)).toBe(
+    expect(entries.some((row) => row.account === "user_usdt" && row.type === "debit" && row.amountCents === 100)).toBe(
       true,
     );
     expect(entries.some((row) => row.account === "payout_pool" && row.type === "credit")).toBe(true);
@@ -429,7 +428,7 @@ describe("phase 3 redeem + gateway", () => {
     ).rejects.toMatchObject({ message: "model_not_allowed" });
   });
 
-  it("rejects USDG redeems above the $15 per-claim cap", async () => {
+  it("rejects USDG redeems above the $1 per-claim cap", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
     await claimThenConvert(db, userId, "usdt", { notionalUsdCents: 1_000_000 });
@@ -441,7 +440,7 @@ describe("phase 3 redeem + gateway", () => {
           address: ADDRESS,
           chainNamespace: "eip155",
           rail: "usdt",
-          amountCents: 1501,
+          amountCents: 101,
           idempotencyKey: "idem_usdg_max",
         },
         db,

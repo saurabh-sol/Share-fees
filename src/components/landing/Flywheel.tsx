@@ -124,7 +124,7 @@ export function Flywheel() {
               <a href="/app/holder" className="text-accent underline underline-offset-4">
                 Verify holder
               </a>{" "}
-              desk for a timed $15 credit.
+              desk for a timed $3 credit.
             </p>
             <Link
               href="/app/swap"

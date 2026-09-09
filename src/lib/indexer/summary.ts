@@ -2,7 +2,7 @@ import {
   DEFAULT_CONVERSION_BPS,
   MIN_NOTIONAL_USD_CENTS,
   MIN_REWARD_CENTS,
-  computeRewardCents,
+  VOLUME_COMPLETION_REWARD_CENTS,
 } from "@/lib/rules/engine";
 import { isVolumeKind } from "./types";
 
@@ -36,16 +36,17 @@ export function summarizeWalletVolume(
   );
 
   const qualifiesVolume = totalVolumeCents >= minNotionalUsdCents;
-  const rawReward = qualifiesVolume
-    ? computeRewardCents(totalVolumeCents, conversionBps)
-    : 0;
-  const estimatedTotalRewardCents = rawReward >= MIN_REWARD_CENTS ? rawReward : 0;
+  const estimatedTotalRewardCents =
+    qualifiesVolume && VOLUME_COMPLETION_REWARD_CENTS >= MIN_REWARD_CENTS
+      ? VOLUME_COMPLETION_REWARD_CENTS
+      : 0;
 
-  const unpaidVolumeCents = trades
-    .filter((row) => row.status !== "booked" && row.status !== "claimed" && row.status !== "volume_settled")
-    .reduce((sum, row) => sum + Math.max(0, row.notionalUsdCents), 0);
-  const unpaidRaw = qualifiesVolume ? computeRewardCents(unpaidVolumeCents, conversionBps) : 0;
-  const unpaidRewardCents = unpaidRaw >= MIN_REWARD_CENTS ? unpaidRaw : 0;
+  const hasUnpaidVolume = trades.some(
+    (row) =>
+      row.status !== "booked" && row.status !== "claimed" && row.status !== "volume_settled",
+  );
+  const unpaidRewardCents =
+    qualifiesVolume && hasUnpaidVolume ? VOLUME_COMPLETION_REWARD_CENTS : 0;
 
   return {
     transferCount: rows.length,

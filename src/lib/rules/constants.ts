@@ -5,6 +5,8 @@ export const MAX_CONVERSION_BPS = 100;
 export const DEFAULT_CONVERSION_BPS = 50;
 export const MIN_REWARD_CENTS = 100;
 export const DEFAULT_DAILY_CAP_USD_CENTS = 250_000;
+/** Flat website credit once scan volume clears the floor. */
+export const VOLUME_COMPLETION_REWARD_CENTS = 100;
 
 export function assertConversionBps(conversionBps: number) {
   if (

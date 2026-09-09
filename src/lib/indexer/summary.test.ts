@@ -28,7 +28,7 @@ describe("summarizeWalletVolume", () => {
     );
     expect(summary.totalVolumeCents).toBe(30_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(150);
+    expect(summary.estimatedTotalRewardCents).toBe(100);
   });
 
   it("shows reward from total swap volume even if some fills are already credited", () => {
@@ -41,7 +41,7 @@ describe("summarizeWalletVolume", () => {
     );
     expect(summary.totalVolumeCents).toBe(35_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(175);
+    expect(summary.estimatedTotalRewardCents).toBe(100);
   });
 
   it("counts send and receive transfers in volume, ignores approvals", () => {
@@ -58,6 +58,6 @@ describe("summarizeWalletVolume", () => {
     expect(summary.transferCount).toBe(5);
     expect(summary.totalVolumeCents).toBe(86_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(430);
+    expect(summary.estimatedTotalRewardCents).toBe(100);
   });
 });

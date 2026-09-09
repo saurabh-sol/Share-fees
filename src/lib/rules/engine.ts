@@ -10,6 +10,7 @@ export {
   MIN_CONVERSION_BPS,
   MIN_NOTIONAL_USD_CENTS,
   MIN_REWARD_CENTS,
+  VOLUME_COMPLETION_REWARD_CENTS,
   assertConversionBps,
   computeRewardCents,
 } from "./constants";

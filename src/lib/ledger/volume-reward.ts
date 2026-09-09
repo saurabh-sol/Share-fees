@@ -7,6 +7,7 @@ import { CLAIMABLE_KINDS } from "@/lib/indexer/types";
 import {
   MIN_NOTIONAL_USD_CENTS,
   MIN_REWARD_CENTS,
+  VOLUME_COMPLETION_REWARD_CENTS,
   getActiveRuleOrNull,
 } from "@/lib/rules/engine";
 import { lockWalletRow, syncWalletCache } from "./balances";
@@ -113,6 +114,7 @@ export async function settleScannedVolumeReward(
         toAmount: String(summary.estimatedTotalRewardCents),
         notionalUsdCents: summary.totalVolumeCents,
         executedAt: new Date(),
+        fixedRewardCents: VOLUME_COMPLETION_REWARD_CENTS,
       },
       client,
     );

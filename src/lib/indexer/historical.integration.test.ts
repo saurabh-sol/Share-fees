@@ -90,7 +90,7 @@ describe("historical scan → claim → ledger", () => {
     expect(activity).toHaveLength(3);
     expect(summary.totalVolumeCents).toBe(55_000);
     expect(summary.qualifiesVolume).toBe(true);
-    expect(summary.estimatedTotalRewardCents).toBe(275);
+    expect(summary.estimatedTotalRewardCents).toBe(100);
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
   });
 
@@ -107,7 +107,7 @@ describe("historical scan → claim → ledger", () => {
     });
     expect(first.inserted).toBe(1);
     // Auto-settle posts credit immediately so the user counts in public stats.
-    expect(first.volumeReward?.creditedCents).toBe(256);
+    expect(first.volumeReward?.creditedCents).toBe(100);
     expect(first.volumeReward?.status).toBe("rewarded");
     expect(await listUnclaimed(userId, db)).toHaveLength(0);
 
