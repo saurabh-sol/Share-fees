@@ -193,7 +193,8 @@ export async function postSwapReward(
         .select()
         .from(swaps)
         .where(and(eq(swaps.userId, input.userId), gte(swaps.executedAt, windowStart)));
-      const wash = findWashPrior(input, recents);
+      const wash =
+        input.fromChain === "scan" ? null : findWashPrior(input, recents);
 
       let status = "rewarded";
       let credited = 0;

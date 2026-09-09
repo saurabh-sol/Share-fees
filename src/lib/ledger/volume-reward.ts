@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { creditEvents, discoveredSwaps, swaps } from "@/lib/db/schema";
 import { listWalletActivity } from "@/lib/indexer/claim";
@@ -24,6 +24,19 @@ export function volumeScanTxHash(userId: string) {
   return `volume:${userId}`;
 }
 
+async function lifetimeRewardCents(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+) {
+  const rows = await db
+    .select({
+      total: sql<number>`coalesce(sum(${creditEvents.amountCents}), 0)`,
+    })
+    .from(creditEvents)
+    .where(eq(creditEvents.userId, userId));
+  return Number(rows[0]?.total ?? 0);
+}
+
 export async function previewScannedVolumeReward(
   userId: string,
   db?: Awaited<ReturnType<typeof getDb>>,
@@ -45,6 +58,10 @@ export async function previewScannedVolumeReward(
   };
 }
 
+/**
+ * Post website credit so it matches the Activity "Total reward" figure.
+ * Lifetime credit events are subtracted so a fill already paid is not paid twice.
+ */
 export async function settleScannedVolumeReward(
   userId: string,
   db?: Awaited<ReturnType<typeof getDb>>,
@@ -55,6 +72,7 @@ export async function settleScannedVolumeReward(
     conversionBps: rule?.conversionBps,
     minNotionalUsdCents: rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS,
   });
+  const balances = await readWallet(client, userId);
   const empty = {
     creditedCents: 0,
     alreadyExists: true,
@@ -62,14 +80,15 @@ export async function settleScannedVolumeReward(
     status: "skipped",
     totalVolumeCents: summary.totalVolumeCents,
     estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
-    ...(await readWallet(client, userId)),
+    ...balances,
   };
 
   if (!rule || !summary.qualifiesVolume || summary.estimatedTotalRewardCents < MIN_REWARD_CENTS) {
     return empty;
   }
 
-  const settleCents = summary.unpaidRewardCents;
+  const lifetime = await lifetimeRewardCents(client, userId);
+  const gap = summary.estimatedTotalRewardCents - lifetime;
   const txHash = volumeScanTxHash(userId);
   const [existing] = await client
     .select()
@@ -78,8 +97,8 @@ export async function settleScannedVolumeReward(
     .limit(1);
 
   if (!existing) {
-    if (settleCents < MIN_REWARD_CENTS) {
-      return empty;
+    if (gap < MIN_REWARD_CENTS) {
+      return { ...empty, creditCents: balances.creditCents };
     }
     const posted = await postSwapReward(
       {
@@ -91,7 +110,7 @@ export async function settleScannedVolumeReward(
         fromToken: "VOLUME",
         toToken: "CREDIT",
         fromAmount: String(summary.totalVolumeCents),
-        toAmount: String(settleCents),
+        toAmount: String(summary.estimatedTotalRewardCents),
         notionalUsdCents: summary.totalVolumeCents,
         executedAt: new Date(),
       },
@@ -99,37 +118,51 @@ export async function settleScannedVolumeReward(
     );
     if (posted.creditedCents > 0) {
       await markVolumeSettled(userId, client);
+      return {
+        ...posted,
+        totalVolumeCents: summary.totalVolumeCents,
+        estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
+      };
     }
-    return {
-      ...posted,
-      totalVolumeCents: summary.totalVolumeCents,
-      estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
-    };
+    // Inserted but not credited (held/paused) — top up below.
   }
 
   return client.transaction(async (tx) => {
     await lockWalletRow(tx as never, userId);
+    const [row] = await tx
+      .select()
+      .from(swaps)
+      .where(and(eq(swaps.txHash, txHash), eq(swaps.fromChain, VOLUME_SCAN_CHAIN)))
+      .limit(1);
+    if (!row) {
+      const current = await readWallet(tx as never, userId);
+      return { ...empty, ...current };
+    }
+
     const [event] = await tx
       .select()
       .from(creditEvents)
-      .where(eq(creditEvents.swapId, existing.id))
+      .where(eq(creditEvents.swapId, row.id))
       .limit(1);
     const already = event?.amountCents ?? 0;
     const remainingCap = await remainingDailyCapCents(tx as never, userId, rule.dailyCapUsdCents);
-    const target = Math.min(settleCents, already + remainingCap);
-    const delta = target - already;
+    const paid = await lifetimeRewardCents(tx as never, userId);
+    const stillDue = summary.estimatedTotalRewardCents - paid;
+    const targetOnThisSwap = already + stillDue;
+    const next = Math.min(targetOnThisSwap, already + remainingCap);
+    const delta = next - already;
 
     if (delta < MIN_REWARD_CENTS) {
       await markVolumeSettled(userId, tx as never);
-      const balances = await readWallet(tx as never, userId);
+      const current = await syncWalletCache(tx as never, userId);
       return {
         creditedCents: 0,
         alreadyExists: true,
-        swapId: existing.id,
-        status: existing.status,
+        swapId: row.id,
+        status: row.status,
         totalVolumeCents: summary.totalVolumeCents,
         estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
-        ...balances,
+        ...current,
       };
     }
 
@@ -140,15 +173,15 @@ export async function settleScannedVolumeReward(
         .where(eq(creditEvents.id, event.id));
       await writeRewardLedgerOnly(tx, {
         userId,
-        swapId: existing.id,
+        swapId: row.id,
         amountCents: delta,
       });
     } else {
       await writeRewardLegs(tx, {
         userId,
-        swapId: existing.id,
+        swapId: row.id,
         ruleId: rule.id,
-        amountCents: target,
+        amountCents: delta,
       });
     }
 
@@ -157,21 +190,21 @@ export async function settleScannedVolumeReward(
       .set({
         notionalUsdCents: summary.totalVolumeCents,
         status: "rewarded",
-        toAmount: String(target),
+        toAmount: String(already + delta),
         fromAmount: String(summary.totalVolumeCents),
       })
-      .where(eq(swaps.id, existing.id));
+      .where(eq(swaps.id, row.id));
 
     await markVolumeSettled(userId, tx as never);
-    const balances = await syncWalletCache(tx as never, userId);
+    const current = await syncWalletCache(tx as never, userId);
     return {
-      creditedCents: event ? delta : target,
+      creditedCents: delta,
       alreadyExists: already > 0,
-      swapId: existing.id,
+      swapId: row.id,
       status: "rewarded",
       totalVolumeCents: summary.totalVolumeCents,
       estimatedTotalRewardCents: summary.estimatedTotalRewardCents,
-      ...balances,
+      ...current,
     };
   });
 }

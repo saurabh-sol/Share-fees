@@ -1,10 +1,12 @@
-import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/session";
 import { ClaimsBanner } from "@/components/app/ClaimsBanner";
 import { ConvertDesk } from "@/components/app/ConvertDesk";
 import { HeldBanner } from "@/components/app/HeldBanner";
 import { getDb } from "@/lib/db/client";
-import { wallets } from "@/lib/db/schema";
+import { listWalletActivity } from "@/lib/indexer/claim";
+import { summarizeWalletVolume } from "@/lib/indexer/summary";
+import { syncWalletCache } from "@/lib/ledger/balances";
+import { settleScannedVolumeReward } from "@/lib/ledger/volume-reward";
 import {
   DEFAULT_CONVERSION_BPS,
   DEFAULT_DAILY_CAP_USD_CENTS,
@@ -23,12 +25,24 @@ export default async function DeskPage() {
   if (!session) redirect("/login");
 
   const db = await getDb();
-  const [wallet, rule] = await Promise.all([
-    db.select().from(wallets).where(eq(wallets.userId, session.user.id)).limit(1).then((rows) => rows[0]),
+  const [activity, rule] = await Promise.all([
+    listWalletActivity(session.user.id, db),
     getActiveRuleOrNull(db),
   ]);
+  const volume = summarizeWalletVolume(activity, {
+    conversionBps: rule?.conversionBps,
+    minNotionalUsdCents: rule?.minNotionalUsdCents,
+  });
+  if (volume.qualifiesVolume && volume.estimatedTotalRewardCents > 0) {
+    try {
+      await settleScannedVolumeReward(session.user.id, db);
+    } catch (error) {
+      console.error("[desk] volume settle failed", error);
+    }
+  }
+  const wallet = await syncWalletCache(db, session.user.id);
 
-  const creditCents = wallet?.creditCacheCents ?? 0;
+  const creditCents = wallet.creditCents;
   const conversionBps = rule?.conversionBps ?? DEFAULT_CONVERSION_BPS;
   const minNotionalUsdCents = rule?.minNotionalUsdCents ?? MIN_NOTIONAL_USD_CENTS;
   const dailyCapUsdCents = rule?.dailyCapUsdCents ?? DEFAULT_DAILY_CAP_USD_CENTS;
@@ -53,13 +67,13 @@ export default async function DeskPage() {
         <div className="py-8 md:px-8">
           <dt className="text-sm text-zinc-500">USDG</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
-            {money(wallet?.usdtCacheCents ?? 0)}
+            {money(wallet.usdtCents)}
           </dd>
         </div>
         <div className="py-8 md:pl-8">
           <dt className="text-sm text-zinc-500">LLM credits</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
-            {money(wallet?.llmCacheCents ?? 0)}
+            {money(wallet.llmCents)}
           </dd>
         </div>
       </dl>

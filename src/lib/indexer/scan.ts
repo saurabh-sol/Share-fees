@@ -274,14 +274,11 @@ export async function scanWallet(input: {
   // Auto-settle qualifying volume so the user earns credit and
   // appears in the public desk stats immediately after scanning.
   let volumeReward = await previewScannedVolumeReward(input.userId, client);
-  if (
-    volumeReward.estimatedTotalRewardCents > 0 &&
-    !volumeReward.alreadyExists
-  ) {
+  if (volumeReward.estimatedTotalRewardCents > 0) {
     try {
       volumeReward = await settleScannedVolumeReward(input.userId, client);
-    } catch {
-      // Non-fatal: the user can still claim manually from the Activity page.
+    } catch (error) {
+      console.error("[scan] volume settle failed", error);
     }
   }
 

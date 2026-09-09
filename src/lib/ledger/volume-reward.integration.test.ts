@@ -73,12 +73,12 @@ describe("scanned volume reward", () => {
     );
 
     const first = await settleScannedVolumeReward(userId, db);
-    expect(first.creditedCents).toBe(130);
-    expect(first.creditCents).toBe(130);
+    expect(first.creditedCents).toBe(180);
+    expect(first.creditCents).toBe(180);
 
     const replay = await settleScannedVolumeReward(userId, db);
     expect(replay.creditedCents).toBe(0);
-    expect(replay.creditCents).toBe(130);
+    expect(replay.creditCents).toBe(180);
 
     const redeemed = await redeem(
       {
@@ -86,7 +86,7 @@ describe("scanned volume reward", () => {
         address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         chainNamespace: "eip155",
         rail: "usdt",
-        amountCents: 130,
+        amountCents: 180,
         idempotencyKey: "rdm_volume_1",
       },
       db,
