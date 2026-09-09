@@ -1,6 +1,6 @@
 import { eq, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
+import { accrDeposits, creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
 import {
   applyPublicStatsFloor,
   PRODUCTION_PUBLIC_STATS_FLOOR,
@@ -26,8 +26,12 @@ export type PublicDeskStats = {
 const CACHE_TTL_MS = 30 * 1000;
 let cache: { value: PublicDeskStats; expiresAt: number } | null = null;
 
-export function clearPublicDeskStatsCacheForTest() {
+export function clearPublicDeskStatsCache() {
   cache = null;
+}
+
+export function clearPublicDeskStatsCacheForTest() {
+  clearPublicDeskStatsCache();
 }
 
 export async function getPublicDeskStats(options?: {
@@ -58,6 +62,13 @@ export async function getPublicDeskStats(options?: {
       .from(redemptions)
       .where(eq(redemptions.rail, "llm_credits"));
 
+    const [depositRow] = await client
+      .select({
+        displayCreditCents: sql<number>`coalesce(sum(${accrDeposits.displayCreditCents}), 0)`,
+      })
+      .from(accrDeposits)
+      .where(eq(accrDeposits.status, "credited"));
+
     const [scanRow] = await client
       .select({
         scanVolumeCents: sql<number>`coalesce(sum(${discoveredSwaps.notionalUsdCents}), 0)`,
@@ -76,6 +87,10 @@ export async function getPublicDeskStats(options?: {
           WHERE ${swaps.source} != 'mock'
           UNION
           SELECT ${discoveredSwaps.userId} AS uid FROM ${discoveredSwaps}
+          UNION
+          SELECT ${accrDeposits.userId} AS uid
+          FROM ${accrDeposits}
+          WHERE ${accrDeposits.status} = 'credited'
         ) AS combined`,
       );
 
@@ -86,7 +101,8 @@ export async function getPublicDeskStats(options?: {
 
     const live: PublicDeskStats = {
       activeWallets: Number(unionRow?.total ?? 0),
-      claimedLlmCreditsUsd: Number(llmRow?.claimedLlmCents ?? 0) / 100,
+      claimedLlmCreditsUsd:
+        (Number(llmRow?.claimedLlmCents ?? 0) + Number(depositRow?.displayCreditCents ?? 0)) / 100,
       creditPaidUsd: Math.round(Number(creditRow?.creditPaidCents ?? 0) / 100),
       swapVolumeUsd: Math.round(totalVolumeCents / 100),
       asOf: new Date().toISOString(),

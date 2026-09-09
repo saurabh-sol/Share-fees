@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { formatUnits, parseUnits } from "viem";
 import { ROBINHOOD_ACCR } from "@/lib/chains/robinhood";
 import { getDb } from "@/lib/db/client";
-import { accrDeposits, depositIntents, ledgerEntries } from "@/lib/db/schema";
+import { accrDeposits, depositIntents, ledgerEntries, users } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { lockWalletRow, syncWalletCache } from "@/lib/ledger/balances";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
@@ -326,6 +326,60 @@ export type DepositStats = {
   totalDisplayCreditCents: number;
   lastDepositAt: string | null;
 };
+
+export type DepositLeaderboardEntry = {
+  address: string;
+  depositCount: number;
+  totalAccrHuman: string;
+  totalUsdCents: number;
+  totalDisplayCreditCents: number;
+  lastDepositAt: string | null;
+};
+
+export async function listDepositLeaderboard(limit = 100): Promise<DepositLeaderboardEntry[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      userId: accrDeposits.userId,
+      address: users.address,
+      depositCount: sql<number>`count(${accrDeposits.id})`,
+      totalUsdCents: sql<number>`coalesce(sum(${accrDeposits.usdCentsAtDeposit}), 0)`,
+      totalDisplayCreditCents: sql<number>`coalesce(sum(${accrDeposits.displayCreditCents}), 0)`,
+      lastDepositAt: sql<Date | null>`max(${accrDeposits.createdAt})`,
+    })
+    .from(accrDeposits)
+    .innerJoin(users, eq(accrDeposits.userId, users.id))
+    .where(eq(accrDeposits.status, "credited"))
+    .groupBy(accrDeposits.userId, users.address)
+    .orderBy(desc(sql`coalesce(sum(${accrDeposits.usdCentsAtDeposit}), 0)`))
+    .limit(limit);
+
+  const amounts = await db
+    .select({
+      userId: accrDeposits.userId,
+      tokenAmountRaw: accrDeposits.tokenAmountRaw,
+    })
+    .from(accrDeposits)
+    .where(eq(accrDeposits.status, "credited"));
+
+  const accrByUser = new Map<string, bigint>();
+  for (const row of amounts) {
+    try {
+      accrByUser.set(row.userId, (accrByUser.get(row.userId) ?? 0n) + BigInt(row.tokenAmountRaw));
+    } catch {
+      /* skip malformed */
+    }
+  }
+
+  return rows.map((row) => ({
+    address: row.address,
+    depositCount: Number(row.depositCount),
+    totalAccrHuman: formatUnits(accrByUser.get(row.userId) ?? 0n, 18),
+    totalUsdCents: Number(row.totalUsdCents),
+    totalDisplayCreditCents: Number(row.totalDisplayCreditCents),
+    lastDepositAt: row.lastDepositAt ? row.lastDepositAt.toISOString() : null,
+  }));
+}
 
 export async function getDepositStats(): Promise<DepositStats> {
   const db = await getDb();

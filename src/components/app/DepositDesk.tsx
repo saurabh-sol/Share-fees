@@ -2,7 +2,7 @@
 
 import { erc20Abi, formatUnits } from "viem";
 import { useAccount, useReadContract } from "wagmi";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ROBINHOOD_ACCR, ROBINHOOD_CHAIN_ID, robinhoodTxUrl } from "@/lib/chains/robinhood";
@@ -94,37 +94,42 @@ export function DepositDesk({
     ? formatUnits(accrBalance.data, 18)
     : "—";
 
-  const fetchQuote = useCallback(async () => {
-    if (usdCents < minUsdCents) {
-      setQuote(null);
-      return;
-    }
-    setPhase("quoting");
-    setMessage(null);
-    try {
-      const data = await readJson<PreparePayload>("/api/v1/deposits/prepare", {
-        method: "POST",
-        body: JSON.stringify({ usdAmount }),
-      });
-      setQuote(data);
-      setPhase("idle");
-    } catch (error) {
-      setQuote(null);
-      setPhase("error");
-      setMessage(error instanceof Error ? error.message : "Could not fetch live price.");
-    }
-  }, [usdAmount, usdCents, minUsdCents]);
+  const quoteRequestId = useRef(0);
 
   useEffect(() => {
     if (usdCents < minUsdCents) {
       setQuote(null);
+      setMessage(null);
+      setPhase("idle");
       return;
     }
+
+    const requestId = ++quoteRequestId.current;
     const timer = window.setTimeout(() => {
-      void fetchQuote();
+      setPhase("quoting");
+      setMessage(null);
+      void readJson<PreparePayload>("/api/v1/deposits/prepare", {
+        method: "POST",
+        body: JSON.stringify({ usdAmount }),
+      })
+        .then((data) => {
+          if (quoteRequestId.current !== requestId) return;
+          setQuote(data);
+          setPhase("idle");
+        })
+        .catch((error) => {
+          if (quoteRequestId.current !== requestId) return;
+          setQuote(null);
+          setPhase("error");
+          setMessage(error instanceof Error ? error.message : "Could not fetch live price.");
+        });
     }, 450);
-    return () => window.clearTimeout(timer);
-  }, [usdCents, minUsdCents, fetchQuote]);
+
+    return () => {
+      window.clearTimeout(timer);
+      quoteRequestId.current += 1;
+    };
+  }, [usdAmount, usdCents, minUsdCents]);
 
   async function onConfirm() {
     if (!quote || !isConnected) return;

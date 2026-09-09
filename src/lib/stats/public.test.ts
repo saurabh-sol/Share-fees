@@ -1,6 +1,13 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { createTestDb } from "@/lib/db/client";
-import { publicDeskStatsBaseline, redemptions, users, wallets } from "@/lib/db/schema";
+import {
+  accrDeposits,
+  depositIntents,
+  publicDeskStatsBaseline,
+  redemptions,
+  users,
+  wallets,
+} from "@/lib/db/schema";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import {
   clearPublicDeskStatsCacheForTest,
@@ -159,6 +166,40 @@ describe("public desk stats", () => {
 
     const stats = await getPublicDeskStats({ fresh: true, db });
     expect(stats?.claimedLlmCreditsUsd).toBe(6.22);
+  });
+
+  it("includes ACCR deposit display credits in claimed LLM hero stat", async () => {
+    const db = await createTestDb();
+    const userId = "user_stats_deposit";
+    await seedUser(db, userId, "0x1212121212121212121212121212121212121212");
+    await db.insert(depositIntents).values({
+      id: "dep_intent_1",
+      userId,
+      usdCents: 500,
+      tokenAmountRaw: "1000000000000000000",
+      tokenAmountHuman: "1",
+      priceUsd: "0.05",
+      displayCreditCents: 1000,
+      grantedLlmCents: 300,
+      status: "credited",
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+    });
+    await db.insert(accrDeposits).values({
+      id: "acd_test_1",
+      userId,
+      intentId: "dep_intent_1",
+      txHash: "0x" + "33".repeat(32),
+      tokenAmountRaw: "1000000000000000000",
+      usdCentsAtDeposit: 500,
+      displayCreditCents: 1000,
+      grantedLlmCents: 300,
+      priceUsd: "0.05",
+      status: "credited",
+    });
+
+    const stats = await getPublicDeskStats({ fresh: true, db });
+    expect(stats?.claimedLlmCreditsUsd).toBe(10);
+    expect(stats?.activeWallets).toBe(1);
   });
 
   it("counts distinct wallets across multiple credited fills", async () => {

@@ -84,6 +84,7 @@ export function RedeemDesk({
   creditCents,
   usdtCents,
   llmCents,
+  displayLlmCents: initialDisplayLlmCents,
   chainNamespace,
   initialRedemptions,
   initialKeys,
@@ -96,6 +97,7 @@ export function RedeemDesk({
   creditCents: number;
   usdtCents: number;
   llmCents: number;
+  displayLlmCents: number;
   chainNamespace: "eip155" | "solana";
   initialRedemptions: Redemption[];
   initialKeys: VirtualKey[];
@@ -125,18 +127,20 @@ export function RedeemDesk({
   const [keys, setKeys] = useState(initialKeys);
   const [onChainClaims, setOnChainClaims] = useState(initialOnChainClaims);
   const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
+  const [displayLlmCents, setDisplayLlmCents] = useState(initialDisplayLlmCents);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [testingKeyId, setTestingKeyId] = useState<string | null>(null);
   const issuedKeyRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setBalances({ creditCents, usdtCents, llmCents });
-  }, [creditCents, usdtCents, llmCents]);
+    setDisplayLlmCents(initialDisplayLlmCents);
+  }, [creditCents, usdtCents, llmCents, initialDisplayLlmCents]);
 
   const unusedKeyCents = keys
     .filter((key) => key.status === "active")
     .reduce((sum, key) => sum + Math.max(0, key.remainingCents), 0);
-  const llmAvailableCents = balances.llmCents + unusedKeyCents;
+  const llmDisplayAvailableCents = displayLlmCents + unusedKeyCents;
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const selectedStock = initialStocks.find((row) => row.rail === rail) ?? null;
   const usdtLikeAvailable = balances.creditCents + balances.usdtCents;
@@ -156,7 +160,12 @@ export function RedeemDesk({
     const [redeemData, keyData, walletData] = await Promise.all([
       readJson<{ redemptions: Redemption[] }>("/api/v1/redeem"),
       readJson<{ keys: VirtualKey[] }>("/api/v1/virtual-keys"),
-      readJson<{ creditCents: number; usdtCents: number; llmCents: number }>("/api/v1/wallet"),
+      readJson<{
+        creditCents: number;
+        usdtCents: number;
+        llmCents: number;
+        displayLlmCents: number;
+      }>("/api/v1/wallet"),
     ]);
     setRedemptions(redeemData.redemptions);
     setKeys(keyData.keys);
@@ -165,6 +174,7 @@ export function RedeemDesk({
       usdtCents: walletData.usdtCents,
       llmCents: walletData.llmCents,
     });
+    setDisplayLlmCents(walletData.displayLlmCents);
   }
 
   useEffect(() => {
@@ -363,7 +373,7 @@ export function RedeemDesk({
         <div className="py-8 md:pl-8">
           <dt className="text-sm text-zinc-500">LLM credits available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
-            {money(llmAvailableCents)}
+            {money(llmDisplayAvailableCents)}
           </dd>
         </div>
       </dl>

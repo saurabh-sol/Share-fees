@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatUnits } from "viem";
 import { getSession } from "@/lib/auth/session";
-import { getDepositStats } from "@/lib/deposit/service";
+import { getDepositStats, listDepositLeaderboard } from "@/lib/deposit/service";
 import { pageTitle } from "@/lib/brand";
 
 export const metadata = {
@@ -17,6 +17,10 @@ function money(cents: number) {
   })}`;
 }
 
+function shortAddress(address: string) {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
 export default async function DepositStatsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -29,8 +33,9 @@ export default async function DepositStatsPage() {
     totalDisplayCreditCents: 0,
     lastDepositAt: null,
   };
+  let leaderboard: Awaited<ReturnType<typeof listDepositLeaderboard>> = [];
   try {
-    stats = await getDepositStats();
+    [stats, leaderboard] = await Promise.all([getDepositStats(), listDepositLeaderboard()]);
   } catch (error) {
     console.error("[deposit/stats] load failed", error);
   }
@@ -42,7 +47,8 @@ export default async function DepositStatsPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Accrued v2</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Deposit stats</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Aggregate desk deposits across all users. Authenticated view only.
+          Public leaderboard for all signed-in desk users. See who deposited ACCR and how much bonus
+          credit was issued.
         </p>
         <Link
           href="/app/deposit"
@@ -90,6 +96,71 @@ export default async function DepositStatsPage() {
       ) : (
         <p className="font-mono text-xs text-zinc-500">No credited deposits yet.</p>
       )}
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl tracking-tight text-zinc-100">Depositor leaderboard</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Every connected wallet can see credited ACCR deposits ranked by USD value.
+          </p>
+        </div>
+
+        {leaderboard.length === 0 ? (
+          <p className="font-mono text-sm text-zinc-500">No deposits to show yet.</p>
+        ) : (
+          <div className="overflow-x-auto border border-white/8">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/8 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                  <th className="px-4 py-3 font-normal">#</th>
+                  <th className="px-4 py-3 font-normal">Wallet</th>
+                  <th className="px-4 py-3 font-normal text-right">Deposits</th>
+                  <th className="px-4 py-3 font-normal text-right">ACCR</th>
+                  <th className="px-4 py-3 font-normal text-right">USD</th>
+                  <th className="px-4 py-3 font-normal text-right">Bonus</th>
+                  <th className="px-4 py-3 font-normal text-right">Last</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/8">
+                {leaderboard.map((row, index) => {
+                  const isYou =
+                    row.address.toLowerCase() === session.user.address.toLowerCase();
+                  return (
+                    <tr key={row.address} className={isYou ? "bg-accent/5" : undefined}>
+                      <td className="px-4 py-3 font-mono tabular-nums text-zinc-500">{index + 1}</td>
+                      <td className="px-4 py-3 font-mono text-zinc-200">
+                        {shortAddress(row.address)}
+                        {isYou ? (
+                          <span className="ml-2 text-[10px] uppercase tracking-wider text-accent">You</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-zinc-300">
+                        {row.depositCount}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-zinc-300">
+                        {Number(row.totalAccrHuman).toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-accent">
+                        {money(row.totalUsdCents)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-zinc-200">
+                        {money(row.totalDisplayCreditCents)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500">
+                        {row.lastDepositAt
+                          ? new Date(row.lastDepositAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

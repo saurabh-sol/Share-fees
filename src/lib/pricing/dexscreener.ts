@@ -1,8 +1,10 @@
 import { ACCR_TOKEN_LOGO, ROBINHOOD_ACCR } from "@/lib/chains/robinhood";
+import { env } from "@/lib/env";
 
 const DEXSCREENER_BASE = "https://api.dexscreener.com";
 const ROBINHOOD_CHAIN_SLUG = "robinhood";
 const CACHE_TTL_MS = 45_000;
+const FETCH_TIMEOUT_MS = 12_000;
 
 export type AccrPriceQuote = {
   priceUsd: number;
@@ -10,6 +12,7 @@ export type AccrPriceQuote = {
   pairAddress: string | null;
   liquidityUsd: number;
   asOf: string;
+  source: "dexscreener" | "env_fallback";
 };
 
 type DexPair = {
@@ -63,20 +66,60 @@ function pickBestPair(pairs: DexPair[], tokenAddress: string): DexPair | null {
   return best;
 }
 
-async function fetchPairs(tokenAddress: string): Promise<DexPair[]> {
-  const primaryUrl = `${DEXSCREENER_BASE}/token-pairs/v1/${ROBINHOOD_CHAIN_SLUG}/${tokenAddress}`;
-  const primary = await fetch(primaryUrl, { next: { revalidate: 0 } });
-  if (primary.ok) {
-    const body = (await primary.json()) as DexPair[] | { pairs?: DexPair[] };
+async function fetchDexscreener(url: string): Promise<DexPair[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "AccruedDesk/1.0 (+https://accrued.trade)",
+      },
+    });
+    if (!response.ok) return [];
+    const body = (await response.json()) as DexPair[] | { pairs?: DexPair[] };
     if (Array.isArray(body)) return body;
     if (Array.isArray(body.pairs)) return body.pairs;
+    return [];
+  } catch (error) {
+    console.error("[dexscreener] fetch failed", url, error);
+    return [];
+  } finally {
+    clearTimeout(timer);
   }
+}
 
-  const fallbackUrl = `${DEXSCREENER_BASE}/latest/dex/tokens/${tokenAddress}`;
-  const fallback = await fetch(fallbackUrl, { next: { revalidate: 0 } });
-  if (!fallback.ok) return [];
-  const body = (await fallback.json()) as { pairs?: DexPair[] };
-  return body.pairs ?? [];
+async function fetchPairs(tokenAddress: string): Promise<DexPair[]> {
+  const normalized = normalizeAddress(tokenAddress);
+  const primaryUrl = `${DEXSCREENER_BASE}/token-pairs/v1/${ROBINHOOD_CHAIN_SLUG}/${normalized}`;
+  const fallbackUrl = `${DEXSCREENER_BASE}/latest/dex/tokens/${normalized}`;
+
+  const [primary, fallback] = await Promise.all([
+    fetchDexscreener(primaryUrl),
+    fetchDexscreener(fallbackUrl),
+  ]);
+
+  const merged = new Map<string, DexPair>();
+  for (const pair of [...primary, ...fallback]) {
+    const key = pair.pairAddress ?? JSON.stringify(pair);
+    merged.set(key, pair);
+  }
+  return [...merged.values()];
+}
+
+function envFallbackQuote(): AccrPriceQuote | null {
+  const price = env.accrPriceUsd;
+  if (price == null || !Number.isFinite(price) || price <= 0) return null;
+  return {
+    priceUsd: price,
+    logoURI: ACCR_TOKEN_LOGO,
+    pairAddress: null,
+    liquidityUsd: 0,
+    asOf: new Date().toISOString(),
+    source: "env_fallback",
+  };
 }
 
 export class AccrPriceUnavailableError extends Error {
@@ -103,23 +146,28 @@ export async function getAccrPriceQuote(options?: {
 
   const pairs = await fetchPairs(tokenAddress);
   const best = pickBestPair(pairs, tokenAddress);
-  if (!best) {
-    throw new AccrPriceUnavailableError();
+
+  if (best) {
+    const priceUsd = accrPriceFromPair(best, tokenAddress);
+    if (priceUsd != null && priceUsd > 0) {
+      const quote: AccrPriceQuote = {
+        priceUsd,
+        logoURI: best.info?.imageUrl ?? ACCR_TOKEN_LOGO,
+        pairAddress: best.pairAddress ?? null,
+        liquidityUsd: Number(best.liquidity?.usd ?? 0),
+        asOf: new Date().toISOString(),
+        source: "dexscreener",
+      };
+      cache = { value: quote, expiresAt: Date.now() + CACHE_TTL_MS };
+      return quote;
+    }
   }
 
-  const priceUsd = accrPriceFromPair(best, tokenAddress);
-  if (priceUsd == null || priceUsd <= 0) {
-    throw new AccrPriceUnavailableError();
+  const fallback = envFallbackQuote();
+  if (fallback) {
+    cache = { value: fallback, expiresAt: Date.now() + CACHE_TTL_MS };
+    return fallback;
   }
 
-  const quote: AccrPriceQuote = {
-    priceUsd,
-    logoURI: best.info?.imageUrl ?? ACCR_TOKEN_LOGO,
-    pairAddress: best.pairAddress ?? null,
-    liquidityUsd: Number(best.liquidity?.usd ?? 0),
-    asOf: new Date().toISOString(),
-  };
-
-  cache = { value: quote, expiresAt: Date.now() + CACHE_TTL_MS };
-  return quote;
+  throw new AccrPriceUnavailableError();
 }

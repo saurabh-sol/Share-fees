@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { DepositError, confirmDeposit } from "@/lib/deposit/service";
+import { clearPublicDeskStatsCache } from "@/lib/stats/public";
 import { OriginError, assertSameOrigin, clientIp, jsonError } from "@/lib/security/origin";
 import { RateLimitError, rateLimitOrThrow } from "@/lib/security/rate-limit";
 
@@ -31,6 +32,10 @@ export async function POST(request: Request) {
       txHash: body.txHash,
       walletAddress: session.user.address,
     });
+
+    if (!result.alreadyExists) {
+      clearPublicDeskStatsCache();
+    }
 
     return Response.json(
       {

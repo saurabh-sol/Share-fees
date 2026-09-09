@@ -47,6 +47,13 @@ export async function POST(request: Request) {
         const min = depositMinUsdCents();
         return jsonError(400, "minimum_deposit", `Minimum deposit is $${(min / 100).toFixed(2)}.`);
       }
+      if (error.message === "deposit_wallet_unconfigured") {
+        return jsonError(
+          503,
+          "deposit_unavailable",
+          "Deposits are temporarily unavailable. Try again shortly.",
+        );
+      }
       return jsonError(error.status, error.message, error.message);
     }
     if (error instanceof z.ZodError) {

@@ -7,6 +7,7 @@ import { syncWalletCache } from "@/lib/ledger/balances";
 import { getRewardVaultAddress, listOnChainClaims } from "@/lib/redeem/reward-vault";
 import { listStockInventory } from "@/lib/redeem/stock-inventory";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
+import { getLlmDisplayCents } from "@/lib/deposit/display";
 import { USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 export default async function RedeemPage() {
@@ -16,8 +17,9 @@ export default async function RedeemPage() {
   const db = await getDb();
   const vault = getRewardVaultAddress();
   const evm = session.user.chainNamespace !== "solana";
-  const [wallet, redemptions, keys, onChainClaims, stocks] = await Promise.all([
+  const [wallet, displayLlmCents, redemptions, keys, onChainClaims, stocks] = await Promise.all([
     syncWalletCache(db, session.user.id),
+    getLlmDisplayCents(session.user.id, db),
     listRedemptions(session.user.id, db),
     listVirtualKeys(session.user.id, db),
     !evm || !vault
@@ -41,6 +43,7 @@ export default async function RedeemPage() {
         creditCents={creditCents}
         usdtCents={wallet.usdtCents}
         llmCents={wallet.llmCents}
+        displayLlmCents={displayLlmCents}
         chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}
         initialRedemptions={redemptions}
         initialKeys={keys}

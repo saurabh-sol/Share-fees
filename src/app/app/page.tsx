@@ -16,6 +16,7 @@ import {
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { env } from "@/lib/env";
+import { getLlmDisplayCents } from "@/lib/deposit/display";
 import { USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 function money(cents: number) {
@@ -43,6 +44,7 @@ export default async function DeskPage() {
     }
   }
   const wallet = await syncWalletCache(db, session.user.id);
+  const displayLlmCents = await getLlmDisplayCents(session.user.id, db);
 
   const creditCents = wallet.creditCents;
   const conversionBps = rule?.conversionBps ?? DEFAULT_CONVERSION_BPS;
@@ -75,7 +77,7 @@ export default async function DeskPage() {
         <div className="py-8 md:pl-8">
           <dt className="text-sm text-zinc-500">LLM credits</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
-            {money(wallet.llmCents)}
+            {money(displayLlmCents)}
           </dd>
         </div>
       </dl>

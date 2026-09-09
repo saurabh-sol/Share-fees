@@ -63,6 +63,7 @@ const envSchema = z.object({
   DEPOSIT_DISPLAY_MULTIPLIER: z.string().optional(),
   DEPOSIT_GRANT_BPS: z.string().optional(),
   DEPOSIT_MIN_USD_CENTS: z.string().optional(),
+  ACCR_PRICE_USD: z.string().optional(),
 });
 
 function cleanEnv(value: string | undefined) {
@@ -123,6 +124,7 @@ const parsed = envSchema.parse({
   DEPOSIT_DISPLAY_MULTIPLIER: process.env.DEPOSIT_DISPLAY_MULTIPLIER,
   DEPOSIT_GRANT_BPS: process.env.DEPOSIT_GRANT_BPS,
   DEPOSIT_MIN_USD_CENTS: process.env.DEPOSIT_MIN_USD_CENTS,
+  ACCR_PRICE_USD: process.env.ACCR_PRICE_USD,
 });
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
@@ -209,6 +211,7 @@ export const env = {
     : 2,
   depositGrantBps: parsed.DEPOSIT_GRANT_BPS ? Number(parsed.DEPOSIT_GRANT_BPS) : 6000,
   depositMinUsdCents: parsed.DEPOSIT_MIN_USD_CENTS ? Number(parsed.DEPOSIT_MIN_USD_CENTS) : 500,
+  accrPriceUsd: parsed.ACCR_PRICE_USD ? Number(parsed.ACCR_PRICE_USD) : undefined,
 };
 
 export function appDomain(): string {
