@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
 import {
   ArrowsLeftRight,
   Coins,
@@ -141,7 +142,7 @@ export function HowItPays() {
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">LLM rail</p>
               <p className="mt-3 text-xl tracking-tight text-zinc-100">A metered acc_ key.</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Paste into Claude, OpenAI, DeepSeek, Google, or Grok-compatible clients. Usage burns the balance.
+                Paste into {LLM_PROVIDER_SUMMARY}-compatible clients. Usage burns the balance.
               </p>
             </div>
           </div>

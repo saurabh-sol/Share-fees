@@ -10,6 +10,7 @@ const COLUMNS: Array<{
     links: [
       { href: "/docs", label: "Docs" },
       { href: "/docs/how-it-pays", label: "How it pays" },
+      { href: "/#flywheel", label: "Flywheel" },
       { href: "/docs/api", label: "LLM API" },
       { href: "/app/chat", label: "Chat" },
     ],

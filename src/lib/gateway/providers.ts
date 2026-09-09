@@ -69,11 +69,28 @@ export function aiGatewayHeaders(): Record<string, string> {
 
 /** Optional leftover per-provider keys. Prefer AI Gateway so .env does not hold house keys. */
 export function poolKeyFor(provider: LlmProvider) {
-  if (provider === "anthropic") return env.anthropicApiKey;
-  if (provider === "deepseek") return env.deepseekApiKey;
-  if (provider === "google") return env.googleApiKey;
-  if (provider === "grok") return env.xaiApiKey;
-  return env.openaiApiKey;
+  switch (provider) {
+    case "anthropic":
+      return env.anthropicApiKey;
+    case "deepseek":
+      return env.deepseekApiKey;
+    case "google":
+      return env.googleApiKey;
+    case "grok":
+      return env.xaiApiKey;
+    case "openai":
+      return env.openaiApiKey;
+    case "mistral":
+      return env.mistralApiKey;
+    case "cohere":
+      return env.cohereApiKey;
+    case "perplexity":
+      return env.perplexityApiKey;
+    case "moonshot":
+      return env.moonshotApiKey;
+    default:
+      return undefined;
+  }
 }
 
 export function providerReady(provider: LlmProvider) {
@@ -129,6 +146,24 @@ async function forwardViaAiGatewayChat(
   return {
     ...forwarded,
     model: publicModel,
+  };
+}
+
+function gatewayForwarder(
+  provider: LlmProvider,
+  directUrl?: string,
+  getKey?: () => string | undefined,
+): ChatForwarder {
+  return async ({ body, signal }) => {
+    throwUnlessReady(provider);
+    const publicModel = asChatBody(body).model;
+    const viaGateway = await forwardViaAiGatewayChat(provider, publicModel, body, signal);
+    if (viaGateway) return viaGateway;
+    const key = getKey?.();
+    if (directUrl && key) {
+      return forwardOpenAICompatible(directUrl, { authorization: `Bearer ${key}` }, body, signal);
+    }
+    throw new GatewayError("provider_pool_empty", 503);
   };
 }
 
@@ -331,10 +366,41 @@ export const forwardToGoogle: ChatForwarder = async ({ body, signal }) => {
   );
 };
 
+export const forwardToMistral = gatewayForwarder(
+  "mistral",
+  "https://api.mistral.ai/v1/chat/completions",
+  () => env.mistralApiKey,
+);
+
+export const forwardToMeta = gatewayForwarder("meta");
+
+export const forwardToCohere = gatewayForwarder(
+  "cohere",
+  "https://api.cohere.com/compatibility/v1/chat/completions",
+  () => env.cohereApiKey,
+);
+
+export const forwardToPerplexity = gatewayForwarder(
+  "perplexity",
+  "https://api.perplexity.ai/chat/completions",
+  () => env.perplexityApiKey,
+);
+
+export const forwardToMoonshot = gatewayForwarder(
+  "moonshot",
+  "https://api.moonshot.cn/v1/chat/completions",
+  () => env.moonshotApiKey,
+);
+
 export function forwarderFor(provider: LlmProvider): ChatForwarder {
   if (provider === "anthropic") return forwardToAnthropic;
   if (provider === "deepseek") return forwardToDeepSeek;
   if (provider === "google") return forwardToGoogle;
   if (provider === "grok") return forwardToGrok;
+  if (provider === "mistral") return forwardToMistral;
+  if (provider === "meta") return forwardToMeta;
+  if (provider === "cohere") return forwardToCohere;
+  if (provider === "perplexity") return forwardToPerplexity;
+  if (provider === "moonshot") return forwardToMoonshot;
   return forwardToOpenAI;
 }

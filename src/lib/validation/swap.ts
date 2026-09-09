@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
+import { llmProviderSchema } from "@/lib/validation/llm";
 
 export const railSchema = z.enum(["usdt", "llm_credits"]);
 export const namespaceSchema = z.enum(["eip155", "solana"]);
@@ -82,7 +83,7 @@ export const redeemRequestSchema = z
     rail: railSchema,
     amountCents: z.number().int().min(100).max(10_000_000),
     idempotencyKey: z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/),
-    provider: z.enum(["anthropic", "openai", "deepseek", "google", "grok"]).optional(),
+    provider: llmProviderSchema.optional(),
     model: z.string().min(3).max(120).optional(),
   })
   .superRefine((data, ctx) => {
@@ -104,7 +105,7 @@ export const chatCompletionSchema = z
   .passthrough();
 
 export const deskChatSchema = z.object({
-  provider: z.enum(["anthropic", "openai", "deepseek", "google", "grok"]),
+  provider: llmProviderSchema,
   model: z.string().min(3).max(120),
   messages: z
     .array(

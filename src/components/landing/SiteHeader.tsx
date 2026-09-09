@@ -14,6 +14,9 @@ export function SiteHeader({ isLoggedIn = false }: { isLoggedIn?: boolean } = {}
           <a href="#mechanics" className="hover:text-zinc-100">
             How it pays
           </a>
+          <a href="#flywheel" className="hover:text-zinc-100">
+            Flywheel
+          </a>
           <a href="#desk" className="hover:text-zinc-100">
             Desk
           </a>
@@ -53,6 +56,9 @@ export function SiteHeader({ isLoggedIn = false }: { isLoggedIn?: boolean } = {}
       <nav className="flex gap-5 overflow-x-auto border-t border-white/8 px-4 py-2.5 text-sm text-zinc-400 md:hidden">
         <a href="#mechanics" className="shrink-0 hover:text-zinc-100">
           How it pays
+        </a>
+        <a href="#flywheel" className="shrink-0 hover:text-zinc-100">
+          Flywheel
         </a>
         <a href="#desk" className="shrink-0 hover:text-zinc-100">
           Desk

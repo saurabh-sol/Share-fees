@@ -37,6 +37,11 @@ describe("upstream auth", () => {
     expect(providerReady("deepseek")).toBe(true);
     expect(providerReady("google")).toBe(true);
     expect(providerReady("grok")).toBe(true);
+    expect(providerReady("mistral")).toBe(true);
+    expect(providerReady("meta")).toBe(true);
+    expect(providerReady("cohere")).toBe(true);
+    expect(providerReady("perplexity")).toBe(true);
+    expect(providerReady("moonshot")).toBe(true);
     expect(poolKeyFor("openai")).toBeUndefined();
   });
 

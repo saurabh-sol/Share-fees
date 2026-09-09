@@ -1,4 +1,5 @@
 import type { LlmProvider } from "./catalog";
+import { officialApiHost } from "./official-apis";
 
 export function originFromGatewayBase(baseUrl: string) {
   return baseUrl.replace(/\/v1\/?$/, "");
@@ -96,34 +97,58 @@ const completion = await client.chat.completions.create({
 
 console.log(completion.choices[0].message.content);`;
 
+  const openAiCompat = (label: string, sdkLabel: string, host: string) => ({
+    host,
+    base: `${origin}/v1`,
+    label,
+    sdkLabel,
+    curl: chatCurl,
+    sdk: chatSdk,
+  });
+
   if (provider === "deepseek") {
-    return {
-      host: "api.deepseek.com/v1",
-      base: `${origin}/v1`,
-      label: "Official DeepSeek API",
-      sdkLabel: "Official DeepSeek (OpenAI SDK)",
-      curl: chatCurl,
-      sdk: chatSdk,
-    };
+    return openAiCompat(
+      "Official DeepSeek API",
+      "Official DeepSeek (OpenAI SDK)",
+      officialApiHost("deepseek"),
+    );
   }
 
   if (provider === "grok") {
-    return {
-      host: "api.x.ai/v1",
-      base: `${origin}/v1`,
-      label: "Official xAI Grok API",
-      sdkLabel: "Official Grok (OpenAI SDK)",
-      curl: chatCurl,
-      sdk: chatSdk,
-    };
+    return openAiCompat("Official xAI Grok API", "Official Grok (OpenAI SDK)", officialApiHost("grok"));
   }
 
-  return {
-    host: "api.openai.com/v1",
-    base: `${origin}/v1`,
-    label: "Official OpenAI API",
-    sdkLabel: "Official OpenAI SDK",
-    curl: chatCurl,
-    sdk: chatSdk,
-  };
+  if (provider === "mistral") {
+    return openAiCompat(
+      "Official Mistral API",
+      "Official Mistral (OpenAI SDK)",
+      officialApiHost("mistral"),
+    );
+  }
+
+  if (provider === "meta") {
+    return openAiCompat("Official Meta Llama API", "Official Meta Llama (OpenAI SDK)", officialApiHost("meta"));
+  }
+
+  if (provider === "cohere") {
+    return openAiCompat("Official Cohere API", "Official Cohere (OpenAI SDK)", officialApiHost("cohere"));
+  }
+
+  if (provider === "perplexity") {
+    return openAiCompat(
+      "Official Perplexity API",
+      "Official Perplexity (OpenAI SDK)",
+      officialApiHost("perplexity"),
+    );
+  }
+
+  if (provider === "moonshot") {
+    return openAiCompat(
+      "Official Moonshot API",
+      "Official Moonshot Kimi (OpenAI SDK)",
+      officialApiHost("moonshot"),
+    );
+  }
+
+  return openAiCompat("Official OpenAI API", "Official OpenAI SDK", officialApiHost("openai"));
 }

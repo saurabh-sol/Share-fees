@@ -26,6 +26,18 @@ describe("LLM catalog", () => {
     expect(isLlmProvider("grok")).toBe(true);
     expect(findModel("grok", "grok-4.1-fast-non-reasoning")?.id).toBe("grok-4.1-fast-non-reasoning");
     expect(gatewayModelSlug("grok", "grok-4.6")).toBe("xai/grok-4.6");
+    expect(isLlmProvider("mistral")).toBe(true);
+    expect(findModel("mistral", "mistral-small")?.id).toBe("mistral-small");
+    expect(gatewayModelSlug("mistral", "mistral-small")).toBe("mistral/mistral-small");
+    expect(isLlmProvider("meta")).toBe(true);
+    expect(findModel("meta", "llama-4-scout")?.id).toBe("llama-4-scout");
+    expect(isLlmProvider("cohere")).toBe(true);
+    expect(findModel("cohere", "command-a")?.id).toBe("command-a");
+    expect(isLlmProvider("perplexity")).toBe(true);
+    expect(findModel("perplexity", "sonar-pro")?.id).toBe("sonar-pro");
+    expect(isLlmProvider("moonshot")).toBe(true);
+    expect(findModel("moonshot", "kimi-k2.5")?.id).toBe("kimi-k2.5");
+    expect(gatewayModelSlug("moonshot", "kimi-k2.5")).toBe("moonshotai/kimi-k2.5");
   });
 
   it("meters at least 1 cent and never under-charges a $1 key past the ceil", () => {

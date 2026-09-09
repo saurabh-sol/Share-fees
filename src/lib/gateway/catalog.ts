@@ -1,4 +1,15 @@
-export const LLM_PROVIDERS = ["anthropic", "openai", "deepseek", "google", "grok"] as const;
+export const LLM_PROVIDERS = [
+  "anthropic",
+  "openai",
+  "deepseek",
+  "google",
+  "grok",
+  "mistral",
+  "meta",
+  "cohere",
+  "perplexity",
+  "moonshot",
+] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 
 export type LlmModel = {
@@ -36,7 +47,7 @@ export const LLM_CATALOG: readonly LlmProviderCatalog[] = [
       { id: "claude-opus-5-fast", label: "Claude Opus 5 (Fast)", inputPerMillion: 10.0, outputPerMillion: 50.0, gatewaySlug: "anthropic/claude-opus-5-fast" },
       { id: "claude-sonnet-4", label: "Claude Sonnet 4", inputPerMillion: 3.0, outputPerMillion: 15.0, gatewaySlug: "anthropic/claude-sonnet-4" },
       { id: "claude-sonnet-4.5", label: "Claude Sonnet 4.5", inputPerMillion: 3.0, outputPerMillion: 15.0, gatewaySlug: "anthropic/claude-sonnet-4.5" },
-      { id: "claude-sonnet-4.6", label: "Claude Sonnet 4.6", inputPerMillion: 3.0, outputPerMillion: 15.0, gatewaySlug: "anthropic/claude-sonnet-4.6" }
+      { id: "claude-sonnet-4.6", label: "Claude Sonnet 4.6", inputPerMillion: 3.0, outputPerMillion: 15.0, gatewaySlug: "anthropic/claude-sonnet-4.6" },
     ],
   },
   {
@@ -100,7 +111,7 @@ export const LLM_CATALOG: readonly LlmProviderCatalog[] = [
       { id: "o3-mini", label: "o3-mini", inputPerMillion: 1.1, outputPerMillion: 4.4, gatewaySlug: "openai/o3-mini" },
       { id: "o3-pro", label: "o3 Pro", inputPerMillion: 20.0, outputPerMillion: 80.0, gatewaySlug: "openai/o3-pro" },
       { id: "o4-mini", label: "o4-mini", inputPerMillion: 1.1, outputPerMillion: 4.4, gatewaySlug: "openai/o4-mini" },
-      { id: "o4-mini-fast", label: "o4-mini (Fast)", inputPerMillion: 2.0, outputPerMillion: 8.0, gatewaySlug: "openai/o4-mini-fast" }
+      { id: "o4-mini-fast", label: "o4-mini (Fast)", inputPerMillion: 2.0, outputPerMillion: 8.0, gatewaySlug: "openai/o4-mini-fast" },
     ],
   },
   {
@@ -116,7 +127,7 @@ export const LLM_CATALOG: readonly LlmProviderCatalog[] = [
       { id: "deepseek-v4-flash-0731", label: "DeepSeek V4 Flash 0731", inputPerMillion: 0.076, outputPerMillion: 0.153, gatewaySlug: "deepseek/deepseek-v4-flash-0731" },
       { id: "deepseek-v4-flash-vision-exp", label: "DeepSeek V4 Flash Vision Exp", inputPerMillion: 0.22, outputPerMillion: 0.66, gatewaySlug: "deepseek/deepseek-v4-flash-vision-exp" },
       { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", inputPerMillion: 0.66, outputPerMillion: 1.98, gatewaySlug: "deepseek/deepseek-v4-pro" },
-      { id: "deepseek-v4-pro-0813", label: "DeepSeek V4 Pro 0813", inputPerMillion: 0.66, outputPerMillion: 1.98, gatewaySlug: "deepseek/deepseek-v4-pro-0813" }
+      { id: "deepseek-v4-pro-0813", label: "DeepSeek V4 Pro 0813", inputPerMillion: 0.66, outputPerMillion: 1.98, gatewaySlug: "deepseek/deepseek-v4-pro-0813" },
     ],
   },
   {
@@ -156,7 +167,55 @@ export const LLM_CATALOG: readonly LlmProviderCatalog[] = [
       { id: "grok-build-0.1", label: "Grok Build 0.1", inputPerMillion: 1.0, outputPerMillion: 2.0, gatewaySlug: "xai/grok-build-0.1" },
     ],
   },
+  {
+    id: "mistral",
+    label: "Mistral",
+    models: [
+      { id: "mistral-small", label: "Mistral Small", inputPerMillion: 0.1, outputPerMillion: 0.3, gatewaySlug: "mistral/mistral-small" },
+      { id: "mistral-medium", label: "Mistral Medium", inputPerMillion: 0.4, outputPerMillion: 2.0, gatewaySlug: "mistral/mistral-medium" },
+      { id: "mistral-large-3", label: "Mistral Large 3", inputPerMillion: 0.5, outputPerMillion: 1.5, gatewaySlug: "mistral/mistral-large-3" },
+      { id: "mistral-medium-3.5", label: "Mistral Medium 3.5", inputPerMillion: 1.5, outputPerMillion: 7.5, gatewaySlug: "mistral/mistral-medium-3.5" },
+      { id: "mistral-nemo", label: "Mistral Nemo", inputPerMillion: 0.15, outputPerMillion: 0.15, gatewaySlug: "mistral/mistral-nemo" },
+    ],
+  },
+  {
+    id: "meta",
+    label: "Meta",
+    models: [
+      { id: "llama-3.1-8b", label: "Llama 3.1 8B", inputPerMillion: 0.02, outputPerMillion: 0.05, gatewaySlug: "meta/llama-3.1-8b" },
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B", inputPerMillion: 0.72, outputPerMillion: 0.72, gatewaySlug: "meta/llama-3.3-70b" },
+      { id: "llama-4-scout", label: "Llama 4 Scout", inputPerMillion: 0.17, outputPerMillion: 0.66, gatewaySlug: "meta/llama-4-scout" },
+      { id: "llama-4-maverick", label: "Llama 4 Maverick", inputPerMillion: 0.24, outputPerMillion: 0.97, gatewaySlug: "meta/llama-4-maverick" },
+    ],
+  },
+  {
+    id: "cohere",
+    label: "Cohere",
+    models: [
+      { id: "command-a", label: "Command A", inputPerMillion: 2.5, outputPerMillion: 10.0, gatewaySlug: "cohere/command-a" },
+    ],
+  },
+  {
+    id: "perplexity",
+    label: "Perplexity",
+    models: [
+      { id: "sonar", label: "Sonar", inputPerMillion: 1.0, outputPerMillion: 1.0, gatewaySlug: "perplexity/sonar" },
+      { id: "sonar-pro", label: "Sonar Pro", inputPerMillion: 3.0, outputPerMillion: 15.0, gatewaySlug: "perplexity/sonar-pro" },
+      { id: "sonar-reasoning-pro", label: "Sonar Reasoning Pro", inputPerMillion: 2.0, outputPerMillion: 8.0, gatewaySlug: "perplexity/sonar-reasoning-pro" },
+    ],
+  },
+  {
+    id: "moonshot",
+    label: "Moonshot",
+    models: [
+      { id: "kimi-k2", label: "Kimi K2", inputPerMillion: 0.57, outputPerMillion: 2.3, gatewaySlug: "moonshotai/kimi-k2" },
+      { id: "kimi-k2-thinking", label: "Kimi K2 Thinking", inputPerMillion: 0.47, outputPerMillion: 2.0, gatewaySlug: "moonshotai/kimi-k2-thinking" },
+      { id: "kimi-k2.5", label: "Kimi K2.5", inputPerMillion: 0.6, outputPerMillion: 3.0, gatewaySlug: "moonshotai/kimi-k2.5" },
+    ],
+  },
 ] as const;
+
+export const LLM_PROVIDER_SUMMARY = LLM_CATALOG.map((house) => house.label).join(", ");
 
 export const DEFAULT_LLM_PROVIDER: LlmProvider = "openai";
 export const DEFAULT_LLM_MODEL = "gpt-4o-mini";

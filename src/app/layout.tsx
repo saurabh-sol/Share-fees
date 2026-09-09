@@ -7,6 +7,7 @@ import {
   BRAND_NAME,
   BRAND_TITLE,
 } from "@/lib/brand";
+import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +26,7 @@ const SITE =
   "https://trade2credits.onrender.com";
 const OG_IMAGE = `${SITE}/og-preview.png`;
 const OG_DESCRIPTION =
-  "Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for Claude, OpenAI, DeepSeek, Google, and Grok.";
+  `Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for ${LLM_PROVIDER_SUMMARY}.`;
 
 export const viewport: Viewport = {
   width: "device-width",

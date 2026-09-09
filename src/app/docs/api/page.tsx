@@ -4,10 +4,12 @@ import { DocsCode } from "@/components/docs/DocsCode";
 import { DocsCallout, DocsH1, DocsH2, DocsLead, DocsP, DocsTable } from "@/components/docs/DocsPrimitives";
 import { DocsPager } from "@/components/docs/DocsPager";
 import { env } from "@/lib/env";
+import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
+import { OFFICIAL_API_DESK_POINTS } from "@/lib/gateway/official-apis";
 
 export const metadata: Metadata = {
   title: docsPageTitle("API"),
-  description: "Use an acc_ key with the official OpenAI, Anthropic, DeepSeek, Google, or Grok SDK.",
+  description: `Use an acc_ key with the official ${LLM_PROVIDER_SUMMARY} SDK.`,
 };
 
 export default function ApiDocsPage() {
@@ -23,13 +25,7 @@ export default function ApiDocsPage() {
 
       <DocsTable
         headers={["Vendor", "Path", "Auth"]}
-        rows={[
-          ["OpenAI", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
-          ["DeepSeek", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
-          ["Anthropic", "POST /v1/messages", "x-api-key: acc_…"],
-          ["Google", "POST /v1beta/models/{model}:generateContent", "x-goog-api-key: acc_…"],
-          ["Grok", "POST /v1/chat/completions", "Authorization: Bearer acc_…"],
-        ]}
+        rows={OFFICIAL_API_DESK_POINTS.map((item) => [item.vendor, item.path, item.auth])}
       />
       <DocsP>
         Base URL is this origin. /gateway/v1 is the same API. Official SDKs work if you override baseURL.
@@ -39,7 +35,12 @@ export default function ApiDocsPage() {
         now — it will be live soon.
       </DocsP>
 
-      <DocsH2 id="openai-deepseek-grok">OpenAI, DeepSeek, and Grok</DocsH2>
+      <DocsH2 id="openai-compat">OpenAI-compatible vendors</DocsH2>
+      <DocsP>
+        OpenAI, DeepSeek, Grok, Mistral, Meta, Cohere, Perplexity, and Moonshot share the chat completions
+        contract. Point the OpenAI SDK at this origin.
+      </DocsP>
+      <DocsH2 id="openai-deepseek-grok">Example (OpenAI SDK)</DocsH2>
       <DocsCode
         language="js"
         code={`import OpenAI from "openai";
@@ -92,8 +93,8 @@ await client.messages.create({
         even when Gateway is healthy.
       </DocsP>
       <DocsCallout title="Do not put vendor keys in the client">
-        acc_ is the only key you paste into Cursor or a local SDK. OpenAI, Anthropic, DeepSeek, Google, and Grok
-        keys never leave the server.
+        acc_ is the only key you paste into Cursor or a local SDK. {LLM_PROVIDER_SUMMARY} keys never leave the
+        server.
       </DocsCallout>
       <DocsPager href="/docs/api" />
     </>

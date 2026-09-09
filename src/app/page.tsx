@@ -7,12 +7,14 @@ import { FaqList } from "@/components/landing/FaqList";
 import { HeroCtaRow } from "@/components/landing/HeroCtaRow";
 import { DeskStats } from "@/components/landing/DeskStats";
 import { HeroMetrics } from "@/components/landing/HeroMetrics";
+import { Flywheel } from "@/components/landing/Flywheel";
 import { HowItPays } from "@/components/landing/HowItPays";
 import { PublishedLimits } from "@/components/landing/PublishedLimits";
 import { RulesBoard } from "@/components/landing/RulesBoard";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { getSession } from "@/lib/auth/session";
+import { LLM_PROVIDER_SUMMARY } from "@/lib/gateway/catalog";
 
 const HOUSES = ["MetaMask", "Phantom", "Coinbase", "Robinhood"];
 
@@ -42,7 +44,7 @@ export default async function HomePage() {
               </h1>
               <p className="mt-6 max-w-[58ch] text-base leading-relaxed text-zinc-400 md:text-[17px] md:leading-relaxed">
                 Qualifying $250+ fills convert at a published ratio. Take USDG to the same wallet, or LLM credits
-                for Claude, OpenAI, DeepSeek, Google, and Grok-compatible clients.
+                for {LLM_PROVIDER_SUMMARY}-compatible clients.
               </p>
               <HeroMetrics />
               <DeskStats />
@@ -75,10 +77,12 @@ export default async function HomePage() {
 
         <HowItPays />
 
+        <Flywheel />
+
         <section id="rails" className="border-t border-white/8">
           <div className="mx-auto grid max-w-[1400px] grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
             <article className="border-b border-white/8 px-4 py-16 md:border-b-0 md:border-r md:px-8 md:py-20">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">[05] Rails</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Rails</p>
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">USDG to the same wallet.</h2>
               <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-zinc-400">
                 Pick USDG before the credit posts. The outbox queues a payout to the session EVM address on Robinhood.
@@ -90,7 +94,7 @@ export default async function HomePage() {
               <h2 className="mt-4 text-3xl tracking-tight text-zinc-100">A metered key, not a coupon.</h2>
               <p className="mt-4 text-base leading-relaxed text-zinc-400">
                 LLM rail mints an acc_ virtual key. Paste it into any OpenAI-compatible client. Usage burns the credit
-                balance. Claude, OpenAI, DeepSeek, Google, and Grok marks on the desk control are the same rail.
+                balance. {LLM_PROVIDER_SUMMARY} marks on the desk control are the same rail.
               </p>
             </article>
           </div>

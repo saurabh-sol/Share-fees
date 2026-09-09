@@ -2,53 +2,9 @@
 
 import { motion } from "framer-motion";
 import { ProviderMark } from "@/components/llm/ProviderMark";
-import type { LlmProvider } from "@/lib/gateway/catalog";
+import { OFFICIAL_API_DESK_POINTS } from "@/lib/gateway/official-apis";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
-
-const APIS: Array<{
-  vendor: string;
-  host: string;
-  path: string;
-  auth: string;
-  provider: LlmProvider;
-}> = [
-  {
-    vendor: "OpenAI",
-    host: "api.openai.com/v1",
-    path: "POST /v1/chat/completions",
-    auth: "Authorization: Bearer acc_…",
-    provider: "openai",
-  },
-  {
-    vendor: "Anthropic",
-    host: "api.anthropic.com",
-    path: "POST /v1/messages",
-    auth: "x-api-key: acc_…",
-    provider: "anthropic",
-  },
-  {
-    vendor: "DeepSeek",
-    host: "api.deepseek.com/v1",
-    path: "POST /v1/chat/completions",
-    auth: "Authorization: Bearer acc_…",
-    provider: "deepseek",
-  },
-  {
-    vendor: "Google",
-    host: "generativelanguage.googleapis.com",
-    path: "POST /v1beta/models/{model}:generateContent",
-    auth: "x-goog-api-key: acc_…",
-    provider: "google",
-  },
-  {
-    vendor: "Grok",
-    host: "api.x.ai/v1",
-    path: "POST /v1/chat/completions",
-    auth: "Authorization: Bearer acc_…",
-    provider: "grok",
-  },
-];
 
 export function ApiSurface() {
   return (
@@ -67,13 +23,13 @@ export function ApiSurface() {
       </div>
 
       <div className="mx-auto max-w-[1400px] border-t border-white/8">
-        {APIS.map((item, index) => (
+        {OFFICIAL_API_DESK_POINTS.map((item, index) => (
           <motion.article
-            key={item.vendor}
+            key={item.provider}
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
-            transition={{ ...spring, delay: index * 0.04 }}
+            transition={{ ...spring, delay: index * 0.03 }}
             className="grid grid-cols-1 border-b border-white/8 md:grid-cols-[0.7fr_1.3fr]"
           >
             <div className="flex items-center gap-4 border-b border-white/8 px-4 py-10 md:border-b-0 md:border-r md:px-8">

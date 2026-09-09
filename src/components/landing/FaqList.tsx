@@ -32,6 +32,10 @@ const FAQS = [
     q: "Why did a fill not credit?",
     a: "Below the $250 floor, over the daily cap, a duplicate hash, or a wash hold. The row stays on Activity either way.",
   },
+  {
+    q: "How does the $ACCR flywheel work?",
+    a: "Net protocol fees from Accrued Swap Studio fills are distributed pro rata to eligible $ACCR holders. More volume through the desk means more value flowing back to holders — live now.",
+  },
 ];
 
 export function FaqList() {
