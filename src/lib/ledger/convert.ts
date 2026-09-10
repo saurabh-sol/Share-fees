@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client";
 import { creditConversions, ledgerEntries } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
 import { assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
+import { ledgerAccountForRail } from "./rail-accounts";
 import { isUsdtLikeRail, LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
 
 export type ConvertInput = {
@@ -76,7 +77,7 @@ export async function convertCredits(
       }
 
       const conversionId = newLedgerId("cnv");
-      const dest = isUsdtLikeRail(input.rail) ? "user_usdt" : "user_llm";
+      const dest = ledgerAccountForRail(input.rail);
 
       await tx.insert(creditConversions).values({
         id: conversionId,

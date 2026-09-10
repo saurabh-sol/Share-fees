@@ -139,6 +139,7 @@ export const wallets = pgTable("wallets", {
   creditCacheCents: integer("credit_cache_cents").notNull().default(0),
   usdtCacheCents: integer("usdt_cache_cents").notNull().default(0),
   llmCacheCents: integer("llm_cache_cents").notNull().default(0),
+  aiCreateCacheCents: integer("ai_create_cache_cents").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -466,6 +467,57 @@ export const accrDeposits = pgTable(
     uniqueIndex("accr_deposits_intent").on(table.intentId),
     index("accr_deposits_user").on(table.userId),
     index("accr_deposits_status").on(table.status),
+  ],
+);
+
+export const aiModels = pgTable(
+  "ai_models",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull().default("replicate"),
+    category: text("category").notNull(),
+    modelSlug: text("model_slug").notNull(),
+    displayName: text("display_name").notNull(),
+    enabled: integer("enabled").notNull().default(1),
+    pricingType: text("pricing_type").notNull().default("fixed_max"),
+    maxCostCents: integer("max_cost_cents").notNull(),
+    inputSchema: text("input_schema").notNull(),
+    asyncRequired: integer("async_required").notNull().default(0),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("ai_models_category").on(table.category, table.enabled)],
+);
+
+export const aiGenerations = pgTable(
+  "ai_generations",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    modelId: text("model_id")
+      .notNull()
+      .references(() => aiModels.id),
+    provider: text("provider").notNull(),
+    providerPredictionId: text("provider_prediction_id"),
+    status: text("status").notNull(),
+    estimatedCostCents: integer("estimated_cost_cents").notNull(),
+    reservedCreditCents: integer("reserved_credit_cents").notNull(),
+    finalCostCents: integer("final_cost_cents"),
+    holdId: text("hold_id").notNull(),
+    input: text("input").notNull(),
+    output: text("output"),
+    error: text("error"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("ai_generations_idempotency").on(table.userId, table.idempotencyKey),
+    index("ai_generations_user").on(table.userId, table.createdAt),
+    index("ai_generations_status").on(table.status),
+    uniqueIndex("ai_generations_prediction").on(table.providerPredictionId),
   ],
 );
 

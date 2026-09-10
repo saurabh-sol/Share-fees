@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/v1/jobs/payouts", "schedule": "* * * * *" },
     { "path": "/api/v1/jobs/settles", "schedule": "* * * * *" },
-    { "path": "/api/v1/jobs/holder", "schedule": "* * * * *" }
+    { "path": "/api/v1/jobs/holder", "schedule": "* * * * *" },
+    { "path": "/api/v1/jobs/ai-create", "schedule": "*/5 * * * *" }
   ]
 }

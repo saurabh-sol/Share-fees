@@ -19,6 +19,7 @@ function newIdempotencyKey() {
 
 const RAIL_LABELS: Record<Rail, string> = {
   llm_credits: "LLM credits",
+  ai_create_credits: "Create credits",
   usdt: "USDG",
   stock_nvda: "NVDA",
   stock_aapl: "AAPL",
@@ -104,10 +105,10 @@ export function ConvertDesk({
     <section className="space-y-6 border-t border-white/8 pt-10">
       <div>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Convert</p>
-        <h2 className="mt-3 text-2xl tracking-tight text-zinc-100">Website credit to USDG</h2>
+        <h2 className="mt-3 text-2xl tracking-tight text-zinc-100">Website credit to a rail</h2>
         <p className="mt-3 max-w-[65ch] text-sm text-zinc-400">
-          Move website credit to USDG or the LLM rail before redeeming. LLM redeems spend only what is
-          already on the LLM rail.
+          Move volume reward to USDG, Create credits (AI Create / Replicate), or LLM credits (chat and
+          acc_ API). You can also allocate on the Redeem page.
         </p>
       </div>
 
@@ -136,6 +137,9 @@ export function ConvertDesk({
           <div className="flex flex-wrap gap-3">
             <NotchedButton disabled={creditCents <= 0 || usdgPaused} onClick={() => review("usdt")}>
               To USDG rail
+            </NotchedButton>
+            <NotchedButton disabled={creditCents <= 0} onClick={() => review("ai_create_credits")}>
+              To Create rail
             </NotchedButton>
             <NotchedButton disabled={creditCents <= 0} onClick={() => review("llm_credits")}>
               To LLM rail

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/client";
 import { users, virtualKeys, wallets } from "@/lib/db/schema";
+import { convertCredits } from "@/lib/ledger/convert";
 import { postSwapReward } from "@/lib/ledger/post-swap-reward";
 import { spendableLlmCents } from "@/lib/ledger/desk-chat";
 import { redeem } from "@/lib/redeem/service";
@@ -67,7 +68,7 @@ describe("desk chat", () => {
   it("calls the model and charges a redeemed key", async () => {
     const db = await createTestDb();
     const userId = await seedUser(db);
-    await postSwapReward(
+    const posted = await postSwapReward(
       {
         userId,
         source: "mock",
@@ -83,6 +84,17 @@ describe("desk chat", () => {
       },
       db,
     );
+    if (posted.creditedCents > 0) {
+      await convertCredits(
+        {
+          userId,
+          rail: "llm_credits",
+          amountCents: posted.creditedCents,
+          idempotencyKey: "cnv_desk_chat",
+        },
+        db,
+      );
+    }
 
     const redeemed = await redeem(
       {

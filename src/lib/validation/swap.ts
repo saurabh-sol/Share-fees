@@ -3,7 +3,7 @@ import { MAX_USDG_REDEEM_CENTS } from "@/lib/redeem/limits";
 import { STOCK_RAILS } from "@/lib/redeem/stock-catalog";
 import { llmProviderSchema } from "@/lib/validation/llm";
 
-export const railSchema = z.enum(["usdt", "llm_credits", ...STOCK_RAILS]);
+export const railSchema = z.enum(["usdt", "llm_credits", "ai_create_credits", ...STOCK_RAILS]);
 export const namespaceSchema = z.enum(["eip155", "solana"]);
 
 export const nonceRequestSchema = z.object({
@@ -148,6 +148,40 @@ export const rewardRuleSchema = z.object({
 
 export const adminSessionSchema = z.object({
   secret: z.string().min(16).max(200),
+});
+
+const aiModelFieldSchema = z.object({
+  type: z.enum(["string", "number", "boolean", "array"]),
+  required: z.boolean().optional(),
+  maxLength: z.number().int().positive().optional(),
+  enum: z.array(z.string()).optional(),
+  default: z.union([z.string(), z.number(), z.boolean(), z.array(z.unknown())]).optional(),
+});
+
+export const aiModelAdminSchema = z.object({
+  id: z
+    .string()
+    .min(2)
+    .max(64)
+    .regex(/^[a-z0-9-]+$/),
+  provider: z.string().min(2).max(32).default("replicate"),
+  category: z.enum(["image", "video", "audio"]),
+  modelSlug: z
+    .string()
+    .min(3)
+    .max(128)
+    .regex(/^[^/]+\/[^/]+$/),
+  displayName: z.string().min(2).max(80),
+  enabled: z.boolean().default(true),
+  pricingType: z.enum(["fixed_max"]).default("fixed_max"),
+  maxCostCents: z.number().int().min(1).max(10_000),
+  inputSchema: z.record(z.string(), aiModelFieldSchema),
+  asyncRequired: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).max(999).default(0),
+});
+
+export const aiModelToggleSchema = z.object({
+  enabled: z.boolean(),
 });
 
 export const flagResolveSchema = z.object({

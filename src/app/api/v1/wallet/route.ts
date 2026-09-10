@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     creditCents: wallet.creditCents,
     usdtCents: wallet.usdtCents,
     llmCents: wallet.llmCents,
+    aiCreateCents: wallet.aiCreateCents,
     displayLlmCents,
     swaps: recentSwaps,
     credits: recentCredits,

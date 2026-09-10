@@ -63,21 +63,27 @@ export default async function DeskPage() {
         {conversionBps} bps · {money(minNotionalUsdCents)} floor · $1.00 min credit · {money(dailyCapUsdCents)} daily
         cap
       </p>
-      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
-        <div className="py-8 md:pr-8">
+      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+        <div className="py-8 lg:pr-6">
           <dt className="text-sm text-zinc-500">Website credit</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">{money(creditCents)}</dd>
         </div>
-        <div className="py-8 md:px-8">
-          <dt className="text-sm text-zinc-500">USDG</dt>
-          <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
-            {money(wallet.usdtCents)}
+        <div className="py-8 lg:px-6">
+          <dt className="text-sm text-zinc-500">Create credits</dt>
+          <dd className="mt-2 font-mono text-4xl tracking-tight text-accent">
+            {money(wallet.aiCreateCents)}
           </dd>
         </div>
-        <div className="py-8 md:pl-8">
+        <div className="py-8 lg:px-6">
           <dt className="text-sm text-zinc-500">LLM credits</dt>
           <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
             {money(displayLlmCents)}
+          </dd>
+        </div>
+        <div className="py-8 lg:pl-6">
+          <dt className="text-sm text-zinc-500">USDG</dt>
+          <dd className="mt-2 font-mono text-4xl tracking-tight text-zinc-100">
+            {money(wallet.usdtCents)}
           </dd>
         </div>
       </dl>
@@ -90,8 +96,8 @@ export default async function DeskPage() {
         usdgPauseMessage={USDG_PAUSE_MESSAGE}
       />
       <p className="max-w-[65ch] text-zinc-400">
-        Scan finds fills. Claim each qualifying swap to post website credit. Convert to USDG or redeem
-        LLM credits before spending — chat and API keys only work after LLM redeem.
+        Scan finds fills. Claim each qualifying swap to post website credit. On Redeem, choose Create
+        credits for AI Create (Replicate) or LLM credits for chat and acc_ API (Vercel Gateway).
       </p>
       <div className="flex flex-wrap gap-6">
         <Link href="/app/swap" className="text-sm text-accent">

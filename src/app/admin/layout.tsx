@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                   { href: "/admin/ledger", label: "Ledger" },
                   { href: "/admin/payouts", label: "Payouts" },
                   { href: "/admin/exchanges", label: "Pay-in routes" },
+                  { href: "/admin/models", label: "AI models" },
                 ]}
               />
               <AdminSignOut />

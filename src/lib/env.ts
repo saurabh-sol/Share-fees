@@ -64,10 +64,30 @@ const envSchema = z.object({
   DEPOSIT_GRANT_BPS: z.string().optional(),
   DEPOSIT_MIN_USD_CENTS: z.string().optional(),
   ACCR_PRICE_USD: z.string().optional(),
+  REPLICATE_API_TOKEN: z.string().min(8).optional(),
+  AI_CREATE_ENABLED: z.enum(["true", "false"]).optional(),
+  AI_CREATE_MAX_CONCURRENT: z.string().optional(),
+  AI_CREATE_DAILY_CAP_CENTS: z.string().optional(),
+  REPLICATE_DAILY_BUDGET_CENTS: z.string().optional(),
+  REPLICATE_WEBHOOK_SECRET: z.string().min(8).optional(),
+  AI_STORAGE_LOCAL: z.enum(["true", "false"]).optional(),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  R2_PUBLIC_URL: z.string().url().optional(),
 });
 
 function cleanEnv(value: string | undefined) {
   return value?.trim().replace(/^['"]|['"]$/g, "") || undefined;
+}
+
+/** Accept a bare Alchemy key or a pasted RPC URL (`…/v2/<key>`). */
+export function normalizeAlchemyApiKey(raw: string | undefined) {
+  const cleaned = cleanEnv(raw)?.split("#")[0]?.trim();
+  if (!cleaned) return undefined;
+  const fromUrl = cleaned.match(/\/v2\/([^/?#]+)/)?.[1];
+  return (fromUrl ?? cleaned).trim() || undefined;
 }
 
 const parsed = envSchema.parse({
@@ -83,7 +103,7 @@ const parsed = envSchema.parse({
   LIFI_API_KEY: cleanEnv(process.env.LIFI_API_KEY),
   CHANGENOW_API_KEY: cleanEnv(process.env.CHANGENOW_API_KEY),
   ZERION_API_KEY: cleanEnv(process.env.ZERION_API_KEY),
-  ALCHEMY_API_KEY: cleanEnv(process.env.ALCHEMY_API_KEY),
+  ALCHEMY_API_KEY: normalizeAlchemyApiKey(process.env.ALCHEMY_API_KEY),
   AI_GATEWAY_API_KEY: cleanEnv(process.env.AI_GATEWAY_API_KEY),
   VERCEL_OIDC_TOKEN: cleanEnv(process.env.VERCEL_OIDC_TOKEN),
   OPENAI_API_KEY: cleanEnv(process.env.OPENAI_API_KEY),
@@ -125,6 +145,18 @@ const parsed = envSchema.parse({
   DEPOSIT_GRANT_BPS: process.env.DEPOSIT_GRANT_BPS,
   DEPOSIT_MIN_USD_CENTS: process.env.DEPOSIT_MIN_USD_CENTS,
   ACCR_PRICE_USD: process.env.ACCR_PRICE_USD,
+  REPLICATE_API_TOKEN: process.env.REPLICATE_API_TOKEN,
+  AI_CREATE_ENABLED: process.env.AI_CREATE_ENABLED,
+  AI_CREATE_MAX_CONCURRENT: process.env.AI_CREATE_MAX_CONCURRENT,
+  AI_CREATE_DAILY_CAP_CENTS: process.env.AI_CREATE_DAILY_CAP_CENTS,
+  REPLICATE_DAILY_BUDGET_CENTS: process.env.REPLICATE_DAILY_BUDGET_CENTS,
+  REPLICATE_WEBHOOK_SECRET: process.env.REPLICATE_WEBHOOK_SECRET,
+  AI_STORAGE_LOCAL: process.env.AI_STORAGE_LOCAL,
+  R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+  R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
+  R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
 });
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
@@ -212,6 +244,32 @@ export const env = {
   depositGrantBps: parsed.DEPOSIT_GRANT_BPS ? Number(parsed.DEPOSIT_GRANT_BPS) : 6000,
   depositMinUsdCents: parsed.DEPOSIT_MIN_USD_CENTS ? Number(parsed.DEPOSIT_MIN_USD_CENTS) : 500,
   accrPriceUsd: parsed.ACCR_PRICE_USD ? Number(parsed.ACCR_PRICE_USD) : undefined,
+  replicateApiToken: parsed.REPLICATE_API_TOKEN,
+  aiCreateEnabled: parsed.AI_CREATE_ENABLED === "true",
+  aiCreateMaxConcurrent: parsed.AI_CREATE_MAX_CONCURRENT
+    ? Number(parsed.AI_CREATE_MAX_CONCURRENT)
+    : 2,
+  aiCreateDailyCapCents: parsed.AI_CREATE_DAILY_CAP_CENTS
+    ? Number(parsed.AI_CREATE_DAILY_CAP_CENTS)
+    : 2000,
+  replicateDailyBudgetCents: parsed.REPLICATE_DAILY_BUDGET_CENTS
+    ? Number(parsed.REPLICATE_DAILY_BUDGET_CENTS)
+    : 50_000,
+  replicateWebhookSecret: parsed.REPLICATE_WEBHOOK_SECRET,
+  aiStorageLocal:
+    parsed.AI_STORAGE_LOCAL === "true" ||
+    (parsed.AI_STORAGE_LOCAL !== "false" && parsed.NODE_ENV === "development"),
+  r2AccountId: parsed.R2_ACCOUNT_ID,
+  r2AccessKeyId: parsed.R2_ACCESS_KEY_ID,
+  r2SecretAccessKey: parsed.R2_SECRET_ACCESS_KEY,
+  r2BucketName: parsed.R2_BUCKET_NAME,
+  r2PublicUrl: parsed.R2_PUBLIC_URL,
+  r2Configured: Boolean(
+    parsed.R2_ACCOUNT_ID &&
+      parsed.R2_ACCESS_KEY_ID &&
+      parsed.R2_SECRET_ACCESS_KEY &&
+      parsed.R2_BUCKET_NAME,
+  ),
 };
 
 export function appDomain(): string {

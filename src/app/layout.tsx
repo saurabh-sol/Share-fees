@@ -22,10 +22,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE =
-  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-  process.env.APP_ORIGIN?.replace(/\/$/, "") ??
-  PRODUCTION_APP_ORIGIN;
+const SITE = PRODUCTION_APP_ORIGIN;
 const OG_IMAGE = `${SITE}/og-preview.png`;
 const OG_DESCRIPTION =
   `Qualifying $250+ fills convert at 50 bps. Take USDG to your wallet or LLM credits for ${LLM_PROVIDER_SUMMARY}.`;

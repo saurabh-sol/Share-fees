@@ -246,7 +246,7 @@ export async function confirmDeposit(input: {
       {
         id: newLedgerId("led"),
         userId: input.userId,
-        account: "user_llm",
+        account: "user_ai_create",
         type: "credit",
         amountCents: intent.grantedLlmCents,
         referenceType: "accr_deposit",

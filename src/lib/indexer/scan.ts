@@ -227,7 +227,7 @@ export async function scanWallet(input: {
     try {
       const batch = await source.fetchTrades(input.address, since);
       candidates.push(...batch);
-      if (source.name === "alchemy" && batch.length >= 0) {
+      if (source.name === "alchemy" && batch.length > 0) {
         primarySucceeded = true;
       }
     } catch (error) {

@@ -14,8 +14,8 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Placeholders for `next build` only. Runtime secrets (Privy, session, DB) come from Compose.
 RUN SESSION_SECRET=docker-build-session-secret-min-32-chars \
-    APP_ORIGIN=http://localhost:3000 \
-    NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+    APP_ORIGIN=https://accrued.trade \
+    NEXT_PUBLIC_APP_URL=https://accrued.trade \
     npm run build
 
 FROM node:22-alpine AS runner

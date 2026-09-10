@@ -2,7 +2,12 @@ import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { ledgerEntries, wallets } from "@/lib/db/schema";
 
-export type LedgerAccount = "user_credits" | "user_usdt" | "user_llm" | "payout_pool";
+export type LedgerAccount =
+  | "user_credits"
+  | "user_usdt"
+  | "user_llm"
+  | "user_ai_create"
+  | "payout_pool";
 
 export async function lockWalletRow(
   db: Awaited<ReturnType<typeof getDb>>,
@@ -33,6 +38,7 @@ export async function syncWalletCache(
   const creditCents = await sumAccountCents(db, userId, "user_credits");
   const usdtCents = await sumAccountCents(db, userId, "user_usdt");
   const llmCents = await sumAccountCents(db, userId, "user_llm");
+  const aiCreateCents = await sumAccountCents(db, userId, "user_ai_create");
   await db
     .insert(wallets)
     .values({
@@ -40,6 +46,7 @@ export async function syncWalletCache(
       creditCacheCents: creditCents,
       usdtCacheCents: usdtCents,
       llmCacheCents: llmCents,
+      aiCreateCacheCents: aiCreateCents,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -48,8 +55,9 @@ export async function syncWalletCache(
         creditCacheCents: creditCents,
         usdtCacheCents: usdtCents,
         llmCacheCents: llmCents,
+        aiCreateCacheCents: aiCreateCents,
         updatedAt: new Date(),
       },
     });
-  return { creditCents, usdtCents, llmCents };
+  return { creditCents, usdtCents, llmCents, aiCreateCents };
 }

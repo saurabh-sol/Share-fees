@@ -27,7 +27,7 @@ Notional is the **USD value of the fill**, not the token amount. A $40 swap in a
 2. **Swap live, or bring history.** Swap Studio quotes and executes through the swap router or Robinhood ETH. Activity can scan the same wallet (last 90 days, when configured) or accept a verified transaction hash.
 3. **Clear the $250 floor.** Confirmed swap volume on the connected wallet must reach $250 before BPS is listed. Smaller swaps still count toward that total. Sends do not. A live fill below $250 still executes; it does not pay on its own.
 4. **Credit posts at 50 bps.** Qualifying notional × 0.50% becomes website credit.
-5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. USDG redeem is an on-chain vault claim on Robinhood. LLM redeem stays a `acc_` key.
+5. **Claim, then convert.** Credit sits on the desk first. Convert 1:1 to the USDG rail or the LLM rail when you want it. LLM rail balance powers **AI Create** (Replicate). **Redeem → LLM** mints a separate `acc_` key for chat/API (Vercel Gateway). USDG redeem is an on-chain vault claim on Robinhood.
 6. **One hash, one credit.** The same transaction on the same chain never pays twice. Re-scan, retry, and a second claim on that fill do nothing.
 
 Partners named on the site: MetaMask, Phantom, Coinbase, and Robinhood.
@@ -41,7 +41,10 @@ Partners named on the site: MetaMask, Phantom, Coinbase, and Robinhood.
 | `/app` | Balances for website credit, USDG rail, and LLM rail |
 | `/app/swap` | Quote a pair, execute the fill, settle the credit |
 | `/app/claims` | Scan wallet history or import a hash, then claim |
-| `/app/redeem` | Convert credit and redeem USDG or a `acc_` key |
+| `/app/redeem` | Redeem USDG, stock tokens, or mint an `acc_` key for chat/API |
+| `/app/deposit` | Deposit $ACCR for an LLM credit bonus (same ledger AI Create spends) |
+| `/app/create` | AI Create — image/video generation via Replicate |
+| `/app/chat` | Desk chat via Vercel AI Gateway (requires redeemed `acc_` key) |
 
 ## Rails
 
@@ -77,6 +80,25 @@ await client.chat.completions.create({
 ```
 
 Upstream calls go through **Vercel AI Gateway**. You do not paste OpenAI, Anthropic, or DeepSeek keys. Set `AI_GATEWAY_API_KEY`, or on Vercel use the automatic OIDC token. Desk credit still caps the `acc_` key. If Gateway is unset and a leftover provider key is also empty, that provider returns `503`. `/gateway/v1` is the same API.
+
+### AI Create credits (Replicate)
+
+AI Create uses a **separate ledger rail** (`user_ai_create` / **Create credits**). It does **not** share balance with LLM chat or `acc_` API keys.
+
+| Rail | Pays for | Backend |
+| --- | --- | --- |
+| **Create credits** | `/app/create` image/video | Replicate (`REPLICATE_API_TOKEN`) |
+| **LLM credits** | `/app/chat`, `acc_` `/v1` API | Vercel AI Gateway |
+
+User flow after scan and claim:
+
+1. **Earn volume reward** — swap at `/app/swap`, claim at `/app/claims` ($250+ floor, 50 bps) → website credit.
+2. **Choose on Redeem** — `/app/redeem` → **Create credits** (AI Create) or **LLM credits** (chat/API key). Or **Convert** on `/app`.
+3. **Generate** — `/app/create` holds Create balance per job, calls Replicate, settles actual cost on deduction.
+
+`$ACCR` **Deposit** bonuses post to **Create credits**, not the LLM rail.
+
+Operator env for AI Create: `AI_CREATE_ENABLED=true`, `REPLICATE_API_TOKEN`, optional `REPLICATE_WEBHOOK_SECRET` for async video.
 
 ## What the desk will not do
 

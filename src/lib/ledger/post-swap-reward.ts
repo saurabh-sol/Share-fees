@@ -20,6 +20,7 @@ import type { Rail } from "@/lib/redeem/rails";
 
 export type { Rail, StockRail } from "@/lib/redeem/rails";
 export { isStockRail, isUsdtLikeRail } from "@/lib/redeem/rails";
+export { isAiCreateRail, isLlmChatRail, ledgerAccountForRail } from "./rail-accounts";
 
 export type PostSwapInput = {
   userId: string;
@@ -46,6 +47,7 @@ export type PostSwapResult = {
   creditCents: number;
   usdtCents: number;
   llmCents: number;
+  aiCreateCents: number;
 };
 
 export function newLedgerId(prefix: string) {
@@ -145,6 +147,7 @@ export async function readWallet(
     creditCents: row?.creditCacheCents ?? 0,
     usdtCents: row?.usdtCacheCents ?? 0,
     llmCents: row?.llmCacheCents ?? 0,
+    aiCreateCents: row?.aiCreateCacheCents ?? 0,
   };
 }
 

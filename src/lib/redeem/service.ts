@@ -9,6 +9,7 @@ import {
 } from "@/lib/gateway/catalog";
 import { creditConversions, ledgerEntries, payoutOutbox, redemptions, virtualKeys } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "@/lib/ledger/balances";
+import { isLlmChatRail, ledgerAccountForRail } from "@/lib/ledger/rail-accounts";
 import { isStockRail, isUsdtLikeRail, type Rail } from "@/lib/ledger/post-swap-reward";
 import { newLedgerId } from "@/lib/ledger/post-swap-reward";
 import { issueVirtualKeyMaterial } from "./keys";
@@ -103,6 +104,57 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     }
   }
 
+  if (input.rail === "ai_create_credits") {
+    return client.transaction(async (tx) => {
+      await lockWalletRow(tx as never, input.userId);
+      const creditAvailable = await sumAccountCents(tx as never, input.userId, "user_credits");
+      if (creditAvailable < input.amountCents) {
+        throw new RedeemError("insufficient_balance", 400);
+      }
+      const redemptionId = newId("rdm");
+      await tx.insert(redemptions).values({
+        id: redemptionId,
+        userId: input.userId,
+        rail: input.rail,
+        amountCents: input.amountCents,
+        status: "fulfilled",
+        destination: "ai_create",
+        idempotencyKey: input.idempotencyKey,
+        fulfilledAt: new Date(),
+      });
+      await tx.insert(ledgerEntries).values([
+        {
+          id: newId("led"),
+          userId: input.userId,
+          account: "user_credits",
+          type: "debit",
+          amountCents: input.amountCents,
+          referenceType: "redemption",
+          referenceId: redemptionId,
+        },
+        {
+          id: newId("led"),
+          userId: input.userId,
+          account: "user_ai_create",
+          type: "credit",
+          amountCents: input.amountCents,
+          referenceType: "redemption",
+          referenceId: redemptionId,
+        },
+      ]);
+      const balances = await syncWalletCache(tx as never, input.userId);
+      return {
+        alreadyExists: false,
+        redemptionId,
+        status: "fulfilled" as const,
+        plaintextKey: null as string | null,
+        keyPrefix: null as string | null,
+        onChainClaim: null,
+        ...balances,
+      };
+    });
+  }
+
   let llm: ReturnType<typeof assertProviderModel> | null = null;
   if (input.rail === "llm_credits") {
     try {
@@ -115,7 +167,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     }
   }
 
-  const account = isUsdtLikeRail(input.rail) ? "user_usdt" : "user_llm";
+  const account = ledgerAccountForRail(input.rail);
   const destination = isUsdtLikeRail(input.rail)
     ? normalizeAddress("eip155", input.address)
     : "gateway";
@@ -124,13 +176,12 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     await lockWalletRow(tx as never, input.userId);
     const railAvailable = await sumAccountCents(tx as never, input.userId, account);
     const creditAvailable = await sumAccountCents(tx as never, input.userId, "user_credits");
-    const llmRailOnly = input.rail === "llm_credits";
-    const spendable = railAvailable + (llmRailOnly ? 0 : creditAvailable);
+    const spendable = railAvailable + creditAvailable;
     if (spendable < input.amountCents) {
       throw new RedeemError("insufficient_balance", 400);
     }
 
-    const fromCredit = llmRailOnly ? 0 : Math.min(creditAvailable, input.amountCents);
+    const fromCredit = Math.min(creditAvailable, input.amountCents);
     if (fromCredit > 0) {
       const conversionId = newLedgerId("cnv");
       await tx.insert(creditConversions).values({
@@ -162,7 +213,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       ]);
     }
     const redemptionId = newId("rdm");
-    const initialStatus = input.rail === "llm_credits" ? "fulfilled" : "queued";
+    const initialStatus = isLlmChatRail(input.rail) ? "fulfilled" : "queued";
 
     await tx.insert(redemptions).values({
       id: redemptionId,
@@ -173,7 +224,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
       destination,
       idempotencyKey: input.idempotencyKey,
       clientIp: isUsdtLikeRail(input.rail) ? input.clientIp?.trim() || null : null,
-      fulfilledAt: input.rail === "llm_credits" ? new Date() : null,
+      fulfilledAt: isLlmChatRail(input.rail) ? new Date() : null,
     });
 
     await tx.insert(ledgerEntries).values([
@@ -200,7 +251,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
     let plaintextKey: string | null = null;
     let keyPrefix: string | null = null;
 
-    if (input.rail === "llm_credits") {
+    if (isLlmChatRail(input.rail)) {
       const material = issueVirtualKeyMaterial();
       plaintextKey = material.raw;
       keyPrefix = material.prefix;

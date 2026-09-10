@@ -277,3 +277,63 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up --build 
 7. `/app/chat` spends the same rail from the desk.
 8. `/app/rewards` shows the rows. A second claim on the same hash does nothing.
 9. Pull the network: pixel **404**. Open a missing URL: same field.
+
+---
+
+## AI Create (local)
+
+Phase 1 + 2 cover image (sync) and video (async) generation via Replicate, billed against actual **LLM rail** balance.
+
+### `.env.local` minimum
+
+```env
+REPLICATE_API_TOKEN=r8_...
+AI_CREATE_ENABLED=true
+AI_STORAGE_LOCAL=true
+CRON_SECRET=dev-cron-secret-min-16
+```
+
+Optional for webhook-driven async finalization (video):
+
+```env
+REPLICATE_WEBHOOK_SECRET=whsec_...
+```
+
+Fetch the signing secret from Replicate: `GET https://api.replicate.com/v1/webhooks/default/secret` with your API token. For local webhooks, expose the app with ngrok and set `APP_ORIGIN` to the public URL.
+
+Optional production storage (Cloudflare R2):
+
+```env
+AI_STORAGE_LOCAL=false
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=https://assets.example.com
+```
+
+### Fund LLM credits
+
+Deposit or convert website credit to the LLM rail (`/app/deposit` or `/app/convert`). AI Create spends **actual** `user_llm`, while the desk shows the 2× display balance when `DEPOSIT_DISPLAY_MULTIPLIER=2`.
+
+### Walkthrough
+
+1. `npm run dev` — local cron ticks `/api/v1/jobs/ai-create` every 60s when `CRON_SECRET` is set.
+2. Open `/app/create`.
+3. **Image tab** — FLUX Schnell (~10¢ max). Prompt → **Generate**. Result appears inline or after a short poll.
+4. **Video tab** — MiniMax Video-01 (~$1.50 max, async). Prompt → **Generate** → poll until `succeeded`. With `AI_STORAGE_LOCAL=true`, outputs are copied to `.data/ai-outputs/` and served from `/api/v1/ai/assets/...`.
+5. Check balance drops on success; failed/canceled runs release the hold (partial charge only if Replicate reports `predict_time` on cancel).
+
+### Automated tests
+
+```bash
+npm test -- src/lib/ai-create src/lib/replicate/webhook.test.ts
+npm run typecheck
+```
+
+### Phase 3 — admin + ledger activity
+
+1. Open `/admin` with `ADMIN_SECRET` from `.env.local`.
+2. **AI models** — `/admin/models` lists seeded models; edit max cost, toggle enable/disable, or add a new allowlisted slug.
+3. **Overview** — provider spend meter shows today’s Replicate usage vs `REPLICATE_DAILY_BUDGET_CENTS` (warns above 80%).
+4. **User ledger** — `/app/rewards` shows friendly event labels (`AI generation`, `Deposit`, …) plus an **AI generations** section linking to `/app/create`.

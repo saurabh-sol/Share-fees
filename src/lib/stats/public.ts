@@ -3,7 +3,9 @@ import { getDb } from "@/lib/db/client";
 import { accrDeposits, creditEvents, discoveredSwaps, redemptions, swaps } from "@/lib/db/schema";
 import {
   applyPublicStatsFloor,
+  PRODUCTION_PUBLIC_STATS_FLOOR,
   readPublicStatsFloor,
+  statsFromFloorOnly,
 } from "./baseline";
 
 export type { PublicStatsFloor } from "./baseline";
@@ -24,6 +26,26 @@ export type PublicDeskStats = {
 const CACHE_TTL_MS = 30 * 1000;
 let cache: { value: PublicDeskStats; expiresAt: number } | null = null;
 
+function publicStatsMirrorOrigin(): string | undefined {
+  const raw = process.env.PUBLIC_STATS_MIRROR_ORIGIN?.trim().replace(/\/$/, "");
+  return raw || undefined;
+}
+
+async function fetchMirroredPublicDeskStats(): Promise<PublicDeskStats | null> {
+  const origin = publicStatsMirrorOrigin();
+  if (!origin || process.env.NODE_ENV === "test") return null;
+  try {
+    const response = await fetch(`${origin}/api/v1/stats/public`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as PublicDeskStats;
+  } catch {
+    return null;
+  }
+}
+
 export function clearPublicDeskStatsCache() {
   cache = null;
 }
@@ -38,6 +60,14 @@ export async function getPublicDeskStats(options?: {
 }): Promise<PublicDeskStats> {
   if (!options?.fresh && cache && cache.expiresAt > Date.now()) {
     return cache.value;
+  }
+
+  if (!options?.db) {
+    const mirrored = await fetchMirroredPublicDeskStats();
+    if (mirrored) {
+      cache = { value: mirrored, expiresAt: Date.now() + CACHE_TTL_MS };
+      return mirrored;
+    }
   }
 
   try {
@@ -114,13 +144,7 @@ export async function getPublicDeskStats(options?: {
     return stats;
   } catch (error) {
     console.error("[stats/public] live query failed", error);
-    const stats: PublicDeskStats = {
-      activeWallets: 0,
-      claimedLlmCreditsUsd: 0,
-      creditPaidUsd: 0,
-      swapVolumeUsd: 0,
-      asOf: new Date().toISOString(),
-    };
+    const stats = statsFromFloorOnly(PRODUCTION_PUBLIC_STATS_FLOOR);
     cache = { value: stats, expiresAt: Date.now() + CACHE_TTL_MS };
     return stats;
   }

@@ -1,4 +1,5 @@
 import { desc, eq, inArray, sql } from "drizzle-orm";
+import { aiCreateOverview } from "@/lib/ai-create/stats";
 import { getDb } from "@/lib/db/client";
 import { changenowExchanges, fraudFlags, ledgerEntries, payoutOutbox, swaps, users } from "@/lib/db/schema";
 
@@ -28,7 +29,7 @@ export async function accountTotals(db?: Awaited<ReturnType<typeof getDb>>) {
 
 export async function adminOverview(db?: Awaited<ReturnType<typeof getDb>>) {
   const client = db ?? (await getDb());
-  const [totals, openFlags, queuedPayouts, heldSwaps, userCount, pendingNow] = await Promise.all([
+  const [totals, openFlags, queuedPayouts, heldSwaps, userCount, pendingNow, aiCreate] = await Promise.all([
     accountTotals(client),
     client
       .select({ count: sql<number>`count(*)` })
@@ -51,6 +52,7 @@ export async function adminOverview(db?: Awaited<ReturnType<typeof getDb>>) {
       .from(changenowExchanges)
       .where(inArray(changenowExchanges.status, ["new", "waiting", "confirming", "exchanging", "sending"]))
       .then((rows) => Number(rows[0]?.count ?? 0)),
+    aiCreateOverview(client),
   ]);
 
   const liabilityCents = totals.userCreditsCents + totals.userUsdtCents + totals.userLlmCents;
@@ -62,6 +64,7 @@ export async function adminOverview(db?: Awaited<ReturnType<typeof getDb>>) {
     heldSwaps,
     userCount,
     pendingChangeNow: pendingNow,
+    aiCreate,
   };
 }
 

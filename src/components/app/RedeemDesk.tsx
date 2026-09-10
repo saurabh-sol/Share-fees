@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowSquareOut } from "@phosphor-icons/react";
@@ -64,6 +65,7 @@ function money(cents: number) {
 function railLabel(rail: string) {
   if (rail === "usdt") return "USDG";
   if (rail === "llm_credits") return "LLM";
+  if (rail === "ai_create_credits") return "Create";
   return STOCK_PAYOUT_OPTIONS.find((row) => row.rail === rail)?.symbol ?? rail;
 }
 
@@ -84,6 +86,7 @@ export function RedeemDesk({
   creditCents,
   usdtCents,
   llmCents,
+  aiCreateCents,
   displayLlmCents: initialDisplayLlmCents,
   chainNamespace,
   initialRedemptions,
@@ -97,6 +100,7 @@ export function RedeemDesk({
   creditCents: number;
   usdtCents: number;
   llmCents: number;
+  aiCreateCents: number;
   displayLlmCents: number;
   chainNamespace: "eip155" | "solana";
   initialRedemptions: Redemption[];
@@ -126,16 +130,16 @@ export function RedeemDesk({
   const [redemptions, setRedemptions] = useState(initialRedemptions);
   const [keys, setKeys] = useState(initialKeys);
   const [onChainClaims, setOnChainClaims] = useState(initialOnChainClaims);
-  const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents });
+  const [balances, setBalances] = useState({ creditCents, usdtCents, llmCents, aiCreateCents });
   const [displayLlmCents, setDisplayLlmCents] = useState(initialDisplayLlmCents);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [testingKeyId, setTestingKeyId] = useState<string | null>(null);
   const issuedKeyRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    setBalances({ creditCents, usdtCents, llmCents });
+    setBalances({ creditCents, usdtCents, llmCents, aiCreateCents });
     setDisplayLlmCents(initialDisplayLlmCents);
-  }, [creditCents, usdtCents, llmCents, initialDisplayLlmCents]);
+  }, [creditCents, usdtCents, llmCents, aiCreateCents, initialDisplayLlmCents]);
 
   const unusedKeyCents = keys
     .filter((key) => key.status === "active")
@@ -144,7 +148,8 @@ export function RedeemDesk({
   const usdgMaxCents = MAX_USDG_REDEEM_CENTS;
   const selectedStock = initialStocks.find((row) => row.rail === rail) ?? null;
   const usdtLikeAvailable = balances.creditCents + balances.usdtCents;
-  const llmRedeemCap = balances.llmCents;
+  const llmRedeemCap = balances.creditCents + balances.llmCents;
+  const createRedeemCap = balances.creditCents;
   const usdgClaimCap = Math.min(usdtLikeAvailable, usdgMaxCents);
   const stockClaimCap = selectedStock
     ? Math.min(usdtLikeAvailable, selectedStock.balanceUsdCents)
@@ -153,7 +158,9 @@ export function RedeemDesk({
     ? stockClaimCap
     : rail === "usdt"
       ? usdgClaimCap
-      : llmRedeemCap;
+      : rail === "ai_create_credits"
+        ? createRedeemCap
+        : llmRedeemCap;
 
   async function refreshLists() {
     const [redeemData, keyData, walletData] = await Promise.all([
@@ -163,6 +170,7 @@ export function RedeemDesk({
         creditCents: number;
         usdtCents: number;
         llmCents: number;
+        aiCreateCents: number;
         displayLlmCents: number;
       }>("/api/v1/wallet"),
     ]);
@@ -172,6 +180,7 @@ export function RedeemDesk({
       creditCents: walletData.creditCents,
       usdtCents: walletData.usdtCents,
       llmCents: walletData.llmCents,
+      aiCreateCents: walletData.aiCreateCents,
     });
     setDisplayLlmCents(walletData.displayLlmCents);
   }
@@ -206,8 +215,13 @@ export function RedeemDesk({
       if (isStockRail(rail) && amountCents > stockClaimCap) {
         throw new Error(`Treasury only has ${money(stockClaimCap)} of ${railLabel(rail)} available.`);
       }
+      if (rail === "ai_create_credits" && amountCents > createRedeemCap) {
+        throw new Error(
+          `You can move up to ${money(createRedeemCap)} of volume credit into Create credits.`,
+        );
+      }
       if (rail === "llm_credits" && amountCents > llmRedeemCap) {
-        throw new Error(`You can redeem up to ${money(llmRedeemCap)} on the LLM rail right now.`);
+        throw new Error(`You can redeem up to ${money(llmRedeemCap)} for LLM chat/API right now.`);
       }
       const result = await readJson<{
         alreadyExists: boolean;
@@ -217,6 +231,7 @@ export function RedeemDesk({
         creditCents: number;
         usdtCents: number;
         llmCents: number;
+        aiCreateCents: number;
         redemptionId: string;
         onChainClaim: OnChainClaimVoucher | null;
       }>("/api/v1/redeem", {
@@ -232,6 +247,7 @@ export function RedeemDesk({
         creditCents: result.creditCents,
         usdtCents: result.usdtCents,
         llmCents: result.llmCents,
+        aiCreateCents: result.aiCreateCents,
       });
       if (result.plaintextKey) {
         setIssuedKey(result.plaintextKey);
@@ -291,7 +307,9 @@ export function RedeemDesk({
             ? `Queued ${money(amountCents)} ${railLabel(rail)} to this wallet on Robinhood.${onChainNote}`
             : rail === "usdt"
               ? `Queued ${money(amountCents)} USDG to this wallet on Robinhood.${onChainNote || " It stays queued until the vault claim is submitted."}`
-              : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
+              : rail === "ai_create_credits"
+                ? `Moved ${money(amountCents)} to Create credits. Open AI Create to generate images or video — this balance does not power chat or API keys.`
+                : `Issued a ${money(amountCents)} ${provider} key for ${model}. Use the official ${provider} API. Cap is ${money(amountCents)}. Copy it now — it is not stored in plaintext.`,
       );
     } catch (error) {
       setStatus("error");
@@ -359,23 +377,38 @@ export function RedeemDesk({
 
   return (
     <div className="space-y-12">
-      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 md:grid-cols-3 md:divide-x md:divide-y-0">
-        <div className="py-8 md:pr-8">
-          <dt className="text-sm text-zinc-500">Total reward</dt>
+      <dl className="grid grid-cols-1 divide-y divide-white/8 border-y border-white/8 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+        <div className="py-8 lg:pr-6">
+          <dt className="text-sm text-zinc-500">Volume reward</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(balances.creditCents)}
           </dd>
+          <p className="mt-1 text-xs text-zinc-500">Unallocated swap credit</p>
         </div>
-        <div className="py-8 md:px-8">
+        <div className="py-8 lg:px-6">
+          <dt className="text-sm text-zinc-500">Create credits</dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-accent">
+            {money(balances.aiCreateCents)}
+          </dd>
+          <p className="mt-1 text-xs text-zinc-500">
+            For{" "}
+            <Link href="/app/create" className="underline hover:text-zinc-300">
+              AI Create
+            </Link>{" "}
+            (Replicate)
+          </p>
+        </div>
+        <div className="py-8 lg:px-6">
+          <dt className="text-sm text-zinc-500">LLM credits</dt>
+          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
+            {money(llmDisplayAvailableCents)}
+          </dd>
+          <p className="mt-1 text-xs text-zinc-500">Chat + acc_ API (Vercel Gateway)</p>
+        </div>
+        <div className="py-8 lg:pl-6">
           <dt className="text-sm text-zinc-500">USDG available</dt>
           <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
             {money(balances.usdtCents)}
-          </dd>
-        </div>
-        <div className="py-8 md:pl-8">
-          <dt className="text-sm text-zinc-500">LLM credits available</dt>
-          <dd className="mt-2 font-mono text-3xl tracking-tight text-zinc-100">
-            {money(llmDisplayAvailableCents)}
           </dd>
         </div>
       </dl>
@@ -427,10 +460,27 @@ export function RedeemDesk({
               <input
                 type="radio"
                 name="redeem-rail"
-                checked={rail === "llm_credits"}
-                onChange={() => setRail("llm_credits")}
+                checked={rail === "ai_create_credits"}
+                onChange={() => {
+                  setRail("ai_create_credits");
+                  setAmount(
+                    (Math.max(100, createRedeemCap) / 100).toFixed(2),
+                  );
+                }}
               />
-              LLM credits
+              Create credits
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-200">
+              <input
+                type="radio"
+                name="redeem-rail"
+                checked={rail === "llm_credits"}
+                onChange={() => {
+                  setRail("llm_credits");
+                  setAmount((Math.max(100, llmRedeemCap) / 100).toFixed(2));
+                }}
+              />
+              LLM credits (chat / API)
             </label>
           </div>
           {!evmOnly ? (
@@ -445,6 +495,16 @@ export function RedeemDesk({
           ) : null}
         </fieldset>
 
+        {rail === "ai_create_credits" ? (
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Moves volume reward into your Create balance on{" "}
+            <Link href="/app/create" className="underline hover:text-zinc-300">
+              AI Create
+            </Link>
+            . Generations run on Replicate and debit this rail only — not chat, not acc_ API keys.
+          </p>
+        ) : null}
+
         {rail === "llm_credits" ? (
           <div className="space-y-3">
             <LlmModelPicker
@@ -456,8 +516,11 @@ export function RedeemDesk({
               }}
             />
             <p className="text-xs leading-relaxed text-zinc-500">
-              Redeem $1.00 and this key can spend at most $1.00 on the official {provider} API. Extra
-              tokens are rejected. After claim, redeem here to mint the key.
+              Mints an acc_ key capped at your redeem amount for{" "}
+              <Link href="/app/chat" className="underline hover:text-zinc-300">
+                chat
+              </Link>{" "}
+              and external /v1 API via Vercel AI Gateway. Separate from Create credits on Replicate.
             </p>
           </div>
         ) : null}

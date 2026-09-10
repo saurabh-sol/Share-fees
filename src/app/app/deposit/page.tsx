@@ -28,7 +28,8 @@ export default async function DepositPage() {
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Deposit</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
           Fund your desk with $ACCR. Live DexScreener pricing converts your USD amount to tokens at
-          confirm time. After on-chain confirmation, LLM credit bonus is applied to your account.
+          confirm time. After on-chain confirmation, a Create credit bonus is applied for AI Create
+          (Replicate) — separate from LLM chat/API keys.
         </p>
       </div>
       <DepositDesk

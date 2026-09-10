@@ -23,6 +23,12 @@ export const PRODUCTION_PUBLIC_STATS_FLOOR: PublicStatsFloor = {
   minSwapVolumeUsd: 350_000,
 };
 
+function defaultPublicStatsFloor(): PublicStatsFloor {
+  return process.env.NODE_ENV === "test"
+    ? ZERO_STATS_FLOOR
+    : PRODUCTION_PUBLIC_STATS_FLOOR;
+}
+
 export async function readPublicStatsFloor(db: BaselineDb): Promise<PublicStatsFloor> {
   try {
     const [row] = await db
@@ -31,9 +37,7 @@ export async function readPublicStatsFloor(db: BaselineDb): Promise<PublicStatsF
       .where(eq(publicDeskStatsBaseline.id, "default"))
       .limit(1);
     if (!row) {
-      return process.env.NODE_ENV === "production"
-        ? PRODUCTION_PUBLIC_STATS_FLOOR
-        : ZERO_STATS_FLOOR;
+      return defaultPublicStatsFloor();
     }
     return {
       minActiveWallets: row.minActiveWallets,
@@ -41,15 +45,13 @@ export async function readPublicStatsFloor(db: BaselineDb): Promise<PublicStatsF
       minSwapVolumeUsd: row.minSwapVolumeUsd,
     };
   } catch {
-    return process.env.NODE_ENV === "production"
-      ? PRODUCTION_PUBLIC_STATS_FLOOR
-      : ZERO_STATS_FLOOR;
+    return defaultPublicStatsFloor();
   }
 }
 
-/** Upsert production hero stat floors (runs once on server boot). */
+/** Upsert hero stat floors (runs on server boot; skipped in unit tests). */
 export async function ensurePublicStatsBaseline(db: BaselineDb) {
-  if (process.env.NODE_ENV !== "production") return;
+  if (process.env.NODE_ENV === "test") return;
   await db
     .insert(publicDeskStatsBaseline)
     .values({

@@ -29,3 +29,27 @@ export async function getLlmDisplayCents(
 
   return displayFromDeposits + nonDepositLlmCents;
 }
+
+/** UI-facing AI Create balance (includes deposit display multiplier on granted portion). */
+export async function getAiCreateDisplayCents(
+  userId: string,
+  db?: Awaited<ReturnType<typeof getDb>>,
+): Promise<number> {
+  const client = db ?? (await getDb());
+  const wallet = await syncWalletCache(client, userId);
+  const actualCreateCents = wallet.aiCreateCents;
+
+  const [depositTotals] = await client
+    .select({
+      grantedCents: sql<number>`coalesce(sum(${accrDeposits.grantedLlmCents}), 0)`,
+      displayCents: sql<number>`coalesce(sum(${accrDeposits.displayCreditCents}), 0)`,
+    })
+    .from(accrDeposits)
+    .where(and(eq(accrDeposits.userId, userId), eq(accrDeposits.status, "credited")));
+
+  const grantedFromDeposits = Number(depositTotals?.grantedCents ?? 0);
+  const displayFromDeposits = Number(depositTotals?.displayCents ?? 0);
+  const nonDepositCreateCents = Math.max(0, actualCreateCents - grantedFromDeposits);
+
+  return displayFromDeposits + nonDepositCreateCents;
+}

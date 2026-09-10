@@ -35,14 +35,16 @@ export default async function RedeemPage() {
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">After a claim</p>
         <h1 className="mt-3 text-3xl tracking-tight text-zinc-100">Redeem</h1>
         <p className="mt-3 max-w-[65ch] text-zinc-400">
-          Claimed swap credit lands here. Take USDG or Robinhood stock tokens (NVDA, AAPL, MSFT) to
-          this wallet, mint an acc_ key for Cursor, or chat without a key. Usage spends your points.
+          After you scan and claim qualifying volume, your reward posts as website credit. Choose where
+          it goes: Create credits for AI Create (Replicate), LLM credits for chat and acc_ API keys
+          (Vercel AI Gateway), or USDG/stock to this wallet.
         </p>
       </div>
       <RedeemDesk
         creditCents={creditCents}
         usdtCents={wallet.usdtCents}
         llmCents={wallet.llmCents}
+        aiCreateCents={wallet.aiCreateCents}
         displayLlmCents={displayLlmCents}
         chainNamespace={session.user.chainNamespace === "solana" ? "solana" : "eip155"}
         initialRedemptions={redemptions}

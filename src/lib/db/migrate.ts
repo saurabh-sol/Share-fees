@@ -4,6 +4,7 @@ import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
 import type { PgliteQueryResultHKT } from "drizzle-orm/pglite";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type * as schema from "./schema";
+import { seedAiModels } from "@/lib/ai-create/model-seeds";
 
 type AnyDb = {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
@@ -94,6 +95,7 @@ const STATEMENTS = [
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_cache_cents INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE wallets ADD COLUMN IF NOT EXISTS ai_create_cache_cents INTEGER NOT NULL DEFAULT 0`,
   `CREATE TABLE IF NOT EXISTS fraud_flags (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -335,12 +337,49 @@ const STATEMENTS = [
     min_swap_volume_usd INTEGER NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `CREATE TABLE IF NOT EXISTS ai_models (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL DEFAULT 'replicate',
+    category TEXT NOT NULL,
+    model_slug TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    pricing_type TEXT NOT NULL DEFAULT 'fixed_max',
+    max_cost_cents INTEGER NOT NULL,
+    input_schema TEXT NOT NULL,
+    async_required INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS ai_models_category ON ai_models (category, enabled)`,
+  `CREATE TABLE IF NOT EXISTS ai_generations (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    model_id TEXT NOT NULL REFERENCES ai_models(id),
+    provider TEXT NOT NULL,
+    provider_prediction_id TEXT UNIQUE,
+    status TEXT NOT NULL,
+    estimated_cost_cents INTEGER NOT NULL,
+    reserved_credit_cents INTEGER NOT NULL,
+    final_cost_cents INTEGER,
+    hold_id TEXT NOT NULL,
+    input TEXT NOT NULL,
+    output TEXT,
+    error TEXT,
+    idempotency_key TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ai_generations_idempotency ON ai_generations (user_id, idempotency_key)`,
+  `CREATE INDEX IF NOT EXISTS ai_generations_user ON ai_generations (user_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS ai_generations_status ON ai_generations (status)`,
 ];
 
 export async function applyMigrations(db: AnyDb) {
   for (const statement of STATEMENTS) {
     await db.execute(sql.raw(statement));
   }
+  await seedAiModels(db);
 }
 
 export type SchemaTx =
