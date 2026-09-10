@@ -2,6 +2,8 @@ import { env } from "@/lib/env";
 
 export const USDG_PAUSE_MESSAGE = "Rewards are paused due to version upgrade.";
 
+export const STOCK_PAUSE_MESSAGE = "Stock redemptions are temporarily unavailable.";
+
 export const V2_BANNER_MESSAGE =
   "Backend is upgrading to Accrued v2. Some services may not work. Thanks for your support.";
 
@@ -20,5 +22,11 @@ export function isAccruedV2Upgrade(): boolean {
 export function assertUsdgClaimsOpen(): void {
   if (isAccruedV2Upgrade()) {
     throw new UpgradePausedError();
+  }
+}
+
+export function assertStockRedeemOpen(): void {
+  if (!env.stockRedeemEnabled) {
+    throw new UpgradePausedError(STOCK_PAUSE_MESSAGE);
   }
 }

@@ -9,6 +9,7 @@ import { isStockRail } from "@/lib/ledger/post-swap-reward";
 import { isRedemptionClaimedOnChain } from "@/lib/redeem/reward-vault";
 import { broadcastStockPayout, stockTreasuryCanBroadcast } from "@/lib/redeem/stock-payout";
 import { broadcastRobinhoodUsdg, treasuryCanPayOnChain, type BroadcastUsdt } from "@/lib/redeem/treasury";
+import { env } from "@/lib/env";
 import { isAccruedV2Upgrade } from "@/lib/v2/upgrade";
 
 const MAX_ATTEMPTS = 8;
@@ -124,6 +125,14 @@ export async function processPayoutOutbox(input?: {
       const rail = redemption?.rail ?? "usdt";
       const stockPayout = isStockRail(rail);
 
+      if (stockPayout && !env.stockRedeemEnabled) {
+        await client
+          .update(payoutOutbox)
+          .set({ status: "queued", updatedAt: new Date() })
+          .where(eq(payoutOutbox.id, row.id));
+        results.push({ id: row.id, status: "queued_stock_paused" });
+        continue;
+      }
       if (stockPayout && !canPayStock && !input?.broadcast) {
         await client
           .update(payoutOutbox)

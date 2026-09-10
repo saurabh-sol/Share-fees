@@ -2,7 +2,7 @@ export const HOLDER_CHAIN = "holder";
 
 export const HOLDER_MIN_TOKENS = 1_800_000;
 export const HOLDER_HOLD_MS = 60 * 60 * 1000;
-export const HOLDER_REWARD_CENTS = 300;
+export const HOLDER_REWARD_CENTS = 100;
 
 export const HOLDER_STATUSES = ["pending", "eligible", "credited", "failed", "expired"] as const;
 export type HolderStatus = (typeof HOLDER_STATUSES)[number];

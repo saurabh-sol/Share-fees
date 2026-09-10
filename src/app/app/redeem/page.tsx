@@ -8,7 +8,7 @@ import { getRewardVaultAddress, listOnChainClaims } from "@/lib/redeem/reward-va
 import { listStockInventory } from "@/lib/redeem/stock-inventory";
 import { listRedemptions, listVirtualKeys } from "@/lib/redeem/service";
 import { getLlmDisplayCents } from "@/lib/deposit/display";
-import { USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
+import { STOCK_PAUSE_MESSAGE, USDG_PAUSE_MESSAGE } from "@/lib/v2/upgrade";
 
 export default async function RedeemPage() {
   const session = await getSession();
@@ -54,6 +54,8 @@ export default async function RedeemPage() {
         initialStocks={stocks}
         usdgPaused={env.accruedV2Upgrade}
         usdgPauseMessage={USDG_PAUSE_MESSAGE}
+        stocksPaused={!env.stockRedeemEnabled}
+        stocksPauseMessage={STOCK_PAUSE_MESSAGE}
       />
     </div>
   );

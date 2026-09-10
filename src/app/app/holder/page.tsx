@@ -9,7 +9,7 @@ import { pageTitle } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: pageTitle("Verify holder"),
-  description: "Hold 1.8M $ACCR for 1 hour to earn $3 website credit.",
+  description: "Hold 1.8M $ACCR for 1 hour to earn $1 website credit.",
 };
 
 export default async function HolderPage() {

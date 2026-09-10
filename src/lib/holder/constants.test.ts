@@ -8,7 +8,7 @@ describe("holder verification", () => {
   });
 
   it("uses a fixed three dollar reward", () => {
-    expect(HOLDER_REWARD_CENTS).toBe(300);
+    expect(HOLDER_REWARD_CENTS).toBe(100);
   });
 
   it("dedupes holder credits per user", () => {

@@ -22,7 +22,7 @@ import {
 import { assertUsdgRedeemLimits } from "./limits";
 import { assertStockInventoryForRedeem } from "./stock-inventory";
 import { signUsdgClaimVoucher } from "./treasury";
-import { assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
+import { assertStockRedeemOpen, assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
 
 export { RedeemError } from "./errors";
 
@@ -94,6 +94,7 @@ export async function redeem(input: RedeemInput, db?: Awaited<ReturnType<typeof 
   }
 
   if (isStockRail(input.rail)) {
+    assertStockRedeemOpen();
     try {
       await assertStockInventoryForRedeem(input.rail, input.amountCents);
     } catch (error) {

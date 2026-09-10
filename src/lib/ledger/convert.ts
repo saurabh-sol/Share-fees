@@ -5,7 +5,8 @@ import { creditConversions, ledgerEntries } from "@/lib/db/schema";
 import { lockWalletRow, sumAccountCents, syncWalletCache } from "./balances";
 import { assertUsdgClaimsOpen } from "@/lib/v2/upgrade";
 import { ledgerAccountForRail } from "./rail-accounts";
-import { isUsdtLikeRail, LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
+import { assertStockRedeemOpen } from "@/lib/v2/upgrade";
+import { isStockRail, LedgerError, newLedgerId, readWallet, type Rail } from "./post-swap-reward";
 
 export type ConvertInput = {
   userId: string;
@@ -24,8 +25,11 @@ export async function convertCredits(
     throw new LedgerError("invalid_amount");
   }
 
-  if (isUsdtLikeRail(input.rail)) {
+  if (input.rail === "usdt") {
     assertUsdgClaimsOpen();
+  }
+  if (isStockRail(input.rail)) {
+    assertStockRedeemOpen();
   }
 
   const [existing] = await client

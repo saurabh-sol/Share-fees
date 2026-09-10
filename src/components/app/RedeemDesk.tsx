@@ -96,6 +96,8 @@ export function RedeemDesk({
   initialStocks,
   usdgPaused = false,
   usdgPauseMessage = "Rewards are paused due to version upgrade.",
+  stocksPaused = true,
+  stocksPauseMessage = "Stock redemptions are temporarily unavailable.",
 }: {
   creditCents: number;
   usdtCents: number;
@@ -110,6 +112,8 @@ export function RedeemDesk({
   initialStocks: StockInventory[];
   usdgPaused?: boolean;
   usdgPauseMessage?: string;
+  stocksPaused?: boolean;
+  stocksPauseMessage?: string;
 }) {
   const router = useRouter();
   const evmOnly = chainNamespace === "eip155";
@@ -208,6 +212,9 @@ export function RedeemDesk({
       }
       if (rail === "usdt" && usdgPaused) {
         throw new Error(usdgPauseMessage);
+      }
+      if (isStockRail(rail) && stocksPaused) {
+        throw new Error(stocksPauseMessage);
       }
       if (rail === "usdt" && amountCents > usdgMaxCents) {
         throw new Error(`USDG claims are capped at ${money(usdgMaxCents)} per request.`);
@@ -440,7 +447,7 @@ export function RedeemDesk({
                   type="radio"
                   name="redeem-rail"
                   checked={rail === stock.rail}
-                  disabled={!evmOnly || stock.balanceUsdCents < 100}
+                  disabled={!evmOnly || stocksPaused || stock.balanceUsdCents < 100}
                   onChange={() => {
                     setRail(stock.rail as Rail);
                     const cap = Math.min(usdtLikeAvailable, stock.balanceUsdCents);
@@ -491,6 +498,11 @@ export function RedeemDesk({
           {usdgPaused ? (
             <p role="status" className="border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
               {usdgPauseMessage}
+            </p>
+          ) : null}
+          {stocksPaused ? (
+            <p role="status" className="border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-zinc-400">
+              {stocksPauseMessage}
             </p>
           ) : null}
         </fieldset>
