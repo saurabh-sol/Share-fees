@@ -25,6 +25,6 @@ DEX Aggregator — Accrued routes through Uniswap V3 SwapRouter02 but does not o
 ## Links
 
 - Website: https://accrued.trade
-- Dune dashboard: https://dune.com/accrued/accrued (create after contract decode)
+- Dune dashboard: https://dune.com/accured/accrued
 - DeFiLlama PR: https://github.com/DefiLlama/dimension-adapters/pull/9382
 - Attribution doc: https://github.com/saurabh-sol/Share-fees/blob/main/docs/analytics/swap-attribution.md

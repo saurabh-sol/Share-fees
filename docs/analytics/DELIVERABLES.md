@@ -7,7 +7,7 @@
 | 3 | AccruedSwap ABI | [`src/lib/uniswap/constants.ts`](../../src/lib/uniswap/constants.ts) `ACCRUED_SWAP_ROUTER_ABI` |
 | 4 | Attribution | [swap-attribution.md](./swap-attribution.md) |
 | 5 | Dune canonical query | [`analytics/dune/canonical_swaps.sql`](../../analytics/dune/canonical_swaps.sql) — publish on Dune after contract decode |
-| 6 | Dune dashboard | https://dune.com/accrued/accrued (create from queries in `analytics/dune/`) |
+| 6 | Dune dashboard | https://dune.com/accured/accrued |
 | 7–9 | Volume / swaps / users | From Dune after first attributed swaps |
 | 10 | Fee methodology | [usd-methodology.md](./usd-methodology.md) — $0 protocol fee |
 | 11 | DeFiLlama adapter | [`analytics/defillama/dexs/accrued.ts`](../../analytics/defillama/dexs/accrued.ts) |
