@@ -20,7 +20,7 @@ export function isAccruedV2Upgrade(): boolean {
 }
 
 export function assertUsdgClaimsOpen(): void {
-  if (isAccruedV2Upgrade()) {
+  if (env.usdgRewardsPaused) {
     throw new UpgradePausedError();
   }
 }

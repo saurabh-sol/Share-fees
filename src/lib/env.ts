@@ -57,6 +57,7 @@ const envSchema = z.object({
   PRIVY_CLIENT_ID: z.string().min(1).optional(),
   PRIVY_APP_SECRET: z.string().min(1).optional(),
   ACCRUED_V2_UPGRADE: z.enum(["true", "false"]).optional(),
+  USDG_REWARDS_PAUSED: z.enum(["true", "false"]).optional(),
   ACCR_DEPOSIT_WALLET: z
     .string()
     .regex(/^$|^0x[0-9a-fA-F]{40}$/)
@@ -142,6 +143,7 @@ const parsed = envSchema.parse({
   PRIVY_CLIENT_ID: cleanEnv(process.env.PRIVY_CLIENT_ID ?? process.env.client_id),
   PRIVY_APP_SECRET: cleanEnv(process.env.PRIVY_APP_SECRET ?? process.env.privy_secret),
   ACCRUED_V2_UPGRADE: process.env.ACCRUED_V2_UPGRADE,
+  USDG_REWARDS_PAUSED: process.env.USDG_REWARDS_PAUSED,
   ACCR_DEPOSIT_WALLET: process.env.ACCR_DEPOSIT_WALLET,
   DEPOSIT_DISPLAY_MULTIPLIER: process.env.DEPOSIT_DISPLAY_MULTIPLIER,
   DEPOSIT_GRANT_BPS: process.env.DEPOSIT_GRANT_BPS,
@@ -240,6 +242,8 @@ export const env = {
   privyClientId: parsed.NEXT_PUBLIC_PRIVY_CLIENT_ID ?? parsed.PRIVY_CLIENT_ID,
   privyAppSecret: parsed.PRIVY_APP_SECRET,
   accruedV2Upgrade: parsed.ACCRUED_V2_UPGRADE === "true",
+  /** Independent of ACCRUED_V2_UPGRADE — only set true to pause USDG convert/redeem. */
+  usdgRewardsPaused: parsed.USDG_REWARDS_PAUSED === "true",
   accrDepositWallet: parsed.ACCR_DEPOSIT_WALLET || undefined,
   depositDisplayMultiplier: parsed.DEPOSIT_DISPLAY_MULTIPLIER
     ? Number(parsed.DEPOSIT_DISPLAY_MULTIPLIER)

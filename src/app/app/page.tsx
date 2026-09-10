@@ -92,7 +92,7 @@ export default async function DeskPage() {
         conversionBps={conversionBps}
         minNotionalUsdCents={minNotionalUsdCents}
         dailyCapUsdCents={dailyCapUsdCents}
-        usdgPaused={env.accruedV2Upgrade}
+        usdgPaused={env.usdgRewardsPaused}
         usdgPauseMessage={USDG_PAUSE_MESSAGE}
       />
       <p className="max-w-[65ch] text-zinc-400">

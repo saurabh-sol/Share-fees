@@ -10,7 +10,6 @@ import { isRedemptionClaimedOnChain } from "@/lib/redeem/reward-vault";
 import { broadcastStockPayout, stockTreasuryCanBroadcast } from "@/lib/redeem/stock-payout";
 import { broadcastRobinhoodUsdg, treasuryCanPayOnChain, type BroadcastUsdt } from "@/lib/redeem/treasury";
 import { env } from "@/lib/env";
-import { isAccruedV2Upgrade } from "@/lib/v2/upgrade";
 
 const MAX_ATTEMPTS = 8;
 const STALE_MS = 5 * 60 * 1000;
@@ -141,7 +140,7 @@ export async function processPayoutOutbox(input?: {
         results.push({ id: row.id, status: "queued" });
         continue;
       }
-      if (!stockPayout && isAccruedV2Upgrade()) {
+      if (!stockPayout && env.usdgRewardsPaused) {
         await client
           .update(payoutOutbox)
           .set({ status: "queued", updatedAt: new Date() })

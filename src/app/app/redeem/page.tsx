@@ -52,7 +52,7 @@ export default async function RedeemPage() {
         rewardVaultAddress={vault}
         initialOnChainClaims={onChainClaims}
         initialStocks={stocks}
-        usdgPaused={env.accruedV2Upgrade}
+        usdgPaused={env.usdgRewardsPaused}
         usdgPauseMessage={USDG_PAUSE_MESSAGE}
         stocksPaused={!env.stockRedeemEnabled}
         stocksPauseMessage={STOCK_PAUSE_MESSAGE}
