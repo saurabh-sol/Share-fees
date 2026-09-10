@@ -367,8 +367,8 @@ Each page SEO title: `{Page} — Accrued Docs`
 **Swap router path** (in-wallet fill):
 1. Pick chains/tokens/amount
 2. `POST /api/v1/swaps/quote`
-3. Wallet signs the quoted route (Swap Studio shows **Swap router**)
-4. `POST /api/v1/swaps/settle` with tx hash
+3. Wallet signs through **AccruedSwapRouter** (`0xc78e883f…`) → Uniswap V3 SwapRouter02; emits `AccruedSwap` for Dune/DeFiLlama
+4. `POST /api/v1/swaps/settle` with tx hash (settle verifies `AccruedSwap` event)
 5. Poll up to 24×5s if 202 pending
 
 **Desk pay-in path** (Robinhood ETH or pairs the swap router cannot quote; also used as fallback):

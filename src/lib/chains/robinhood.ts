@@ -37,6 +37,9 @@ export const ROBINHOOD_STOCKS: RobinhoodStock[] = [
 /** Deployed UsdgRewardVault on Robinhood Chain. Public; claims and recover go through this address. */
 export const USDG_REWARD_VAULT = "0x991FA150A5Cf1680d41137a38bEAa9Eaa0eBE1db";
 
+/** AccruedSwapRouter — emits AccruedSwap for analytics attribution. */
+export const ACCRUED_SWAP_ROUTER = "0xc78e883f87675e75334df4d341f6fcb0915ebf19" as const;
+
 /** Public contract address linked in the site navbar. */
 export const ROBINHOOD_ACCR = "0x85aCab234fce5d5287a7C24807A317581160420B" as const;
 export const SITE_CONTRACT_ADDRESS = ROBINHOOD_ACCR;

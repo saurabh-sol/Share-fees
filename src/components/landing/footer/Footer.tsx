@@ -57,6 +57,14 @@ function FooterBottom() {
             Terms
           </Link>
           <a
+            href="https://dune.com/accrued/accrued"
+            target="_blank"
+            rel="noreferrer"
+            className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline"
+          >
+            Analytics
+          </a>
+          <a
             href={robinhoodAddressUrl(USDG_REWARD_VAULT)}
             target="_blank"
             rel="noreferrer"

@@ -25,8 +25,10 @@ import {
   ERC20_ABI,
   NATIVE_ADDRESS,
   WRAPPED_NATIVE,
+  ACCRUED_SWAP_ROUTER_ABI,
   V3_SWAP_ROUTER_02,
   SWAP_ROUTER_02_ABI,
+  getAccruedSwapRouter,
   CMD_V3_SWAP_EXACT_IN,
   CMD_WRAP_ETH,
   CMD_UNWRAP_WETH,
@@ -195,29 +197,37 @@ async function executeV3ViaSwapRouter02(
   weth: `0x${string}`,
   onProgress?: (step: string) => void,
 ): Promise<Hash> {
+  const accruedRouter = getAccruedSwapRouter(params.chainId);
+  if (accruedRouter) {
+    return executeV3ViaAccruedRouter(
+      params,
+      route,
+      amountIn,
+      amountOutMin,
+      weth,
+      accruedRouter,
+      onProgress,
+    );
+  }
+
   const sr02 = V3_SWAP_ROUTER_02[params.chainId];
   if (!sr02) throw new Error("V3 SwapRouter02 not deployed on this chain.");
 
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
   const needsUnwrap = params.needsUnwrapOut ?? false;
 
-  // For ERC-20 input, approve SwapRouter02 directly (no Permit2).
   if (!params.isNativeIn) {
-    const approvalToken =
-      route.type === "v3-single" ? route.v3TokenIn : weth;
+    const approvalToken = route.type === "v3-single" ? route.v3TokenIn : weth;
     await ensureDirectApproval(approvalToken, sr02, amountIn, params.recipient, params.chainId, onProgress);
   }
 
   onProgress?.("Encoding swap…");
-
-  // Build the multicall data array.
   const calls: `0x${string}`[] = [];
 
   if (route.type === "v3-single") {
     const swapRecipient = needsUnwrap
-      ? ("0x0000000000000000000000000000000000000002" as `0x${string}`) // ADDRESS_THIS
+      ? ("0x0000000000000000000000000000000000000002" as `0x${string}`)
       : params.recipient;
-
     calls.push(
       encodeFunctionData({
         abi: SWAP_ROUTER_02_ABI,
@@ -239,7 +249,6 @@ async function executeV3ViaSwapRouter02(
     const swapRecipient = needsUnwrap
       ? ("0x0000000000000000000000000000000000000002" as `0x${string}`)
       : params.recipient;
-
     calls.push(
       encodeFunctionData({
         abi: SWAP_ROUTER_02_ABI,
@@ -256,7 +265,6 @@ async function executeV3ViaSwapRouter02(
     );
   }
 
-  // If output is native ETH, unwrap WETH → ETH.
   if (needsUnwrap) {
     calls.push(
       encodeFunctionData({
@@ -268,7 +276,6 @@ async function executeV3ViaSwapRouter02(
   }
 
   onProgress?.("Confirm the swap in your wallet…");
-
   const walletClient = await getWalletClient(wagmiConfig, { chainId: params.chainId });
   const sendValue = params.isNativeIn ? amountIn : 0n;
 
@@ -280,6 +287,90 @@ async function executeV3ViaSwapRouter02(
     value: sendValue,
     chain: wagmiConfig.chains.find((c) => c.id === params.chainId),
   });
+
+  onProgress?.("Waiting for confirmation…");
+  await waitForTransactionReceipt(wagmiConfig, {
+    hash: txHash,
+    chainId: params.chainId as (typeof wagmiConfig)["chains"][number]["id"],
+    confirmations: 1,
+  });
+
+  return txHash;
+}
+
+async function executeV3ViaAccruedRouter(
+  params: UniswapSwapParams,
+  route: Extract<UniswapSwapParams["route"], { type: "v3-single" | "v3-multi" }>,
+  amountIn: bigint,
+  amountOutMin: bigint,
+  weth: `0x${string}`,
+  accruedRouter: `0x${string}`,
+  onProgress?: (step: string) => void,
+): Promise<Hash> {
+  const needsUnwrap = params.needsUnwrapOut ?? false;
+
+  if (!params.isNativeIn) {
+    const approvalToken = route.type === "v3-single" ? route.v3TokenIn : weth;
+    await ensureDirectApproval(
+      approvalToken,
+      accruedRouter,
+      amountIn,
+      params.recipient,
+      params.chainId,
+      onProgress,
+    );
+  }
+
+  onProgress?.("Encoding swap…");
+  const walletClient = await getWalletClient(wagmiConfig, { chainId: params.chainId });
+  const sendValue = params.isNativeIn ? amountIn : 0n;
+  const tokenInNative = params.isNativeIn ? NATIVE_ADDRESS : route.type === "v3-single" ? route.v3TokenIn : weth;
+
+  onProgress?.("Confirm the swap in your wallet…");
+
+  let txHash: Hash;
+  if (route.type === "v3-single") {
+    txHash = await walletClient.writeContract({
+      address: accruedRouter,
+      abi: ACCRUED_SWAP_ROUTER_ABI,
+      functionName: "swapV3ExactInputSingle",
+      args: [
+        {
+          tokenIn: tokenInNative,
+          tokenOut: route.v3TokenOut,
+          fee: route.v3Fee,
+          recipient: params.recipient,
+          amountIn,
+          amountOutMinimum: amountOutMin,
+          sqrtPriceLimitX96: 0n,
+          unwrapWeth: needsUnwrap,
+        },
+      ],
+      value: sendValue,
+      chain: wagmiConfig.chains.find((c) => c.id === params.chainId),
+    });
+  } else {
+    const pathHex = route.v3Path.slice(2);
+    const tokenOutFromPath = (`0x${pathHex.slice(-40)}`) as `0x${string}`;
+    txHash = await walletClient.writeContract({
+      address: accruedRouter,
+      abi: ACCRUED_SWAP_ROUTER_ABI,
+      functionName: "swapV3ExactInput",
+      args: [
+        {
+          path: route.v3Path,
+          tokenIn: tokenInNative,
+          tokenOut: params.isNativeOut ? NATIVE_ADDRESS : tokenOutFromPath,
+          recipient: params.recipient,
+          amountIn,
+          amountOutMinimum: amountOutMin,
+          unwrapWeth: needsUnwrap,
+        },
+      ],
+      value: sendValue,
+      chain: wagmiConfig.chains.find((c) => c.id === params.chainId),
+    });
+  }
 
   onProgress?.("Waiting for confirmation…");
   await waitForTransactionReceipt(wagmiConfig, {

@@ -58,6 +58,14 @@ const envSchema = z.object({
   PRIVY_APP_SECRET: z.string().min(1).optional(),
   ACCRUED_V2_UPGRADE: z.enum(["true", "false"]).optional(),
   USDG_REWARDS_PAUSED: z.enum(["true", "false"]).optional(),
+  ACCRUED_SWAP_ROUTER_ADDRESS: z
+    .string()
+    .regex(/^$|^0x[0-9a-fA-F]{40}$/)
+    .optional(),
+  NEXT_PUBLIC_ACCRUED_SWAP_ROUTER_ADDRESS: z
+    .string()
+    .regex(/^$|^0x[0-9a-fA-F]{40}$/)
+    .optional(),
   ACCR_DEPOSIT_WALLET: z
     .string()
     .regex(/^$|^0x[0-9a-fA-F]{40}$/)
@@ -144,6 +152,8 @@ const parsed = envSchema.parse({
   PRIVY_APP_SECRET: cleanEnv(process.env.PRIVY_APP_SECRET ?? process.env.privy_secret),
   ACCRUED_V2_UPGRADE: process.env.ACCRUED_V2_UPGRADE,
   USDG_REWARDS_PAUSED: process.env.USDG_REWARDS_PAUSED,
+  ACCRUED_SWAP_ROUTER_ADDRESS: process.env.ACCRUED_SWAP_ROUTER_ADDRESS,
+  NEXT_PUBLIC_ACCRUED_SWAP_ROUTER_ADDRESS: process.env.NEXT_PUBLIC_ACCRUED_SWAP_ROUTER_ADDRESS,
   ACCR_DEPOSIT_WALLET: process.env.ACCR_DEPOSIT_WALLET,
   DEPOSIT_DISPLAY_MULTIPLIER: process.env.DEPOSIT_DISPLAY_MULTIPLIER,
   DEPOSIT_GRANT_BPS: process.env.DEPOSIT_GRANT_BPS,
@@ -244,6 +254,10 @@ export const env = {
   accruedV2Upgrade: parsed.ACCRUED_V2_UPGRADE === "true",
   /** Independent of ACCRUED_V2_UPGRADE — only set true to pause USDG convert/redeem. */
   usdgRewardsPaused: parsed.USDG_REWARDS_PAUSED === "true",
+  accruedSwapRouterAddress:
+    parsed.ACCRUED_SWAP_ROUTER_ADDRESS ??
+    parsed.NEXT_PUBLIC_ACCRUED_SWAP_ROUTER_ADDRESS ??
+    "0xc78e883f87675e75334df4d341f6fcb0915ebf19",
   accrDepositWallet: parsed.ACCR_DEPOSIT_WALLET || undefined,
   depositDisplayMultiplier: parsed.DEPOSIT_DISPLAY_MULTIPLIER
     ? Number(parsed.DEPOSIT_DISPLAY_MULTIPLIER)

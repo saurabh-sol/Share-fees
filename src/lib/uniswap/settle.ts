@@ -1,11 +1,13 @@
 /**
- * Server-side Uniswap V4 swap verification.
- * Reads the tx receipt to verify the swap happened via Universal Router.
+ * Server-side Uniswap swap verification.
+ * Prefers AccruedSwap events from AccruedSwapRouter; falls back to legacy router parsing.
  */
-import { createPublicClient, http, type Chain } from "viem";
+import { createPublicClient, decodeEventLog, http, type Chain } from "viem";
 import { mainnet, optimism, polygon, arbitrum, base, bsc, avalanche } from "viem/chains";
+import { env } from "@/lib/env";
 import { robinhoodChain } from "@/lib/chains/robinhood";
 import {
+  ACCRUED_SWAP_ROUTER_ABI,
   UNIVERSAL_ROUTER,
   V3_SWAP_ROUTER_02,
   WRAPPED_NATIVE,
@@ -41,10 +43,57 @@ export type UniswapSettleResult =
   | VerifiedUniswapFill
   | { kind: "pending" };
 
-/**
- * Verify a Uniswap V4 swap from the tx receipt.
- * Parses ERC-20 Transfer events to extract input/output amounts.
- */
+function accruedRouterForChain(chainId: UniswapChainId): `0x${string}` | undefined {
+  if (chainId !== 4663) return undefined;
+  const raw = env.accruedSwapRouterAddress?.trim();
+  if (!raw || !/^0x[0-9a-fA-F]{40}$/.test(raw)) return undefined;
+  return raw as `0x${string}`;
+}
+
+function normalizeTokenAddress(token: string, wrappedNative: string) {
+  if (token === "0x0000000000000000000000000000000000000000") {
+    return NATIVE_ADDRESS;
+  }
+  if (addressesEqual(token, wrappedNative)) {
+    return wrappedNative;
+  }
+  return token;
+}
+
+function parseAccruedSwapLog(
+  logs: Array<{ address: string; topics: readonly `0x${string}`[]; data: `0x${string}` }>,
+  router: string,
+  sessionAddress: string,
+  wrappedNative: string,
+) {
+  for (const log of logs) {
+    if (!addressesEqual(log.address, router)) continue;
+    try {
+      const decoded = decodeEventLog({
+        abi: ACCRUED_SWAP_ROUTER_ABI,
+        eventName: "AccruedSwap",
+        topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
+        data: log.data,
+      });
+      if (!addressesEqual(decoded.args.user, sessionAddress)) {
+        throw new UniswapSettleError(
+          "AccruedSwap user does not match your session address.",
+          403,
+        );
+      }
+      return {
+        fromToken: normalizeTokenAddress(decoded.args.tokenIn, wrappedNative),
+        toToken: normalizeTokenAddress(decoded.args.tokenOut, wrappedNative),
+        fromAmount: decoded.args.amountIn.toString(),
+        toAmount: decoded.args.amountOut.toString(),
+      };
+    } catch (error) {
+      if (error instanceof UniswapSettleError) throw error;
+    }
+  }
+  return null;
+}
+
 export async function verifyUniswapFill(input: {
   txHash: string;
   chainId: UniswapChainId;
@@ -61,6 +110,7 @@ export async function verifyUniswapFill(input: {
 
   const routerAddress = UNIVERSAL_ROUTER[input.chainId];
   const wrappedNative = WRAPPED_NATIVE[input.chainId];
+  const accruedRouter = accruedRouterForChain(input.chainId);
 
   let receipt;
   try {
@@ -87,15 +137,39 @@ export async function verifyUniswapFill(input: {
   });
 
   const swapRouter02 = V3_SWAP_ROUTER_02[input.chainId];
-  const isValidRouter =
+  const toAccrued = accruedRouter != null && addressesEqual(tx.to ?? "", accruedRouter);
+  const toLegacyRouter =
     addressesEqual(tx.to ?? "", routerAddress) ||
     (swapRouter02 != null && addressesEqual(tx.to ?? "", swapRouter02));
 
-  if (!isValidRouter) {
+  if (accruedRouter && !toAccrued && !toLegacyRouter) {
     throw new UniswapSettleError(
-      "Transaction was not sent to a known Uniswap router.",
+      "Swap must go through AccruedSwapRouter for attribution.",
       400,
     );
+  }
+
+  if (!toAccrued && !toLegacyRouter) {
+    throw new UniswapSettleError(
+      "Transaction was not sent to a known Uniswap or Accrued router.",
+      400,
+    );
+  }
+
+  if (toAccrued && accruedRouter) {
+    const fromEvent = parseAccruedSwapLog(receipt.logs, accruedRouter, input.sessionAddress, wrappedNative);
+    if (fromEvent) {
+      return {
+        kind: "done",
+        txHash: input.txHash,
+        fromToken: fromEvent.fromToken,
+        toToken: fromEvent.toToken,
+        fromAmount: fromEvent.fromAmount,
+        toAmount: fromEvent.toAmount,
+        notionalUsdCents: input.expectedNotionalCents,
+      };
+    }
+    throw new UniswapSettleError("AccruedSwap event not found in transaction receipt.", 400);
   }
 
   let fromAmount = "0";
@@ -115,7 +189,9 @@ export async function verifyUniswapFill(input: {
           const value_ = BigInt(log.data);
           return { from: from_, to: to_, value: value_, address: log.address };
         }
-      } catch { /* skip non-Transfer */ }
+      } catch {
+        /* skip non-Transfer */
+      }
       return null;
     })
     .filter(Boolean) as Array<{ from: `0x${string}`; to: `0x${string}`; value: bigint; address: `0x${string}` }>;
@@ -123,19 +199,18 @@ export async function verifyUniswapFill(input: {
   if (isNativeIn) {
     fromAmount = tx.value.toString();
     fromToken = NATIVE_ADDRESS;
-    const outTransfer = transfers.find(
-      (t) =>
-        addressesEqual(t.to, input.sessionAddress) &&
-        !addressesEqual(t.address, wrappedNative),
-    ) ?? transfers.find((t) => addressesEqual(t.to, input.sessionAddress));
+    const outTransfer =
+      transfers.find(
+        (t) =>
+          addressesEqual(t.to, input.sessionAddress) &&
+          !addressesEqual(t.address, wrappedNative),
+      ) ?? transfers.find((t) => addressesEqual(t.to, input.sessionAddress));
     if (outTransfer) {
       toAmount = outTransfer.value.toString();
       toToken = outTransfer.address;
     }
   } else if (isNativeOut) {
-    const inTransfer = transfers.find(
-      (t) => addressesEqual(t.from, input.sessionAddress),
-    );
+    const inTransfer = transfers.find((t) => addressesEqual(t.from, input.sessionAddress));
     if (inTransfer) {
       fromAmount = inTransfer.value.toString();
       fromToken = inTransfer.address;
@@ -152,9 +227,7 @@ export async function verifyUniswapFill(input: {
     }
     toToken = NATIVE_ADDRESS;
   } else {
-    const inTransfer = transfers.find(
-      (t) => addressesEqual(t.from, input.sessionAddress),
-    );
+    const inTransfer = transfers.find((t) => addressesEqual(t.from, input.sessionAddress));
     const outTransfer = transfers.find(
       (t) =>
         addressesEqual(t.to, input.sessionAddress) &&

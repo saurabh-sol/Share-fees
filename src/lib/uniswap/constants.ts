@@ -90,6 +90,75 @@ export const V3_SWAP_ROUTER_02: Partial<Record<UniswapChainId, `0x${string}`>> =
   4663: "0xcaf681a66d020601342297493863e78c959e5cb2",
 };
 
+/** Accrued attribution router — emits AccruedSwap for Dune / DeFiLlama. */
+export const ACCRUED_SWAP_ROUTER: Partial<Record<UniswapChainId, `0x${string}`>> = {
+  4663:
+    (process.env.NEXT_PUBLIC_ACCRUED_SWAP_ROUTER_ADDRESS?.trim() as `0x${string}` | undefined) ??
+    "0xc78e883f87675e75334df4d341f6fcb0915ebf19",
+};
+
+export function getAccruedSwapRouter(chainId: UniswapChainId): `0x${string}` | undefined {
+  return ACCRUED_SWAP_ROUTER[chainId];
+}
+
+export const ACCRUED_SWAP_ROUTER_ABI = [
+  {
+    type: "event",
+    name: "AccruedSwap",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "tokenIn", type: "address", indexed: true },
+      { name: "tokenOut", type: "address", indexed: true },
+      { name: "amountIn", type: "uint256", indexed: false },
+      { name: "amountOut", type: "uint256", indexed: false },
+      { name: "recipient", type: "address", indexed: false },
+    ],
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+          { name: "unwrapWeth", type: "bool" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "swapV3ExactInputSingle",
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { name: "path", type: "bytes" },
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+          { name: "unwrapWeth", type: "bool" },
+        ],
+        name: "params",
+        type: "tuple",
+      },
+    ],
+    name: "swapV3ExactInput",
+    outputs: [{ name: "amountOut", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
+
 /** V3 fee tiers — try all four to discover any pool. */
 export const V3_FEE_TIERS = [100, 500, 3000, 10000] as const;
 

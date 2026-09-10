@@ -12,7 +12,10 @@
     "test:live": "vitest run src/lib/gateway/live.e2e.test.ts",
     "ci": "npm run typecheck && npm test && npm run build",
     "deploy:reward-vault": "npx tsx scripts/deploy-reward-vault.ts",
-    "recover:reward-vault": "node scripts/recover-reward-vault.mjs"
+    "deploy:accrued-swap-router": "npx tsx scripts/deploy-accrued-swap-router.ts",
+    "recover:reward-vault": "node scripts/recover-reward-vault.mjs",
+    "reconcile:dune-swaps": "node scripts/reconcile-dune-swaps.mjs",
+    "prepare:defillama-pr": "bash scripts/prepare-defillama-pr.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1129.0",

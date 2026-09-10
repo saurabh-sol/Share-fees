@@ -17,7 +17,7 @@ import {
 } from "@/lib/chains/robinhood";
 import { resolveErc20 } from "@/lib/chains/resolve-token";
 import { stableSymbolNotionalCents } from "@/lib/indexer/notional-display";
-import { UNIVERSAL_ROUTER, V3_SWAP_ROUTER_02 } from "@/lib/uniswap/constants";
+import { ACCRUED_SWAP_ROUTER, UNIVERSAL_ROUTER, V3_SWAP_ROUTER_02 } from "@/lib/uniswap/constants";
 import type { ActivityKind, HistoricalCandidate, TradeSource } from "./types";
 
 const TRANSFER_EVENT = parseAbiItem(
@@ -33,11 +33,9 @@ const MAX_CANDIDATES = 500;
 const MAX_RAW_LOGS = 4000;
 
 /** Contracts that execute Uniswap swaps on Robinhood Chain. */
+/** Accrued-attributed routers only (analytics use AccruedSwap events). */
 const DEX_ROUTERS = new Set(
-  [
-    UNIVERSAL_ROUTER[ROBINHOOD_CHAIN_ID],
-    V3_SWAP_ROUTER_02[ROBINHOOD_CHAIN_ID],
-  ]
+  [ACCRUED_SWAP_ROUTER[ROBINHOOD_CHAIN_ID], UNIVERSAL_ROUTER[ROBINHOOD_CHAIN_ID]]
     .filter(Boolean)
     .map((addr) => addr!.toLowerCase()),
 );
